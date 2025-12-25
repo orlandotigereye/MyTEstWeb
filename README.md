@@ -1,29 +1,30 @@
-# My Test Website
+# Netlify Function 範例
 
-This repository contains a simple test website designed to demonstrate deployment using Netlify. It includes:
+這是用於示範如何在 Netlify 運行靜態網站 + Functions 的例子專案。
 
-- **index.html**: The main webpage.
-- **Netlify Function**: A simple serverless function to return a JSON response.
-- **netlify.toml**: Configuration file for deployment on Netlify.
+## 檔案說明
 
-### How to Use
+- **index.html**: 主頁，提供按鈕呼叫 Functions。
+- **netlify/functions/hello.js**: 簡單的 serverless function，回應 JSON。
+- **netlify.toml**: Netlify 設定檔。
+- **README.md**: 此文件。
 
-1. Connect this repository to Netlify.
-2. Deploy the site directly from GitHub.
-3. Test the function by clicking the button on the webpage.
+## 如何部署
 
-### File Structure
+1. **建立 GitHub Repository**
+   - 在 GitHub 上建立一個新的儲存庫，將這些檔案加入。
 
-```
-/
-  ├── index.html         # Main website file
-  ├── netlify/
-  │    ├── functions/
-  │    │    ├── hello.js # Netlify serverless function
-  ├── netlify.toml       # Netlify configuration file
-  ├── README.md          # Project documentation
-```
+2. **連接至 Netlify**
+   - 登入 [Netlify](https://www.netlify.com/)。
+   - 點擊 "New Site from Git"
+   - 選擇這個專案的 GitHub repo，並設定以下：
+     - **Build Command**: 留空
+     - **Publish Directory**: `.`
+   - 點擊 **Deploy Site**
+
+3. **測試網站**
+   - 部署後，你將獲得一個免費的 Netlify 網址。
+   - 開啟網站，你可以測試按鈕是否正確呼叫 Function。
 
 ### License
-
-This project is licensed under the MIT License.
+MIT
