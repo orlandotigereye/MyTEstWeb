@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<title>天象測試頁 V3 - 範本版</title>
+<title>天象測試頁 V4 - 範本版</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -17,13 +17,14 @@ textarea { width:100%; height:120px; margin:6px 0; }
 </style>
 
 <!-- 核心 JS -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://orlandotigereye.github.io/mytestweb/public/public/core.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 </head>
 <body>
 
-<h2>🌟 天象測試頁 V3 - 範本版</h2>
+<h2>🌟 天象測試頁 V4 - 範本版</h2>
 
 <h3>📦 模組載入檢查面板</h3>
 <div id="status"></div>
@@ -34,7 +35,7 @@ textarea { width:100%; height:120px; margin:6px 0; }
 <div id="jsonSummary"></div>
 
 <h3>📝 輸入觀測內容</h3>
-<textarea id="obsInput" placeholder="輸入觀測內容..."></textarea>
+<textarea id="obsInput"></textarea>
 <button onclick="startAnalyze()">🚀 核心分析</button>
 
 <h3>🖼 報告導出</h3>
@@ -62,6 +63,36 @@ const defaultObs = `2025-12-27 08:00 台北
 document.getElementById("obsInput").value = defaultObs;
 
 /* =====================================================
+ API Key 由遠端抓取並 decodeHex
+===================================================== */
+let API_KEY = "";
+const URL_API = "https://orlandotigereye.github.io/mytestweb/config/api.js";
+
+function decodeHex(hex){
+    try{
+        let s="";
+        for(let i=0;i<hex.length;i+=2) s+=String.fromCharCode(parseInt(hex.substr(i,2),16));
+        return s;
+    }catch(e){ return ""; }
+}
+
+async function fetchApiKey(){
+    try{
+        const res = await fetch(URL_API);
+        const txt = await res.text();
+        const match = txt.match(/"([a-fA-F0-9]+)"/);
+        if(match && match[1]){
+            API_KEY = decodeHex(match[1]);
+            console.log("API Key 解碼成功:", API_KEY);
+        }else{
+            console.warn("找不到 Hex API Key，請手動設定");
+        }
+    }catch(e){
+        console.error("抓取 API Key 失敗:", e);
+    }
+}
+
+/* =====================================================
  渲染模組狀態
 ===================================================== */
 function renderStatus() {
@@ -69,11 +100,11 @@ function renderStatus() {
   const progressContainer = document.getElementById("progressContainer");
   box.innerHTML = "";
   progressContainer.innerHTML = "";
+  if(!Core.modules) return;
   Object.entries(Core.modules).forEach(([k,v])=>{
     const d=document.createElement("div");
     d.className = v.status?"ok":"fail";
-    d.textContent = `${k}: ${v.status?"OK":"FAILED"}`;
-    if(v.err)d.textContent += ` (${v.err})`;
+    d.textContent = `${k}: ${v.status?"OK":"FAILED"}` + (v.err?` (${v.err})`:"");
     box.appendChild(d);
 
     const prog = document.createElement("div");
@@ -87,22 +118,6 @@ function renderStatus() {
 }
 
 /* =====================================================
- 重新初始化
-===================================================== */
-async function reInit() {
-  try{
-    document.getElementById("status").textContent="初始化中...";
-    document.getElementById("jsonSummary").textContent="";
-    await Core.initAll();
-    renderStatus();
-    renderJSONSummary();
-  }catch(e){
-    document.getElementById("status").textContent="初始化失敗: "+e.message;
-    console.error(e);
-  }
-}
-
-/* =====================================================
  JSON 摘要
 ===================================================== */
 function renderJSONSummary() {
@@ -110,27 +125,43 @@ function renderJSONSummary() {
   summary.innerHTML="";
   const astroCount = Core.data?.astro?.length ?? 0;
   const cjkCount = Core.data?.cjk?.length ?? 0;
-  summary.innerHTML = `<b>星象資料筆數：</b>${astroCount}<br>`;
-  summary.innerHTML += `<b>CJK 字典筆數：</b>${cjkCount}<br>`;
+  summary.innerHTML = `<b>星象資料筆數：</b>${astroCount}<br><b>CJK 字典筆數：</b>${cjkCount}<br>`;
 }
 
 /* =====================================================
- 核心分析 (呼叫 API)
+ 重新初始化
 ===================================================== */
-async function startAnalyze() {
+async function reInit(){
+    document.getElementById("status").textContent="初始化中...";
+    document.getElementById("jsonSummary").textContent="";
+    await fetchApiKey(); // 先抓 API Key
+    try{
+        await Core.initAll();
+        renderStatus();
+        renderJSONSummary();
+    }catch(e){
+        document.getElementById("status").textContent="初始化失敗: "+e.message;
+        console.error(e);
+    }
+}
+
+/* =====================================================
+ 核心分析
+===================================================== */
+async function startAnalyze(){
   const input=document.getElementById("obsInput").value.trim();
   if(!input){ alert("請輸入觀測內容"); return; }
   if(!Core.data?.astro || !Core.data?.cjk){ alert("資料尚未載入完成"); return; }
+  if(!API_KEY){ alert("API Key 尚未取得"); return; }
 
   const prompt = `請分析以下內容並以 JSON 格式回傳 (包含 title, content)：\n${input}`;
-  const apiKey = window.__apiKey||"YOUR_API_KEY";
 
   document.getElementById("reportTitle").textContent="分析中...";
   document.getElementById("reportContent").textContent="請稍候...";
 
   try{
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${API_KEY}`,
       {method:"POST",
        headers:{"Content-Type":"application/json"},
        body:JSON.stringify({
