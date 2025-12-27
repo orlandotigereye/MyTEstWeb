@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<title>天象測試頁 V2</title>
+<title>天象測試頁 V3 - 範本版</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -12,26 +12,41 @@ body { font-family: system-ui; font-size: 13px; padding: 10px; background:#FFF8E
 button { margin: 6px 0; padding:5px 10px; cursor:pointer; }
 textarea { width:100%; height:120px; margin:6px 0; }
 #report { border:1px solid #C5A059; padding:10px; background:#FFFEF0; margin-top:10px; }
+.progress { height:8px; background:#EEE; border-radius:4px; overflow:hidden; margin-bottom:6px; }
+.progress-inner { height:100%; width:0%; background:#FFD700; transition:width 0.3s; }
 </style>
 
 <!-- 核心 JS -->
 <script src="https://orlandotigereye.github.io/mytestweb/public/public/core.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 </head>
 <body>
 
-<h2>🌟 天象測試頁 V2</h2>
+<h2>🌟 天象測試頁 V3 - 範本版</h2>
 
-<h3>📦 模組載入狀態</h3>
+<h3>📦 模組載入檢查面板</h3>
 <div id="status"></div>
+<div id="progressContainer"></div>
 <button onclick="reInit()">🔄 重新初始化</button>
-
-<h3>📝 輸入觀測內容</h3>
-<textarea id="obsInput" placeholder="輸入觀測內容..."></textarea>
-<button onclick="startAnalyze()">🚀 核心分析</button>
 
 <h3>📊 JSON 摘要</h3>
 <div id="jsonSummary"></div>
+
+<h3>📝 輸入觀測內容</h3>
+<textarea id="obsInput">
+2025-12-27 08:00 台北
+觀測天象：
+- 月亮：上弦
+- 太陽位置：78.5°
+- 水星：94.1°
+- 金星：81.3°
+- 火星：74.7°
+- 木星：240.6°
+- 土星：2.8°
+請分析今日天象對人事影響。
+</textarea>
+<button onclick="startAnalyze()">🚀 核心分析</button>
 
 <h3>🖼 報告導出</h3>
 <div id="report">
@@ -41,50 +56,62 @@ textarea { width:100%; height:120px; margin:6px 0; }
 </div>
 
 <script>
-/* ========================
-  渲染模組狀態
-======================== */
+/* =====================================================
+ 渲染模組狀態
+===================================================== */
 function renderStatus() {
   const box = document.getElementById("status");
+  const progressContainer = document.getElementById("progressContainer");
   box.innerHTML = "";
+  progressContainer.innerHTML = "";
   Object.entries(Core.modules).forEach(([k,v])=>{
     const d=document.createElement("div");
     d.className = v.status?"ok":"fail";
     d.textContent = `${k}: ${v.status?"OK":"FAILED"}`;
-    if(v.err)d.textContent+=` (${v.err})`;
+    if(v.err)d.textContent += ` (${v.err})`;
     box.appendChild(d);
+
+    const prog = document.createElement("div");
+    prog.className="progress";
+    const inner = document.createElement("div");
+    inner.className="progress-inner";
+    inner.style.width = v.status?"100%":"0%";
+    prog.appendChild(inner);
+    progressContainer.appendChild(prog);
   });
 }
 
-/* ========================
-  重新初始化
-======================== */
+/* =====================================================
+ 重新初始化
+===================================================== */
 async function reInit() {
-  document.getElementById("status").textContent="初始化中...";
   try{
-    await Core.initAll(); // 等待所有模組與 JSON 載入完成
+    document.getElementById("status").textContent="初始化中...";
+    document.getElementById("jsonSummary").textContent="";
+    await Core.initAll();
+    renderStatus();
+    renderJSONSummary();
   }catch(e){
-    console.error("初始化失敗:", e);
+    document.getElementById("status").textContent="初始化失敗: "+e.message;
+    console.error(e);
   }
-  renderStatus();
-  renderJSONSummary();
 }
 
-/* ========================
-  JSON 摘要
-======================== */
+/* =====================================================
+ JSON 摘要
+===================================================== */
 function renderJSONSummary() {
   const summary=document.getElementById("jsonSummary");
   summary.innerHTML="";
-  const astroCount = Core.data?.astro?.length || 0;
-  const cjkCount = Core.data?.cjk?.length || 0;
+  const astroCount = Core.data?.astro?.length ?? 0;
+  const cjkCount = Core.data?.cjk?.length ?? 0;
   summary.innerHTML = `<b>星象資料筆數：</b>${astroCount}<br>`;
   summary.innerHTML += `<b>CJK 字典筆數：</b>${cjkCount}<br>`;
 }
 
-/* ========================
-  核心分析 (呼叫 API)
-======================== */
+/* =====================================================
+ 核心分析 (呼叫 API)
+===================================================== */
 async function startAnalyze() {
   const input=document.getElementById("obsInput").value.trim();
   if(!input){ alert("請輸入觀測內容"); return; }
@@ -117,9 +144,9 @@ async function startAnalyze() {
   }
 }
 
-/* ========================
-  導出報告圖
-======================== */
+/* =====================================================
+ 導出報告圖
+===================================================== */
 async function exportReport(){
   if(!window.html2canvas){ alert("html2canvas 尚未載入"); return; }
   const el=document.getElementById("report");
@@ -130,9 +157,9 @@ async function exportReport(){
   link.click();
 }
 
-/* ========================
-  頁面初始化
-======================== */
+/* =====================================================
+ 頁面初始化
+===================================================== */
 reInit();
 </script>
 
