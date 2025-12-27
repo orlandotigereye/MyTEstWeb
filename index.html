@@ -1,34 +1,258 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Netlify Function 範例</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
-    .badge { background: #00c7b7; color: white; padding: .5rem; border-radius: .25rem; }
-    button { padding: 10px 15px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
-    pre { background: #f4f4f4; padding: 10px; border: #ddd solid 1px; border-radius: 5px; overflow-x: auto; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>整合索引面板 (含詳細備註)</title>
+    <style>
+        /* 定義全域變數與字體大小 */
+        :root {
+            --gold-primary: #ffd700;
+            --gold-dark: #b8860b;
+            --gold-light: #fffacd;
+            --text-size: 0.5rem; /* 嚴格控制 0.5rem */
+        }
+        
+        /* 背景設定：金幣輝煌與金光閃閃視覺 */
+        body {
+            background: radial-gradient(circle, #ffec8b, #daa520, #8b6508);
+            background-attachment: fixed;
+            color: #333;
+            font-family: "Microsoft JhengHei", sans-serif;
+            font-size: var(--text-size);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* 主容器 RWD 與陰影特效 */
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid var(--gold-primary);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.8), inset 0 0 10px rgba(255, 215, 0, 0.3);
+            border-radius: 8px;
+            padding: 10px;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .header { text-align: center; margin-bottom: 10px; }
+        h1 { font-size: 0.8rem; color: var(--gold-dark); margin: 5px 0; text-shadow: 1px 1px 1px #fff; }
+
+        /* 分頁標籤樣式 */
+        .tabs { display: flex; gap: 5px; margin-bottom: 10px; border-bottom: 2px solid var(--gold-primary); }
+        .tab-btn { 
+            padding: 5px 10px; cursor: pointer; background: var(--gold-light); 
+            border: 1px solid var(--gold-dark); border-bottom: none; font-size: var(--text-size);
+            border-radius: 5px 5px 0 0;
+        }
+        .tab-btn.active { background: var(--gold-primary); font-weight: bold; color: #fff; }
+
+        /* 內容區塊顯示控制 */
+        .tab-content { display: none; animation: fadeIn 0.4s ease; }
+        .tab-content.active { display: block; }
+
+        /* 通用按鈕樣式 */
+        .btn {
+            padding: 4px 10px; background: linear-gradient(to bottom, #ffd700, #b8860b);
+            color: #fff; border: 1px solid #8b6508; border-radius: 3px; cursor: pointer; 
+            font-size: var(--text-size); margin: 2px;
+        }
+        .btn:hover { filter: brightness(1.1); }
+
+        /* 程式碼與結果顯示區 */
+        pre { 
+            background: #272822; color: #f8f8f2; padding: 8px; border-radius: 4px; 
+            overflow-x: auto; font-size: 0.45rem; line-height: 1.2;
+            border-left: 5px solid var(--gold-primary);
+        }
+
+        /* 檔案列表樣式 */
+        .list-group { list-style: none; padding: 0; margin: 0; border: 1px solid #ddd; border-radius: 4px; }
+        .list-item { 
+            display: flex; align-items: center; padding: 6px; border-bottom: 1px solid #eee; 
+            transition: 0.2s;
+        }
+        .list-item:last-child { border-bottom: none; }
+        .list-item:hover { background: var(--gold-light); }
+        .list-item a { text-decoration: none; color: #0056b3; flex: 1; word-break: break-all; }
+
+        /* 分頁控制項 */
+        .pagination { display: flex; justify-content: center; gap: 3px; margin-top: 10px; flex-wrap: wrap; }
+        .pagination button { 
+            padding: 3px 7px; font-size: var(--text-size); cursor: pointer; 
+            background: #fff; border: 1px solid var(--gold-dark);
+        }
+        .pagination button.active { background: var(--gold-primary); color: white; border-color: #b8860b; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
 </head>
 <body>
-  <h1>Netlify Function 範例</h1>
-  <p>按下按鈕以測試 Netlify serverless function.</p>
-  <button id="callFunction">呼叫 Netlify Function</button>
-  <pre id="result">等待結果...</pre>
 
-  <script>
-    document.getElementById('callFunction').addEventListener('click', async () => {
-      const result = document.getElementById('result');
-      result.textContent = '正在呼叫 Function...';
-      try {
-        const response = await fetch('/.netlify/functions/hello');
+<div class="container">
+    <div class="header">
+        <h1>✨ 萬能管理索引面板 (整合版) ✨</h1>
+        <button class="btn" id="dl-btn">⬇️ 下載此頁原始碼</button>
+    </div>
+
+    <div class="tabs">
+        <div class="tab-btn active" onclick="showTab(event, 'file-tab')">GitHub 檔案庫</div>
+        <div class="tab-btn" onclick="showTab(event, 'api-tab')">Netlify 功能測試</div>
+    </div>
+
+    <div id="file-tab" class="tab-content active">
+        <div id="file-status" style="background:#fff3cd; padding:4px; margin-bottom:5px; border-radius:3px;">
+            📡 狀態：正在從 GitHub 獲取清單...
+        </div>
+        <ul id="file-list" class="list-group"></ul>
+        <div id="file-pagination" class="pagination"></div>
+    </div>
+
+    <div id="api-tab" class="tab-content">
+        <div style="background: rgba(218, 165, 32, 0.1); padding: 10px; border-radius: 5px;">
+            <h3>Serverless Function 測試</h3>
+            <p>目的：測試 /.netlify/functions/hello 是否運作正常。</p>
+            <button class="btn" id="callFunction">🚀 立即呼叫 Function</button>
+            <p>回應結果：</p>
+            <pre id="api-result">等待指令中...</pre>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * 配置參數區
+ */
+const CONFIG = {
+    OWNER: 'orlandotigereye',
+    REPO: 'mytestweb',
+    PATH: 'public/public', // 目標目錄
+    API_URL: function() { return `https://api.github.com/repos/${this.OWNER}/${this.REPO}/contents/${this.PATH}`; },
+    PAGE_SIZE: 10 // 每頁顯示 10 筆
+};
+
+let fileDataStore = []; // 儲存所有檔案資料
+
+/**
+ * 分頁切換邏輯 (Tab Switch)
+ */
+function showTab(event, tabId) {
+    // 隱藏所有分頁內容
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    // 移除所有按鈕啟用狀態
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    
+    // 顯示目標分頁並標記按鈕
+    document.getElementById(tabId).classList.add('active');
+    event.currentTarget.classList.add('active');
+}
+
+/**
+ * GitHub API 抓取邏輯
+ */
+async function fetchGithubFiles() {
+    const statusEl = document.getElementById('file-status');
+    try {
+        const response = await fetch(CONFIG.API_URL());
+        if (!response.ok) throw new Error('無法存取 GitHub API (可能超過次數或路徑錯誤)');
+        
         const data = await response.json();
-        result.textContent = JSON.stringify(data, null, 2);
-      } catch (err) {
-        result.textContent = '呼叫失敗: ' + err.message;
-      }
+        
+        // 排序：讓資料夾 (dir) 優先於檔案 (file)，然後按名稱 A-Z
+        fileDataStore = data.sort((a, b) => {
+            if (a.type === b.type) return a.name.localeCompare(b.name);
+            return a.type === 'dir' ? -1 : 1;
+        });
+
+        statusEl.innerText = `✅ 成功載入 ${fileDataStore.length} 個項目`;
+        renderFilePage(1); // 初始化顯示第一頁
+    } catch (err) {
+        statusEl.style.color = 'red';
+        statusEl.innerText = '❌ 錯誤: ' + err.message;
+    }
+}
+
+/**
+ * 渲染特定分頁的檔案列表
+ * @param {number} page 頁碼
+ */
+function renderFilePage(page) {
+    const listEl = document.getElementById('file-list');
+    const pagEl = document.getElementById('file-pagination');
+    listEl.innerHTML = '';
+    
+    // 計算當前頁面的資料範圍
+    const start = (page - 1) * CONFIG.PAGE_SIZE;
+    const end = start + CONFIG.PAGE_SIZE;
+    const itemsToShow = fileDataStore.slice(start, end);
+
+    itemsToShow.forEach(item => {
+        const li = document.createElement('li');
+        li.className = 'list-item';
+        const icon = item.type === 'dir' ? '📁' : '📄';
+        // 建立 GitHub Pages 的 Web 連結
+        const webUrl = `https://${CONFIG.OWNER}.github.io/${CONFIG.REPO}/${item.path}`;
+        
+        li.innerHTML = `
+            <span style="margin-right:8px;">${icon}</span>
+            <a href="${webUrl}" target="_blank" title="${item.path}">${item.name}</a>
+        `;
+        listEl.appendChild(li);
     });
-  </script>
+
+    // 建立分頁按鈕按鈕
+    pagEl.innerHTML = '';
+    const totalPages = Math.ceil(fileDataStore.length / CONFIG.PAGE_SIZE);
+    for (let i = 1; i <= totalPages; i++) {
+        const btn = document.createElement('button');
+        btn.innerText = i;
+        if (i === page) btn.className = 'active';
+        btn.onclick = () => renderFilePage(i);
+        pagEl.appendChild(btn);
+    }
+}
+
+/**
+ * Netlify Function 呼叫邏輯
+ */
+document.getElementById('callFunction').addEventListener('click', async () => {
+    const resBox = document.getElementById('api-result');
+    resBox.textContent = '📡 正在連線至 Serverless Function...';
+    try {
+        const response = await fetch('/.netlify/functions/hello');
+        if (!response.ok) throw new Error('Function 未部署或路徑不正確');
+        const data = await response.json();
+        resBox.textContent = JSON.stringify(data, null, 2);
+    } catch (err) {
+        // 不使用 alert，錯誤直接顯示在畫面上
+        resBox.textContent = '⚠️ 呼叫失敗: ' + err.message + '\n(備註：此功能僅在 Netlify 環境有效)';
+    }
+});
+
+/**
+ * 程式碼下載功能
+ */
+document.getElementById('dl-btn').addEventListener('click', (e) => {
+    e.preventDefault();
+    const htmlContent = document.documentElement.outerHTML;
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'admin_index.html';
+    a.click();
+    URL.revokeObjectURL(url);
+});
+
+// 初始化：啟動 GitHub 抓取
+fetchGithubFiles();
+
+</script>
 </body>
 </html>
