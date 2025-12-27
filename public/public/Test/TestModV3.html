@@ -3,163 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>乙巳集成推算 V11 - 深度全數據版</title>
+    <title>乙巳三才集成 V15 - 視覺意象版</title>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@latest/astronomy.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://orlandotigereye.github.io/mytestweb/public/public/core.js"></script>
     <style>
         :root { --bg-gold: #FFFDE7; --main-gold: #D4AF37; --deep-gold: #B8860B; --coin-gold: #FFD700; --text-brown: #3E2723; --gold-grad: linear-gradient(135deg, #FFD700 0%, #FFF176 50%, #DAA520 100%); --font-size: 0.5rem; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; background: var(--bg-gold) url('https://www.transparenttextures.com/patterns/gold-dust.png') fixed; color: var(--text-brown); font-size: var(--font-size); width: 100vw; overflow-x: hidden; }
-        header { height: 40px; background: var(--gold-grad); display: flex; justify-content: space-between; align-items: center; padding: 0 10px; border-bottom: 2px solid var(--deep-gold); position: sticky; top: 0; z-index: 1000; font-weight: 900; }
-        .status-bar { background: rgba(255,255,255,0.9); padding: 5px; display: flex; gap: 8px; border-bottom: 1px solid var(--main-gold); font-size: 0.4rem; overflow-x: auto; }
-        .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 2px; }
-        .ok { background: #2E7D32; } .fail { background: #C62828; }
+        body { font-family: 'PingFang TC', sans-serif; background: var(--bg-gold); color: var(--text-brown); font-size: var(--font-size); width: 100vw; overflow-x: hidden; }
+        header { height: 45px; background: var(--gold-grad); display: flex; justify-content: space-between; align-items: center; padding: 0 10px; border-bottom: 2px solid var(--deep-gold); font-weight: 900; }
         .nav-tabs { display: flex; background: #FFF; border-bottom: 1px solid var(--main-gold); }
         .tab { flex: 1; text-align: center; padding: 12px 0; font-weight: 900; color: #A68B5A; cursor: pointer; }
         .tab.active { background: rgba(255, 215, 0, 0.2); border-bottom: 3px solid var(--deep-gold); color: var(--text-brown); }
         .content { padding: 10px; }
         .page { display: none; } .page.active { display: block; }
-        .card { background: rgba(255,255,255,0.9); border: 1.5px solid var(--coin-gold); border-radius: 8px; padding: 10px; margin-bottom: 10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); }
-        .title-gold { color: var(--deep-gold); font-weight: 900; margin-bottom: 6px; border-left: 3px solid var(--main-gold); padding-left: 6px; border-bottom: 1px solid rgba(184, 134, 11, 0.2); }
-        textarea { width: 100%; height: 120px; border: 1px solid var(--main-gold); border-radius: 4px; padding: 6px; font-size: 0.5rem; background: #FFFEF9; font-family: monospace; }
-        .btn-p { background: var(--gold-grad); border: 1px solid var(--deep-gold); color: var(--text-brown); font-weight: 900; padding: 10px; width: 100%; border-radius: 4px; cursor: pointer; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .score-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin: 10px 0; }
-        .score-item { background: #FFF; border: 1px solid var(--coin-gold); padding: 5px; text-align: center; border-radius: 4px; }
-        .score-val { font-size: 0.8rem; font-weight: 900; color: var(--deep-gold); display: block; }
-        .energy-bar-container { height: 12px; background: #eee; border-radius: 6px; overflow: hidden; margin: 4px 0; border: 1px solid #ddd; }
-        .energy-bar { height: 100%; transition: width 0.5s; }
-        .dl-btn { position: fixed; bottom: 10px; right: 10px; width: 45px; height: 45px; background: #000; color: #fff; border-radius: 50%; font-size: 0.4rem; z-index: 3000; border: 1px solid var(--coin-gold); }
-        .report-text { white-space: pre-wrap; line-height: 1.5; font-size: 0.5rem; color: #444; }
+        .card { background: #fff; border: 1.5px solid var(--coin-gold); border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+        textarea { width: 100%; height: 100px; border: 1.5px solid var(--main-gold); border-radius: 4px; padding: 8px; font-size: 0.5rem; }
+        .btn-p { background: var(--gold-grad); border: 1px solid var(--deep-gold); color: var(--text-brown); font-weight: 900; padding: 12px; width: 100%; border-radius: 6px; cursor: pointer; margin-top: 10px; }
+        
+        /* 意象圖畫布樣式 */
+        .visual-container { display: flex; flex-direction: column; gap: 10px; }
+        .visual-card { 
+            width: 300px; height: 180px; background: linear-gradient(145deg, #ffffff, #fff9c4); 
+            border: 4px double var(--main-gold); border-radius: 12px; position: relative; 
+            overflow: hidden; box-shadow: 4px 4px 15px rgba(0,0,0,0.1); padding: 15px; margin: 0 auto;
+        }
+        .visual-bg { position: absolute; top:-20px; right:-20px; font-size: 5rem; color: rgba(212, 175, 55, 0.1); font-weight: 900; z-index: 0; }
+        .visual-header { border-bottom: 1px solid var(--main-gold); margin-bottom: 8px; font-weight: 900; display: flex; justify-content: space-between; z-index: 1; position: relative; }
+        .visual-body { font-size: 0.6rem; z-index: 1; position: relative; color: #5D4037; height: 85px; }
+        .visual-footer { font-size: 0.4rem; color: var(--deep-gold); border-top: 1px dashed var(--main-gold); padding-top: 5px; z-index: 1; position: relative; display: flex; align-items: center; }
+        .logo-small { width: 15px; height: 15px; background: var(--gold-grad); border-radius: 50%; display: inline-block; margin-right: 5px; border: 1px solid var(--deep-gold); }
+
+        .dl-btn { position: fixed; bottom: 10px; right: 10px; width: 45px; height: 45px; background: #000; color: #fff; border-radius: 50%; font-size: 0.4rem; z-index: 3000; border: 1px solid var(--coin-gold); text-align: center; display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
-<header>🔱 乙巳集成推算 V11</header>
-<div class="status-bar" id="mod-status"></div>
-<nav class="nav-tabs"><div class="tab active" onclick="goTab(0)">推演輸入</div><div class="tab" onclick="goTab(1)">全數據報告</div></nav>
+
+<header>🔱 乙巳意象集成 V15</header>
+
+<nav class="nav-tabs">
+    <div class="tab active" onclick="goTab(0)">推演</div>
+    <div class="tab" onclick="goTab(1)">意象圖</div>
+</nav>
+
 <div class="content">
     <div id="p0" class="page active">
         <div class="card">
-            <div class="title-gold">觀測數據錄入</div>
-            <textarea id="astroInput" placeholder="請貼入觀測數據，例如：
-最近行星: Saturn
-Saturn: 1.45 AU
-月相: 上弦
+            <div style="display:flex; gap:5px; margin-bottom:5px;">
+                <button class="btn-p" style="margin:0; flex:1;" onclick="paste()">📋 貼上</button>
+                <button class="btn-p" style="margin:0; flex:1; background:#f5f5f5;" onclick="clearIn()">🗑️ 清空</button>
+            </div>
+            <textarea id="main-in">最近星體: Mars
+月相: 下弦
 干支: 乙巳 戊子 丁卯 癸卯
-木:30 火:40 土:20 金:10 水:50">最近行星: Saturn
-Saturn: 1.45
-月相: 上弦
-干支: 乙巳 戊子 丁卯 癸卯
-木:30 火:40 土:20 金:15 水:45</textarea>
-            <button class="btn-p" onclick="runIntegratedAnalysis()">🚀 啟動集成引擎推演</button>
+五行: 木:20 火:50 土:10 金:5 水:15
+字典關鍵字: 犯, 掩</textarea>
+            <button class="btn-p" onclick="generateVisuals()">🚀 生成三才意象圖</button>
         </div>
-        <div class="card" id="error-note" style="display:none; color:red;"></div>
     </div>
+
     <div id="p1" class="page">
-        <div class="card">
-            <div class="title-gold">【五模組核心判分】</div>
-            <div class="score-row">
-                <div class="score-item"><span>凶吉得分</span><span id="v-score" class="score-val">--</span></div>
-                <div class="score-item"><span>急緩指標</span><span id="v-urgency" class="score-val">--</span></div>
-                <div class="score-item"><span>事態屬性</span><span id="v-type" class="score-val">--</span></div>
+        <div class="visual-container" id="visual-output">
+            <div class="visual-card" id="card-heaven">
+                <div class="visual-bg">天</div>
+                <div class="visual-header"><span>【天時・星命卷】</span><span id="v1-score"></span></div>
+                <div class="visual-body" id="v1-body"></div>
+                <div class="visual-footer"><div class="logo-small"></div> 乙巳全集成 V15 認證</div>
+            </div>
+            <div class="visual-card" id="card-earth">
+                <div class="visual-bg">地</div>
+                <div class="visual-header"><span>【地氣・局變卷】</span><span id="v2-urg"></span></div>
+                <div class="visual-body" id="v2-body"></div>
+                <div class="visual-footer"><div class="logo-small"></div> 乙巳全集成 V15 認證</div>
+            </div>
+            <div class="visual-card" id="card-human">
+                <div class="visual-bg">人</div>
+                <div class="visual-header"><span>【人運・決策卷】</span><span id="v3-stage"></span></div>
+                <div class="visual-body" id="v3-body"></div>
+                <div class="visual-footer"><div class="logo-small"></div> 乙巳全集成 V15 認證</div>
             </div>
         </div>
-        <div class="card">
-            <div class="title-gold">【能量與長生分析】</div>
-            <div id="energy-zone"></div>
-            <div id="stage-zone" style="margin-top:8px; font-weight:bold;"></div>
-        </div>
-        <div class="card">
-            <div class="title-gold">【深度推論原文】</div>
-            <div id="full-report" class="report-text">等待數據錄入...</div>
-        </div>
+        <button class="btn-p" onclick="exportAll()">📥 一鍵導出意象圖集</button>
     </div>
 </div>
-<button class="dl-btn" onclick="downloadThis()">下載<br>代碼</button>
+
+<div class="dl-btn" onclick="downloadCode()">下載<br>代碼</div>
 
 <script>
-    let API_KEY = ""; let IS_AI_OK = false;
-    const FIVE_ELEMENTS = { "甲":"木","乙":"木","丙":"火","丁":"火","戊":"土","己":"土","庚":"金","辛":"金","壬":"水","癸":"水" };
-    const STAGE_MAP = { "丙": { "寅":"長生", "卯":"沐浴", "子":"胎" }, "丁": { "卯":"沐浴", "子":"胎", "巳":"帝旺" } };
-    const ECI_CONST = { Planets: { "Mars": -7, "Saturn": -6, "Jupiter": 9, "Venus": 6, "Mercury": 5 }, Urgency: { "上弦": 33, "下弦": 67, "滿月": 50, "新月": 10 } };
+    const ECI_DB = {
+        Stars: { "Mars": -7, "Saturn": -17, "Jupiter": 9, "Venus": 6, "Sun": 8 },
+        Dict: { "犯": "氣場沖剋，宜靜不宜動", "掩": "隱憂遮蔽，防小人暗算", "守": "根基穩固，利於守成" }
+    };
 
-    async function init() {
-        try {
-            const res = await fetch("https://orlandotigereye.github.io/mytestweb/config/api.js");
-            const txt = await res.text();
-            const match = txt.match(/"([a-fA-F0-9]+)"/);
-            if(match) {
-                API_KEY = decodeHex(match[1]);
-                const check = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${API_KEY}`);
-                IS_AI_OK = check.ok;
-            }
-        } catch(e) { IS_AI_OK = false; }
-        renderStatus();
-    }
+    function goTab(i){ $('.page').removeClass('active'); $(`#p${i}`).addClass('active'); $('.tab').removeClass('active').eq(i).addClass('active'); }
+    function clearIn(){ $('#main-in').val(''); }
+    async function paste(){ const t = await navigator.clipboard.readText(); $('#main-in').val(t); }
 
-    function decodeHex(h){ let s=""; for(let i=0;i<h.length;i+=2) s+=String.fromCharCode(parseInt(h.substr(i,2),16)); return s; }
-    function renderStatus(){
-        const con = $('#mod-status').empty();
-        con.append(`<span><i class="status-dot ${IS_AI_OK?'ok':'fail'}"></i>AI_Key</span>`);
-        con.append(`<span><i class="status-dot ok"></i>乙巳V10.5</span>`);
-        con.append(`<span><i class="status-dot ok"></i>集成模組J</span>`);
-    }
-
-    function runIntegratedAnalysis() {
-        const raw = $('#astroInput').val();
-        if(!raw.trim()) return;
-
-        // 1. 解析數據 (來自 God251224_J 邏輯)
-        const moonPhase = raw.match(/月相[：\s]*(.*)/)?.[1]?.trim() || "未知";
-        const gzMatch = raw.match(/干支[：\s]*(.*)/);
-        const gzParts = gzMatch ? gzMatch[1].trim().split(/\s+/) : ["乙巳","戊子","丁卯","癸卯"];
-        const energies = {
-            木: parseInt(raw.match(/木:(\d+)/)?.[1] || 0),
-            火: parseInt(raw.match(/火:(\d+)/)?.[1] || 0),
-            土: parseInt(raw.match(/土:(\d+)/)?.[1] || 0),
-            金: parseInt(raw.match(/金:(\d+)/)?.[1] || 0),
-            水: parseInt(raw.match(/水:(\d+)/)?.[1] || 0)
-        };
-
-        // 2. 乙巳占判分 (來自 乙巳占_V10_5 邏輯)
-        let score = 0;
-        Object.entries(ECI_CONST.Planets).forEach(([p, v]) => { if(raw.includes(p)) score += v; });
-        let urgency = ECI_CONST.Urgency[moonPhase] || 50;
-
-        // 3. 長生推算
-        const riGan = gzParts[2] ? gzParts[2][0] : "丁";
-        const shiZhi = gzParts[3] ? gzParts[3][1] : "卯";
-        const stage = STAGE_MAP[riGan]?.[shiZhi] || "平";
-
-        // 更新 UI
-        $('#v-score').text((score > 0 ? "+" : "") + score);
-        $('#v-urgency').text(urgency);
-        $('#v-type').text(urgency > 60 ? "急劇變革" : "穩定發展");
-
-        // 渲染五行能量圖
-        let eHtml = "";
-        const colors = { 木:"#10b981", 火:"#ef4444", 土:"#f59e0b", 金:"#94a3b8", 水:"#3b82f6" };
-        Object.entries(energies).forEach(([k, v]) => {
-            eHtml += `<div>${k}: ${v}%</div><div class="energy-bar-container"><div class="energy-bar" style="width:${v}%; background:${colors[k]}"></div></div>`;
-        });
-        $('#energy-zone').html(eHtml);
-        $('#stage-zone').html(`長生狀態：${riGan}見${shiZhi} ➔ <span style="color:var(--deep-gold)">${stage}</span>`);
-
-        // 生成報告
-        let rpt = `【集成推論結果】\n`;
-        rpt += `● 乙巳占：得分 ${score}，當前氣數為${score >= 0 ? '旺' : '衰'}。\n`;
-        rpt += `● 事態：急緩度為 ${urgency}，建議${urgency > 50 ? '速決以免夜長夢多' : '靜待時機成熟'}。\n`;
-        rpt += `● 命理：日干${riGan}處於${stage}位，能量流動以${Object.keys(energies).reduce((a,b)=>energies[a]>energies[b]?a:b)}為主導。\n`;
-        rpt += `● 綜合：天時與地氣${(score > 0 && stage !== '胎') ? '感應良好，大吉之兆' : '稍有滯礙，宜保守行事'}。`;
+    function generateVisuals() {
+        const input = $('#main-in').val();
         
-        $('#full-report').text(rpt);
+        // 1. 天時計算 (乙巳 V10.5)
+        let heavenScore = 0;
+        Object.entries(ECI_DB.Stars).forEach(([k,v]) => { if(input.includes(k)) heavenScore += v; });
+        $('#v1-score').text(`得分: ${heavenScore}`);
+        $('#v1-body').html(`星象感應：${heavenScore < 0 ? '天星示警，氣數收斂' : '天降祥瑞，氣數升騰'}。<br>核心影響：${input.match(/最近星體: (.*)/)?.[1] || '未知'}運轉中。<br>關鍵字：${Object.keys(ECI_DB.Dict).filter(k=>input.includes(k)).join(', ')}`);
+
+        // 2. 地氣計算 (急緩度)
+        const urg = input.includes("下弦") ? "67% (急變)" : "33% (緩進)";
+        $('#v2-urg').text(`指標: ${urg}`);
+        $('#v2-body').html(`當前月相：${input.match(/月相: (.*)/)?.[1] || '觀測中'}<br>地氣走向：${urg.includes("急") ? '動盪頻繁，速戰速決' : '趨勢穩定，事緩則圓'}。<br>字典註解：${Object.keys(ECI_DB.DB).filter(k=>input.includes(k)).map(k=>ECI_DB.Dict[k]).join('；')}`);
+
+        // 3. 人運決策 (God251224_J)
+        const five = input.match(/火:(\d+)/)?.[1] || 0;
+        $('#v3-stage').text(`決策權重: ${five}%`);
+        $('#v3-body').html(`<b>決策建議：</b><br>${heavenScore < -5 ? '🛑 暫緩執行：當前天時不利，盲目擴張必有損傷。' : '✅ 順勢而行：雖然有波折，但根基尚存，宜穩步推進。'}<br><b>五行提醒：</b>火能處於 ${five}%，防急躁情緒誤事。`);
+
         goTab(1);
     }
 
-    function goTab(i){ $('.page').removeClass('active'); $(`#p${i}`).addClass('active'); $('.tab').removeClass('active').eq(i).addClass('active'); }
-    function downloadThis(){ const b=new Blob([document.documentElement.outerHTML],{type:'text/html'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='Integrated_Astro_V11.html'; a.click(); }
-    $(document).ready(init);
+    async function exportAll() {
+        const targets = ['card-heaven', 'card-earth', 'card-human'];
+        for (let id of targets) {
+            const canvas = await html2canvas(document.getElementById(id), { backgroundColor: null, scale: 2 });
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL();
+            link.download = `${id}_${Date.now()}.png`;
+            link.click();
+        }
+    }
+
+    function downloadCode(){ const b=new Blob([document.documentElement.outerHTML],{type:'text/html'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='Golden_Visual_V15.html'; a.click(); }
 </script>
 </body>
 </html>
