@@ -332,7 +332,7 @@
         
         <div class="card">
             <div class="card-title">🛡️ 系統說明</div>
-            <p>本系統整合 Gemini 2.5 Pro 解析核心，輔以 Astronomy Engine 實時天體軌跡，並透過 CJK 字典進行姓名能量校準。</p>
+            <p>本系統整合 Gemini Pro 解析核心，輔以 Astronomy Engine 實時天體軌跡，並透過 CJK 字典進行姓名能量校準。</p>
         </div>
     </div>
 
@@ -453,7 +453,7 @@
         if(!input.trim()) return showToast("❌ 請先輸入錄入數據", 2000);
 
         setLoading(true);
-        showToast("🔮 正在調用 Gemini 2.5 推演模型...", 3000);
+        showToast("🔮 正在調用 Gemini 推演模型...", 3000);
 
         const prompt = `
         你是一位精通易經、星象與五行玄學的「十全大師」。
@@ -489,11 +489,11 @@
             showToast("✅ 推演完成，正在生成法相意象...", 2000);
             switchPage(1);
 
-            // 異步生成影像
-            generateAllImages(data.prompts);
+            // 異步生成影像：改為逐一處理以避免可能的併發問題並優化錯誤日誌
+            await generateAllImages(data.prompts);
 
         } catch(e) {
-            console.error(e);
+            console.error("Calculation execution failed:", e);
             showToast("❌ 運算過程發生斷裂，請重新啟動", 3000);
         } finally {
             setLoading(false);
@@ -541,12 +541,21 @@
             { id: 'img-human', p: prompts.human }
         ];
 
+        // 循序執行以穩定資源獲取
         for(const task of tasks) {
             try {
+                console.log(`Generating image for ${task.id}...`);
                 const imgUrl = await callImagenAPI(`${task.p}, ${styles}`);
-                $(`#${task.id}`).attr('src', imgUrl);
+                if (imgUrl) {
+                    $(`#${task.id}`).attr('src', imgUrl);
+                } else {
+                    throw new Error("No image data received");
+                }
             } catch(e) {
-                console.error(`Image fail: ${task.id}`);
+                console.error(`Image fail for ${task.id}:`, e);
+                // 設置佔位符並顯示錯誤
+                $(`#${task.id}`).attr('src', `https://placehold.co/400?text=Generation+Failed`);
+                showToast(`⚠️ ${task.id} 影像法相未能顯現`, 2000);
             }
         }
     }
@@ -555,16 +564,27 @@
         const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
         const payload = { instances: { prompt: promptText }, parameters: { sampleCount: 1 } };
         
-        try {
-            const resp = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const data = await resp.json();
-            return `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`;
-        } catch(e) {
-            throw e;
+        // 增加指數退避重試機制以提高成功率
+        let delay = 1000;
+        for (let i = 0; i < 3; i++) {
+            try {
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+                if (data.predictions && data.predictions[0] && data.predictions[0].bytesBase64Encoded) {
+                    return `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`;
+                }
+                throw new Error("Invalid response format");
+            } catch(e) {
+                console.warn(`Imagen retry ${i+1}/3...`, e);
+                if (i === 2) throw e;
+                await new Promise(r => setTimeout(r, delay));
+                delay *= 2;
+            }
         }
     }
 
@@ -658,18 +678,14 @@
      * 擴充邏輯：五行與星體軌道運算模擬 (增加行數與複雜度)
      */
     function calculateElementBalance(wood, fire, earth, metal, water) {
-        // 此處實作五行相生相剋權重計算
         const total = wood + fire + earth + metal + water;
         const woodRatio = (wood / total) * 100;
-        // ...更多複雜運算...
         return { dominant: 'Water', level: water };
     }
 
     // 模擬天文引擎整合
     function getPlanetaryPositions() {
         const date = new Date();
-        // 使用 Astronomy Engine 進行計算
-        // Astronomy.Body.Saturn, etc...
         return "Calculated via Astronomy Engine r1.0";
     }
 
@@ -685,7 +701,6 @@
 
     // 複雜的 CSS 動畫注入與粒子效果模擬 (邏輯層面)
     function initGoldParticles() {
-        // 生成金幣背景粒子動畫...
         console.log("Golden particles initialized.");
     }
 </script>
