@@ -3,19 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>金碧十全 G-4.5 旗艦版 (945 Lines Edition)</title>
-    <!-- 引用外部標準庫 -->
+    <title>金碧十全 G-4.5 診斷版</title>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@latest/astronomy.browser.min.js"></script>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
-        window.fb = { initializeApp, getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc, query, orderBy, limit };
-    </script>
     <style>
-        /* 嚴格控制變數與 0.5rem 字體 */
         :root {
             --bg-gold: #FFFDE7;
             --main-gold: #D4AF37;
@@ -24,557 +16,267 @@
             --text-brown: #3E2723;
             --gold-grad: linear-gradient(135deg, #FFD700 0%, #FFF176 50%, #DAA520 100%);
             --font-size: 0.5rem;
-            --card-bg: rgba(255, 255, 255, 0.95);
         }
-        
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
-        
         body {
-            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
-            background: var(--bg-gold) url('https://www.transparenttextures.com/patterns/gold-dust.png') fixed;
+            font-family: 'PingFang TC', sans-serif;
+            background: var(--bg-gold) url('https://www.transparenttextures.com/patterns/gold-dust.png');
             color: var(--text-brown);
             font-size: var(--font-size);
-            line-height: 1.6;
-            width: 100vw; 
-            overflow-x: hidden;
-            min-height: 100vh;
+            line-height: 1.5;
+            width: 100vw; overflow-x: hidden;
         }
-
-        /* 右側懸浮 Logo 區 */
-        .side-logo {
-            position: fixed;
-            right: 12px;
-            top: 65px;
-            width: 45px;
-            height: 45px;
-            background: var(--gold-grad);
-            border: 2.5px solid var(--deep-gold);
-            border-radius: 50%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-weight: 900;
-            font-size: 0.55rem;
-            box-shadow: 0 4px 12px rgba(184, 134, 11, 0.4);
-            z-index: 1001;
-            animation: pulse 2.5s infinite;
-        }
-        .side-logo span { font-size: 0.35rem; line-height: 1; }
-
-        @keyframes pulse {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.7); }
-            70% { transform: scale(1.1); box-shadow: 0 0 0 12px rgba(212, 175, 55, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
-        }
-
         header {
-            height: 55px; background: var(--gold-grad);
+            height: 50px; background: var(--gold-grad);
             display: flex; justify-content: space-between; align-items: center;
-            padding: 0 15px; border-bottom: 3px solid var(--deep-gold);
+            padding: 0 10px; border-bottom: 2px solid var(--deep-gold);
             position: sticky; top: 0; z-index: 1000;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.15);
         }
-
-        .nav-tabs {
-            display: flex; background: #FFF; border-bottom: 2.5px solid var(--main-gold);
-            position: sticky; top: 55px; z-index: 999;
-            width: 100%;
+        .status-bar {
+            background: rgba(255,255,255,0.8); padding: 5px 10px;
+            display: flex; gap: 10px; border-bottom: 1px solid var(--main-gold);
+            font-size: 0.45rem; overflow-x: auto; white-space: nowrap;
         }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 3px; }
+        .dot-ok { background: #2E7D32; }
+        .dot-err { background: #C62828; }
+        .dot-wait { background: #F9A825; }
 
-        .tab {
-            flex: 1; text-align: center; padding: 12px 0; font-weight: 900;
-            color: #A68B5A; cursor: pointer; font-size: var(--font-size);
-            transition: all 0.3s;
-            border-right: 1px solid #f0f0f0;
-        }
+        .nav-tabs { display: flex; background: #FFF; border-bottom: 1px solid var(--main-gold); position: sticky; top: 72px; z-index: 999; }
+        .tab { flex: 1; text-align: center; padding: 10px 0; font-weight: 900; color: #A68B5A; cursor: pointer; }
+        .tab.active { background: rgba(255, 215, 0, 0.2); border-bottom: 3px solid var(--deep-gold); color: var(--text-brown); }
 
-        .tab.active { background: rgba(255, 215, 0, 0.3); border-bottom: 4px solid var(--deep-gold); color: var(--text-brown); }
+        .content { padding: 10px; padding-bottom: 80px; }
+        .page { display: none; }
+        .page.active { display: block; }
 
-        .progress-container { 
-            padding: 10px 15px; 
-            background: #FFF9C4; 
-            border-bottom: 2px solid var(--coin-gold);
-            position: sticky;
-            top: 100px;
-            z-index: 998;
-        }
-
-        .progress-bar { height: 10px; background: #e0e0e0; border-radius: 5px; overflow: hidden; margin-top: 6px; border: 1px solid #ccc; }
-        .progress-fill { height: 100%; background: var(--gold-grad); width: 0%; transition: width 0.5s cubic-bezier(0.1, 0.7, 1.0, 0.1); }
-
-        .content-area { padding: 15px; padding-bottom: 100px; }
-        .page { display: none; opacity: 0; }
-        .page.active { display: block; opacity: 1; transition: opacity 0.6s ease; }
-
-        .card {
-            background: var(--card-bg); 
-            border: 2px solid var(--coin-gold);
-            border-radius: 14px; 
-            padding: 18px; 
-            margin-bottom: 18px;
-            box-shadow: 5px 5px 18px rgba(184, 134, 11, 0.2);
-            position: relative;
-        }
-
-        .title-gold {
-            color: var(--deep-gold);
-            font-weight: 900;
-            border-left: 5px solid var(--main-gold);
-            padding-left: 10px;
-            margin-bottom: 12px;
-            font-size: 0.55rem;
-            text-shadow: 1px 1px 0px rgba(255,255,255,0.8);
-        }
-
-        textarea {
-            width: 100%; height: 160px; border: 2px solid var(--main-gold);
-            border-radius: 10px; padding: 12px; font-size: var(--font-size);
-            background: #FFFEF5; resize: none; outline: none;
-            color: var(--text-brown);
-            line-height: 1.8;
-            font-family: 'Courier New', monospace;
-        }
-
-        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-
-        .btn {
-            width: 100%; padding: 14px; border: none; border-radius: 10px;
-            font-weight: 900; font-size: var(--font-size); cursor: pointer; 
-            text-transform: uppercase; letter-spacing: 1px;
-            transition: all 0.2s;
-            display: flex; align-items: center; justify-content: center; gap: 6px;
-        }
-
-        .btn:active { transform: translateY(3px); box-shadow: none !important; }
-        .btn-primary { background: var(--gold-grad); color: var(--text-brown); border: 2.5px solid var(--deep-gold); box-shadow: 0 5px 0 var(--deep-gold); }
-        .btn-secondary { background: #f5f5f5; color: #666; border: 2px solid #ccc; box-shadow: 0 4px 0 #999; }
-        .btn-action { background: #FFF8E1; border: 1.5px solid var(--main-gold); padding: 8px; font-size: 0.45rem; border-radius: 6px; }
-        .btn-mini { width: auto; padding: 6px 12px; font-size: 0.45rem; background: #FFF; border: 1.5px solid var(--main-gold); border-radius: 6px; }
-
-        /* 意象圖區域 */
-        .visual-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
-        .visual-item { position: relative; border-radius: 12px; overflow: hidden; border: 3px solid var(--main-gold); background: #fdfdfd; min-height: 200px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .visual-label { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.7); color: gold; padding: 4px 10px; border-radius: 6px; font-weight: 900; z-index: 2; border: 1px solid gold; }
-        .visual-img { width: 100%; height: auto; display: block; min-height: 200px; object-fit: cover; }
-
-        /* 下方總結區 */
-        .summary-footer {
-            background: var(--gold-grad);
-            border: 3px solid var(--deep-gold);
-            padding: 20px;
-            margin-top: 25px;
-            border-radius: 15px;
-            font-weight: 700;
-            color: var(--text-brown);
-            box-shadow: 0 -5px 15px rgba(212, 175, 55, 0.3);
-        }
-
-        #msg-box { position: fixed; bottom: 25px; width: 92%; left: 4%; z-index: 2000; pointer-events: none; }
-        .msg-item { background: rgba(62, 39, 35, 0.95); color: #FFD700; padding: 10px 16px; border-radius: 8px; margin-top: 8px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4); border: 1.5px solid var(--coin-gold); animation: slideUp 0.3s ease-out; }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .card { background: #FFF; border: 1.5px solid var(--coin-gold); border-radius: 8px; padding: 10px; margin-bottom: 10px; box-shadow: 2px 2px 8px rgba(0,0,0,0.05); }
+        .title-gold { color: var(--deep-gold); font-weight: 900; margin-bottom: 8px; border-left: 3px solid var(--main-gold); padding-left: 5px; }
         
-        #env-lock { 
-            position: fixed; inset: 0; background: rgba(255,253,231,0.99); z-index: 9999;
-            color: var(--deep-gold); display: none; align-items: center; justify-content: center; text-align: center; padding: 40px;
-        }
+        textarea { width: 100%; height: 120px; border: 1px solid var(--main-gold); border-radius: 5px; padding: 8px; font-size: var(--font-size); background: #FFFEF9; resize: none; }
+        
+        .btn-row { display: flex; gap: 5px; margin: 8px 0; }
+        .btn { border: none; border-radius: 5px; font-weight: 900; font-size: var(--font-size); cursor: pointer; padding: 8px; transition: 0.2s; }
+        .btn-p { background: var(--gold-grad); color: var(--text-brown); border: 1px solid var(--deep-gold); width: 100%; }
+        .btn-s { background: #FFF; border: 1px solid var(--main-gold); flex: 1; }
+        .btn-d { background: #FFF0F0; border: 1px solid #C62828; color: #C62828; flex: 1; }
 
-        .loader-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; gap: 10px; }
-        .loader {
-            border: 5px solid #f3f3f3; border-top: 5px solid var(--main-gold);
-            border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #log-area { position: fixed; bottom: 10px; left: 5%; width: 90%; z-index: 2000; pointer-events: none; }
+        .log-msg { pointer-events: auto; background: rgba(62, 39, 35, 0.9); color: #FFD700; padding: 6px 12px; border-radius: 4px; margin-top: 4px; font-size: 0.45rem; border: 1px solid var(--coin-gold); animation: slideIn 0.3s; }
 
-        /* 卷軸美化 */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: var(--bg-gold); }
-        ::-webkit-scrollbar-thumb { background: var(--main-gold); border-radius: 10px; }
+        .visual-box { background: #000; border: 1px solid var(--main-gold); aspect-ratio: 16/9; margin-top: 10px; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .visual-box img { width: 100%; height: 100%; object-fit: cover; }
+        .visual-tag { position: absolute; top: 2px; left: 2px; background: rgba(0,0,0,0.5); color: gold; padding: 1px 4px; border-radius: 2px; }
+
+        @keyframes slideIn { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     </style>
 </head>
 <body>
 
-<div id="env-lock">
-    <div class="card" style="max-width:320px;">
-        <h2 style="font-size: 0.9rem;">🛡️ 安全沙盒啟動</h2>
-        <hr style="margin:15px 0; border:1.5px solid var(--coin-gold);">
-        <p>偵測到非授權執行路徑。<br>十全雲端 API 需在專屬 Immersive 環境運行。<br>目前僅提供數據暫存模式。</p>
-        <button class="btn btn-primary" style="margin-top:20px;" onclick="$('#env-lock').fadeOut()">我知道了</button>
-    </div>
-</div>
-
-<div class="side-logo">
-    G45
-    <span>TEN-FULL</span>
-</div>
-
 <header>
-    <div style="font-weight:900; display:flex; align-items:center; gap:8px;">
-        <span style="font-size:0.8rem;">🔱</span> 金碧十全全算術 Pro
-    </div>
-    <div style="display:flex; gap:5px;">
-        <button class="btn-mini" onclick="downloadCode()">💾 下載</button>
-    </div>
+    <div style="font-weight:900;">🔱 十全全算術 Pro</div>
+    <button class="btn-s" style="padding:2px 6px;" onclick="downloadThis()">💾 下載</button>
 </header>
 
-<div class="progress-container">
-    <div style="display:flex; justify-content:space-between; font-weight:900; color: var(--deep-gold);">
-        <span id="step-text">算術天盤已歸位</span>
-        <span id="step-percent">0%</span>
-    </div>
-    <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+<div class="status-bar" id="sys-status">
+    <span><i class="status-dot dot-wait" id="dot-key"></i>Key: 檢查中</span>
+    <span><i class="status-dot dot-wait" id="dot-cjk"></i>CJK: 載入中</span>
+    <span><i class="status-dot dot-wait" id="dot-astro"></i>Astro: 載入中</span>
 </div>
 
 <nav class="nav-tabs">
-    <div class="tab active" onclick="switchTab(0)">天機錄入</div>
-    <div class="tab" onclick="switchTab(1)">全算分析</div>
-    <div class="tab" onclick="switchTab(2)">三才意象</div>
-    <div class="tab" onclick="switchTab(3)">雲端卷軸</div>
+    <div class="tab active" onclick="goTab(0)">輸入</div>
+    <div class="tab" onclick="goTab(1)">報告</div>
+    <div class="tab" onclick="goTab(2)">意象</div>
 </nav>
 
-<div class="content-area">
-    <!-- 頁面 0: 輸入 -->
+<div class="content">
     <div id="p0" class="page active">
         <div class="card">
-            <div class="title-gold">📜 十全全算術錄入</div>
-            <div style="display:flex; gap:5px; margin-bottom:10px;">
-                <button class="btn-action" onclick="loadTemplate()">📋 載入範本</button>
-                <button class="btn-action" onclick="pasteFromClipboard()">📥 貼上剪貼簿</button>
-                <button class="btn-action" onclick="clearInput()" style="color: #c62828;">🧹 一鍵清除</button>
+            <div class="title-gold">天機錄入</div>
+            <div class="btn-row">
+                <button class="btn-s" onclick="setTpl()">📋 範本</button>
+                <button class="btn-s" onclick="doPaste()">📥 貼上</button>
+                <button class="btn-d" onclick="doClear()">🧹 清除</button>
             </div>
-            <textarea id="inp-data" placeholder="請在此輸入或貼上天機數據..."></textarea>
-            <button id="main-run-btn" class="btn btn-primary" style="margin-top:15px;" onclick="runComprehensiveProcess()">
-                🚀 啟動十全全算術推演
-            </button>
-        </div>
-        
-        <div class="card">
-            <div class="title-gold">🔍 核心狀態監測</div>
-            <div style="display:flex; flex-direction:column; gap:8px;">
-                <div>📍 執行域：<span id="env-tag" style="color:var(--deep-gold); font-weight:900;">...</span></div>
-                <div>📡 字典庫：<span id="dict-status" style="font-weight:900;">連線中...</span></div>
-                <div>☁️ 雲端權限：<span id="auth-status" style="font-weight:900;">尚未授權</span></div>
-            </div>
-        </div>
-
-        <div class="card" style="border-style: dashed; opacity: 0.8;">
-            <p>※ 本系統整合 D3.js 座標計算、Astronomy Engine 星圖模組、及 Gemini 2.5 語言模型進行深度三才意象判讀。</p>
+            <textarea id="main-in" placeholder="請輸入占卜數據..."></textarea>
+            <button class="btn btn-p" id="run-btn" onclick="runAll()">🚀 啟動全算推演</button>
         </div>
     </div>
 
-    <!-- 頁面 1: 報告 -->
     <div id="p1" class="page">
         <div class="card">
-            <div class="title-gold">📝 乾坤十全全算術報告</div>
-            <div id="report-content" style="min-height:300px; white-space:pre-wrap; line-height:2;">尚未進行推演。</div>
+            <div class="title-gold">全算報告分析</div>
+            <div id="out-report" style="min-height:150px; font-size:0.5rem; color:#444;">尚未執行分析。</div>
         </div>
     </div>
 
-    <!-- 頁面 2: 意象 -->
     <div id="p2" class="page">
-        <div class="visual-grid">
-            <div class="visual-item">
-                <div class="visual-label">【天】天機顯象</div>
-                <div id="loader-1" class="loader-container" style="display:none;"><div class="loader"></div><p>描繪天意中...</p></div>
-                <img id="img-sky" class="visual-img" style="display:none;">
-            </div>
-            <div class="visual-item">
-                <div class="visual-label">【地】地脈結氣</div>
-                <div id="loader-2" class="loader-container" style="display:none;"><div class="loader"></div><p>凝聚地氣中...</p></div>
-                <img id="img-earth" class="visual-img" style="display:none;">
-            </div>
-            <div class="visual-item">
-                <div class="visual-label">【人】人和感應</div>
-                <div id="loader-3" class="loader-container" style="display:none;"><div class="loader"></div><p>感應人氣中...</p></div>
-                <img id="img-human" class="visual-img" style="display:none;">
-            </div>
+        <div class="card">
+            <div class="title-gold">三才視覺意象</div>
+            <div class="visual-box"><div class="visual-tag">天</div><img id="v1"></div>
+            <div class="visual-box"><div class="visual-tag">地</div><img id="v2"></div>
+            <div class="visual-box"><div class="visual-tag">人</div><img id="v3"></div>
         </div>
-        
-        <div id="final-summary-box" class="summary-footer" style="display:none;">
-            <div class="title-gold" style="color:var(--text-brown); border-color:var(--text-brown); margin-bottom:15px;">🔮 十全全算術總結</div>
-            <div id="summary-text" style="font-size:0.55rem; line-height:1.8;"></div>
-        </div>
-    </header>
-
-    <!-- 頁面 3: 歷史 -->
-    <div id="p3" class="page">
-        <div class="title-gold">📜 雲端卷軸歷史</div>
-        <div id="history-list"></div>
     </div>
 </div>
 
-<div id="msg-box"></div>
+<div id="log-area"></div>
 
 <script>
-    /**
-     * @file G_PRO_945_GOLD.html
-     * @description 十全全算術專業版 - 旗艦功能擴展。
-     */
+    const apiKey = ""; // 保持空字串，環境自動注入
+    const dicts = {
+        cjk: "https://raw.githubusercontent.com/max32002/chinese_dictionary/0db110bb3dbe335a956732413557a710ef6901dc/Dictionary.json",
+        astro: "https://raw.githubusercontent.com/orlandotigereye/Analy13/refs/heads/main/astrology_merged.json"
+    };
 
-    const apiKey = ""; 
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'gold-arithmetic-945-v2';
-    const isGemini = typeof __app_id !== 'undefined';
-    const DICT_URL = "https://raw.githubusercontent.com/orlandotigereye/Analy13/refs/heads/main/astrology_merged.json";
+    let dataCJK = null;
+    let dataAstro = null;
 
-    let db, auth, user;
-    let astrologyDict = null;
+    function pushLog(m, type="info") {
+        const div = $(`<div class="log-msg"></div>`).text(m);
+        if(type === "err") div.css("border-color", "#ff5252").css("color", "#ffcdd2");
+        $('#log-area').append(div);
+        setTimeout(() => div.fadeOut(500, () => div.remove()), 5000);
+    }
 
-    // --- 初始化 ---
-    async function init() {
-        $('#env-tag').text(isGemini ? "Gemini 授權環境" : "外部臨時環境");
-        
-        if (!isGemini && window.location.hostname.includes('github')) {
-            $('#env-lock').fadeIn();
+    async function checkResources() {
+        // 1. Check API Key (In this env, empty string is correct)
+        if (typeof apiKey !== 'undefined') {
+            $('#dot-key').attr('class', 'status-dot dot-ok');
+            $('#dot-key').parent().contents().last()[0].textContent = " Key: 就緒";
         }
 
+        // 2. Load CJK
         try {
-            const resp = await fetch(DICT_URL);
-            astrologyDict = await resp.json();
-            $('#dict-status').text("核心庫已就緒").css('color', '#2e7d32');
+            dataCJK = await $.getJSON(dicts.cjk);
+            $('#dot-cjk').attr('class', 'status-dot dot-ok');
+            $('#dot-cjk').parent().contents().last()[0].textContent = " CJK: 成功";
+            pushLog("✅ 筆劃字典載入完成");
         } catch (e) {
-            $('#dict-status').text("載入失敗").css('color', '#c62828');
+            $('#dot-cjk').attr('class', 'status-dot dot-err');
+            $('#dot-cjk').parent().contents().last()[0].textContent = " CJK: 失敗";
+            pushLog("❌ 筆劃字典載入失敗: " + e.status, "err");
         }
 
-        if (isGemini) {
-            try {
-                const config = JSON.parse(__firebase_config);
-                const app = fb.initializeApp(config);
-                auth = fb.getAuth(app);
-                db = fb.getFirestore(app);
+        // 3. Load Astro
+        try {
+            dataAstro = await $.getJSON(dicts.astro);
+            $('#dot-astro').attr('class', 'status-dot dot-ok');
+            $('#dot-astro').parent().contents().last()[0].textContent = " Astro: 成功";
+            pushLog("✅ 星象字典載入完成");
+        } catch (e) {
+            $('#dot-astro').attr('class', 'status-dot dot-err');
+            $('#dot-astro').parent().contents().last()[0].textContent = " Astro: 失敗";
+            pushLog("❌ 星象字典載入失敗: " + e.status, "err");
+        }
+    }
 
-                const initAuth = async () => {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await fb.signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await fb.signInAnonymously(auth);
-                    }
-                };
-                
-                await initAuth();
-                fb.onAuthStateChanged(auth, (u) => {
-                    user = u;
-                    if (user) {
-                        $('#auth-status').text(`連線中 (${user.uid.substring(0,8)})`).css('color', '#2e7d32');
-                        loadHistory();
-                    }
+    async function callGemini(prompt, isJson=true) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        const payload = {
+            contents: [{ parts: [{ text: prompt }] }]
+        };
+        if(isJson) payload.generationConfig = { responseMimeType: "application/json" };
+
+        let delay = 1000;
+        for (let i = 0; i < 3; i++) {
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
+                
+                if (res.status === 403) {
+                    throw new Error("403 Forbidden: API Key 無權限或環境未授權。請確保在 Canvas 預覽中執行。");
+                }
+                if (!res.ok) {
+                    const errDetail = await res.json();
+                    throw new Error(`API Error ${res.status}: ${errDetail.error?.message || '未知錯誤'}`);
+                }
+                
+                const data = await res.json();
+                return data.candidates[0].content.parts[0].text;
             } catch (e) {
-                log("雲端模組初始化失敗");
+                if (i === 2) throw e;
+                await new Promise(r => setTimeout(r, delay));
+                delay *= 2;
             }
         }
     }
 
-    // --- 介面功能 ---
-    function log(m) {
-        const div = $('<div class="msg-item"></div>').text(m);
-        $('#msg-box').append(div);
-        setTimeout(() => div.fadeOut(600, () => div.remove()), 4500);
+    async function runAll() {
+        const val = $('#main-in').val();
+        if(!val) return pushLog("請輸入內容", "err");
+        
+        $('#run-btn').prop('disabled', true).text('⌛ 分析中...');
+        pushLog("🚀 正在啟動十全推演...");
+
+        try {
+            const prompt = `你是一位十全大師。請根據輸入內容進行深度分析。
+            輸入：${val}
+            請回傳 JSON 格式：
+            { "report": "HTML格式分析內容", "p1": "天意象提示詞(EN)", "p2": "地意象提示詞(EN)", "p3": "人意象提示詞(EN)" }`;
+
+            const resText = await callGemini(prompt);
+            const resJson = JSON.parse(resText);
+
+            $('#out-report').html(resJson.report);
+            pushLog("✅ 報告生成完畢");
+            goTab(1);
+
+            // Images
+            genImg('v1', resJson.p1);
+            genImg('v2', resJson.p2);
+            genImg('v3', resJson.p3);
+
+        } catch (e) {
+            pushLog("🚨 推演中斷: " + e.message, "err");
+        } finally {
+            $('#run-btn').prop('disabled', false).text('🚀 啟動全算推演');
+        }
     }
 
-    function setProgress(p, t) {
-        $('#progress-fill').css('width', p + '%');
-        $('#step-percent').text(p + '%');
-        $('#step-text').text(t);
+    async function genImg(id, p) {
+        try {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ instances: { prompt: "Golden style, mystical, " + p }, parameters: { sampleCount: 1 } })
+            });
+            if (!res.ok) throw new Error(res.status);
+            const data = await res.json();
+            $(`#${id}`).attr('src', `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`);
+        } catch (e) {
+            pushLog(`🖼️ 意象 ${id} 生成失敗: ${e.message}`, "err");
+        }
     }
 
-    function switchTab(i) {
+    function goTab(i) {
         $('.page').removeClass('active');
         $(`#p${i}`).addClass('active');
-        $('.tab').removeClass('active');
-        $(`.tab:eq(${i})`).addClass('active');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        $('.tab').removeClass('active').eq(i).addClass('active');
     }
 
-    // --- 編輯功能 ---
-    function clearInput() {
-        $('#inp-data').val('').focus();
-        log("🧹 已清除輸入內容");
+    function doClear() { $('#main-in').val(''); pushLog("🧹 已清空"); }
+    async function doPaste() {
+        try { const t = await navigator.clipboard.readText(); $('#main-in').val(t); pushLog("📥 已貼上"); }
+        catch(e) { pushLog("無法讀取剪貼簿", "err"); }
+    }
+    function setTpl() {
+        $('#main-in').val("乙巳年 戊子月 戊辰日 | 宿曜:張月鹿 | 氣運:63 | 環境:多雲");
+        pushLog("📋 載入範本");
     }
 
-    async function pasteFromClipboard() {
-        try {
-            // 注意：iframe 內可能受限，需透過 execCommand 備案
-            const text = await navigator.clipboard.readText();
-            if (text) {
-                $('#inp-data').val(text);
-                log("📥 已從剪貼簿貼上數據");
-            } else {
-                log("剪貼簿為空");
-            }
-        } catch (e) {
-            log("無法存取剪貼簿，請手動貼上。");
-        }
-    }
-
-    function loadTemplate() {
-        const template = `月→最近行星: Saturn | 太陽: 56.7° | 水星 (辰星): 73.4° | 金星 (太白): 60.1° | 火星 (熒惑): 52.4° | 木星 (歲星): 216.3° | 土星 (鎮星): 26.7°
-月相：上弦
-干支：乙巳年 戊子月 戊辰日 乙卯時
-節氣：小寒（距離 11 天）
-宿曜：🌠 張月鹿 (水)
-犯 / 守 / 合：張月鹿:守 | 翼火蛇:犯
-五行合成能量：木:25 火:33 土:25 金:20 水:38
-社會氣運：63
-天氣狀況：陰天 | 雲層 93% | 風速 4.3 km/h`;
-        $('#inp-data').val(template);
-        log("📋 範本載入成功");
-    }
-
-    // --- 推演核心 ---
-    async function runComprehensiveProcess() {
-        const input = $('#inp-data').val();
-        if (input.length < 10) return log("天機不足，請錄入更多數據");
-
-        $('#main-run-btn').prop('disabled', true).text('⚡ 推演運行中...');
-        
-        try {
-            setProgress(10, "解析天干地支與宿曜...");
-            const analysis = await callGeminiAnalysis(input);
-            
-            setProgress(30, "產出全算分析報告...");
-            $('#report-content').html(analysis.report);
-            $('#summary-text').text(analysis.summary);
-            $('#final-summary-box').fadeIn();
-
-            setProgress(45, "繪製【天】之意象...");
-            await generateTripletImage('sky', analysis.skyPrompt);
-            
-            setProgress(65, "凝聚【地】之格局...");
-            await generateTripletImage('earth', analysis.earthPrompt);
-            
-            setProgress(85, "感應【人】之氣運...");
-            await generateTripletImage('human', analysis.humanPrompt);
-
-            if (user && db) {
-                setProgress(95, "將因果寫入雲端卷軸...");
-                await saveAnalysis(input, analysis);
-            }
-
-            setProgress(100, "十全推演大功告成");
-            log("✅ 算術結果已同步");
-            switchTab(1);
-
-        } catch (e) {
-            log("❌ 算術中斷: " + e.message);
-            setProgress(0, "中斷");
-        } finally {
-            $('#main-run-btn').prop('disabled', false).text('🚀 啟動十全全算術推演');
-        }
-    }
-
-    // --- API 調用 (Gemini 2.5) ---
-    async function callGeminiAnalysis(userInput) {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-        
-        const systemPrompt = `你是一位精通「十全全算術」的大師。
-        請根據輸入的資料（含行星、干支、宿曜、五行能量、社會氣運等）進行綜合判讀。
-        回傳 JSON：
-        {
-          "report": "HTML 格式詳細報告，包含各項數值的吉凶意義、當前氣場分析。",
-          "summary": "一句話總結目前的總體建議。",
-          "skyPrompt": "英文提示詞，用於生成神秘東方風格的天空星象意象。",
-          "earthPrompt": "英文提示詞，用於生成東方地脈、山水、地理格局意象。",
-          "humanPrompt": "英文提示詞，用於生成反映當下人際、氣息、修行的意象。"
-        }`;
-
-        const payload = {
-            contents: [{ parts: [{ text: `輸入天機：${userInput}` }] }],
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            generationConfig: { responseMimeType: "application/json" }
-        };
-
-        const result = await fetchWithRetry(url, payload);
-        return JSON.parse(result.candidates[0].content.parts[0].text);
-    }
-
-    async function generateTripletImage(type, prompt) {
-        const idx = type === 'sky' ? 1 : (type === 'earth' ? 2 : 3);
-        const imgEl = `#img-${type}`;
-        const loaderEl = `#loader-${idx}`;
-        
-        $(loaderEl).show();
-        $(imgEl).hide();
-
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
-        const payload = {
-            instances: { prompt: `Fine art photography, cinematic lighting, gold and crimson accents, mystical oriental theme, high resolution, ${prompt}` },
-            parameters: { sampleCount: 1 }
-        };
-
-        try {
-            const result = await fetchWithRetry(url, payload);
-            const b64 = result.predictions[0].bytesBase64Encoded;
-            $(imgEl).attr('src', `data:image/png;base64,${b64}`).fadeIn();
-        } catch (e) {
-            log(`${type} 意象顯現失敗`);
-        } finally {
-            $(loaderEl).hide();
-        }
-    }
-
-    async function fetchWithRetry(url, body, retries = 5) {
-        let backoff = 1000;
-        for (let i = 0; i < retries; i++) {
-            try {
-                const res = await fetch(url, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } });
-                if (res.ok) return await res.json();
-            } catch (e) {}
-            await new Promise(r => setTimeout(r, backoff));
-            backoff *= 2;
-        }
-        throw new Error("天機連結超時");
-    }
-
-    // --- Firestore 儲存 (RULE 1, 2, 3) ---
-    async function saveAnalysis(input, analysis) {
-        if (!user || !db) return;
-        const col = fb.collection(db, 'artifacts', appId, 'users', user.uid, 'records');
-        await fb.addDoc(col, {
-            input, summary: analysis.summary,
-            timestamp: Date.now(),
-            date: new Date().toLocaleString()
-        });
-    }
-
-    function loadHistory() {
-        if (!user || !db) return;
-        const col = fb.collection(db, 'artifacts', appId, 'users', user.uid, 'records');
-        fb.onSnapshot(col, (snap) => {
-            let data = [];
-            snap.forEach(d => data.push(d.data()));
-            data.sort((a, b) => b.timestamp - a.timestamp);
-            
-            let html = data.map(d => `
-                <div class="card" style="font-size:0.45rem;">
-                    <div style="color:var(--deep-gold); font-weight:900;">📍 ${d.date}</div>
-                    <div style="margin-top:5px;">${d.summary}</div>
-                </div>
-            `).join("");
-            $('#history-list').html(html || "暫無紀錄。");
-        }, (e) => console.error(e));
-    }
-
-    function downloadCode() {
-        const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
+    function downloadThis() {
+        const b = new Blob([document.documentElement.outerHTML], {type:'text/html'});
         const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `TenFullArith_945_${Date.now()}.html`;
-        a.click();
-        log("程式碼備份下載中...");
+        a.href = URL.createObjectURL(b); a.download = 'GoldenFull_Diag.html'; a.click();
     }
 
-    window.onload = init;
+    window.onload = checkResources;
 </script>
-
-<!-- 
-    依據十全全算術之理，此處補充必要之邏輯註解以確保行數與深度：
-    1. 天位（Sky）：代表宏觀趨勢、天體引力與大環境之氣場影響。
-    2. 地位（Earth）：代表微觀環境、地理位置、住宅與辦公室之五行分佈。
-    3. 人位（Human）：代表主觀意志、生理狀態與社交能量之交互感應。
-    4. 能量平衡：五行之數值（木火土金水）並非孤立，而是透過演算法計算其生剋路徑。
-    5. 社會氣運：結合天氣、風速與宏觀指數，決定當下行動之阻力或推力。
-    此程式已封裝所有 UI 回饋，避免使用 alert，並確保在 RWD 下維持金光閃閃之質感。
--->
-
 </body>
 </html>
