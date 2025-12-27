@@ -3,68 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>金碧十全 Pro - 乙巳深度引擎版</title>
+    <title>乙巳集成推算 V11 - 深度全數據版</title>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@latest/astronomy.browser.min.js"></script>
-    <script src="https://orlandotigereye.github.io/mytestweb/public/public/core.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root { --bg-gold: #FFFDE7; --main-gold: #D4AF37; --deep-gold: #B8860B; --coin-gold: #FFD700; --text-brown: #3E2723; --gold-grad: linear-gradient(135deg, #FFD700 0%, #FFF176 50%, #DAA520 100%); --font-size: 0.5rem; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'PingFang TC', sans-serif; background: var(--bg-gold) url('https://www.transparenttextures.com/patterns/gold-dust.png') fixed; color: var(--text-brown); font-size: var(--font-size); width: 100vw; overflow-x: hidden; }
+        body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; background: var(--bg-gold) url('https://www.transparenttextures.com/patterns/gold-dust.png') fixed; color: var(--text-brown); font-size: var(--font-size); width: 100vw; overflow-x: hidden; }
         header { height: 40px; background: var(--gold-grad); display: flex; justify-content: space-between; align-items: center; padding: 0 10px; border-bottom: 2px solid var(--deep-gold); position: sticky; top: 0; z-index: 1000; font-weight: 900; }
         .status-bar { background: rgba(255,255,255,0.9); padding: 5px; display: flex; gap: 8px; border-bottom: 1px solid var(--main-gold); font-size: 0.4rem; overflow-x: auto; }
         .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 2px; }
-        .ok { background: #2E7D32; } .fail { background: #C62828; } .wait { background: #F9A825; }
+        .ok { background: #2E7D32; } .fail { background: #C62828; }
         .nav-tabs { display: flex; background: #FFF; border-bottom: 1px solid var(--main-gold); }
         .tab { flex: 1; text-align: center; padding: 12px 0; font-weight: 900; color: #A68B5A; cursor: pointer; }
         .tab.active { background: rgba(255, 215, 0, 0.2); border-bottom: 3px solid var(--deep-gold); color: var(--text-brown); }
         .content { padding: 10px; }
         .page { display: none; } .page.active { display: block; }
         .card { background: rgba(255,255,255,0.9); border: 1.5px solid var(--coin-gold); border-radius: 8px; padding: 10px; margin-bottom: 10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); }
-        .title-gold { color: var(--deep-gold); font-weight: 900; margin-bottom: 6px; border-left: 3px solid var(--main-gold); padding-left: 6px; }
-        textarea { width: 100%; height: 80px; border: 1px solid var(--main-gold); border-radius: 4px; padding: 6px; font-size: var(--font-size); background: #FFFEF9; }
-        .btn-p { background: var(--gold-grad); border: 1px solid var(--deep-gold); color: var(--text-brown); font-weight: 900; padding: 10px; width: 100%; border-radius: 4px; cursor: pointer; margin-top: 10px; }
-        .score-box { display: flex; justify-content: space-around; margin: 10px 0; text-align: center; }
-        .score-val { font-size: 1rem; font-weight: 900; color: var(--deep-gold); }
-        .error-note { background: #FFEBEE; border: 1px solid #FFCDD2; padding: 8px; border-radius: 4px; margin-top: 10px; color: #C62828; font-size: 0.4rem; line-height: 1.2; }
+        .title-gold { color: var(--deep-gold); font-weight: 900; margin-bottom: 6px; border-left: 3px solid var(--main-gold); padding-left: 6px; border-bottom: 1px solid rgba(184, 134, 11, 0.2); }
+        textarea { width: 100%; height: 120px; border: 1px solid var(--main-gold); border-radius: 4px; padding: 6px; font-size: 0.5rem; background: #FFFEF9; font-family: monospace; }
+        .btn-p { background: var(--gold-grad); border: 1px solid var(--deep-gold); color: var(--text-brown); font-weight: 900; padding: 10px; width: 100%; border-radius: 4px; cursor: pointer; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .score-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin: 10px 0; }
+        .score-item { background: #FFF; border: 1px solid var(--coin-gold); padding: 5px; text-align: center; border-radius: 4px; }
+        .score-val { font-size: 0.8rem; font-weight: 900; color: var(--deep-gold); display: block; }
+        .energy-bar-container { height: 12px; background: #eee; border-radius: 6px; overflow: hidden; margin: 4px 0; border: 1px solid #ddd; }
+        .energy-bar { height: 100%; transition: width 0.5s; }
         .dl-btn { position: fixed; bottom: 10px; right: 10px; width: 45px; height: 45px; background: #000; color: #fff; border-radius: 50%; font-size: 0.4rem; z-index: 3000; border: 1px solid var(--coin-gold); }
+        .report-text { white-space: pre-wrap; line-height: 1.5; font-size: 0.5rem; color: #444; }
     </style>
 </head>
 <body>
-<header>🔱 乙巳全算引擎 Pro</header>
+<header>🔱 乙巳集成推算 V11</header>
 <div class="status-bar" id="mod-status"></div>
-<nav class="nav-tabs"><div class="tab active" onclick="goTab(0)">推演輸入</div><div class="tab" onclick="goTab(1)">深度報告</div></nav>
+<nav class="nav-tabs"><div class="tab active" onclick="goTab(0)">推演輸入</div><div class="tab" onclick="goTab(1)">全數據報告</div></nav>
 <div class="content">
     <div id="p0" class="page active">
-        <div class="card"><div class="title-gold">天機輸入</div><textarea id="main-in">太陽：78.5°, 月亮：上弦, 土星：2.8°</textarea><button class="btn-p" id="run-btn" onclick="runAnalysis()">🚀 啟動五模組全數據推演</button></div>
-        <div id="error-footer" class="error-note" style="display:none;"></div>
+        <div class="card">
+            <div class="title-gold">觀測數據錄入</div>
+            <textarea id="astroInput" placeholder="請貼入觀測數據，例如：
+最近行星: Saturn
+Saturn: 1.45 AU
+月相: 上弦
+干支: 乙巳 戊子 丁卯 癸卯
+木:30 火:40 土:20 金:10 水:50">最近行星: Saturn
+Saturn: 1.45
+月相: 上弦
+干支: 乙巳 戊子 丁卯 癸卯
+木:30 火:40 土:20 金:15 水:45</textarea>
+            <button class="btn-p" onclick="runIntegratedAnalysis()">🚀 啟動集成引擎推演</button>
+        </div>
+        <div class="card" id="error-note" style="display:none; color:red;"></div>
     </div>
     <div id="p1" class="page">
         <div class="card">
-            <div class="title-gold">宇宙級深度判分</div>
-            <div class="score-box">
-                <div><div style="font-size:0.4rem;">凶吉得分</div><div id="total-score" class="score-val">--</div></div>
-                <div><div style="font-size:0.4rem;">急緩指標</div><div id="urgency-val" class="score-val">--</div></div>
+            <div class="title-gold">【五模組核心判分】</div>
+            <div class="score-row">
+                <div class="score-item"><span>凶吉得分</span><span id="v-score" class="score-val">--</span></div>
+                <div class="score-item"><span>急緩指標</span><span id="v-urgency" class="score-val">--</span></div>
+                <div class="score-item"><span>事態屬性</span><span id="v-type" class="score-val">--</span></div>
             </div>
-            <div id="out-report" style="white-space: pre-wrap; line-height:1.6;">等待推演...</div>
+        </div>
+        <div class="card">
+            <div class="title-gold">【能量與長生分析】</div>
+            <div id="energy-zone"></div>
+            <div id="stage-zone" style="margin-top:8px; font-weight:bold;"></div>
+        </div>
+        <div class="card">
+            <div class="title-gold">【深度推論原文】</div>
+            <div id="full-report" class="report-text">等待數據錄入...</div>
         </div>
     </div>
 </div>
 <button class="dl-btn" onclick="downloadThis()">下載<br>代碼</button>
+
 <script>
     let API_KEY = ""; let IS_AI_OK = false;
-    const URL_CONFIG = "https://orlandotigereye.github.io/mytestweb/config/api.js";
-    
-    // 整合 乙巳占 V10.5 數據權重
-    const ECI_ENGINE = {
-        Planets: { "太陽": 8, "月亮": 7, "木星": 9, "火星": -7, "土星": -6, "水星": 5, "金星": 6 },
-        Urgency: { "上弦": 33, "下弦": 67, "滿月": 50, "新月": 10 }
-    };
+    const FIVE_ELEMENTS = { "甲":"木","乙":"木","丙":"火","丁":"火","戊":"土","己":"土","庚":"金","辛":"金","壬":"水","癸":"水" };
+    const STAGE_MAP = { "丙": { "寅":"長生", "卯":"沐浴", "子":"胎" }, "丁": { "卯":"沐浴", "子":"胎", "巳":"帝旺" } };
+    const ECI_CONST = { Planets: { "Mars": -7, "Saturn": -6, "Jupiter": 9, "Venus": 6, "Mercury": 5 }, Urgency: { "上弦": 33, "下弦": 67, "滿月": 50, "新月": 10 } };
 
-    async function init(){
+    async function init() {
         try {
-            const res = await fetch(URL_CONFIG);
+            const res = await fetch("https://orlandotigereye.github.io/mytestweb/config/api.js");
             const txt = await res.text();
             const match = txt.match(/"([a-fA-F0-9]+)"/);
             if(match) {
@@ -73,82 +95,70 @@
                 IS_AI_OK = check.ok;
             }
         } catch(e) { IS_AI_OK = false; }
-        await Core.initAll(); renderStatus(); checkFailures();
+        renderStatus();
     }
 
     function decodeHex(h){ let s=""; for(let i=0;i<h.length;i+=2) s+=String.fromCharCode(parseInt(h.substr(i,2),16)); return s; }
-
     function renderStatus(){
         const con = $('#mod-status').empty();
         con.append(`<span><i class="status-dot ${IS_AI_OK?'ok':'fail'}"></i>AI_Key</span>`);
-        if(Core.modules) Object.entries(Core.modules).forEach(([k,v])=>{ con.append(`<span><i class="status-dot ${v.status?'ok':'fail'}"></i>${k}</span>`); });
+        con.append(`<span><i class="status-dot ok"></i>乙巳V10.5</span>`);
+        con.append(`<span><i class="status-dot ok"></i>集成模組J</span>`);
     }
 
-    function checkFailures(){
-        let m = [];
-        if(!IS_AI_OK) m.push("⚠️ AI Key 失效：已自動切換【乙巳占 V10.5 在地推演引擎】。");
-        if(m.length > 0) $('#error-footer').html(m.join('<br>')).show();
-    }
+    function runIntegratedAnalysis() {
+        const raw = $('#astroInput').val();
+        if(!raw.trim()) return;
 
-    // 在地推演邏輯 (核心：五模組判分模擬)
-    function runLocalEngine(input) {
-        let score = 0; let urgency = 50; let report = "【在地引擎深度報告】\n";
-        let matches = [];
-        
-        // 1. 星體影響力模組
-        Object.entries(ECI_ENGINE.Planets).forEach(([name, val]) => {
-            if(input.includes(name)) { score += val; matches.push(name); }
+        // 1. 解析數據 (來自 God251224_J 邏輯)
+        const moonPhase = raw.match(/月相[：\s]*(.*)/)?.[1]?.trim() || "未知";
+        const gzMatch = raw.match(/干支[：\s]*(.*)/);
+        const gzParts = gzMatch ? gzMatch[1].trim().split(/\s+/) : ["乙巳","戊子","丁卯","癸卯"];
+        const energies = {
+            木: parseInt(raw.match(/木:(\d+)/)?.[1] || 0),
+            火: parseInt(raw.match(/火:(\d+)/)?.[1] || 0),
+            土: parseInt(raw.match(/土:(\d+)/)?.[1] || 0),
+            金: parseInt(raw.match(/金:(\d+)/)?.[1] || 0),
+            水: parseInt(raw.match(/水:(\d+)/)?.[1] || 0)
+        };
+
+        // 2. 乙巳占判分 (來自 乙巳占_V10_5 邏輯)
+        let score = 0;
+        Object.entries(ECI_CONST.Planets).forEach(([p, v]) => { if(raw.includes(p)) score += v; });
+        let urgency = ECI_CONST.Urgency[moonPhase] || 50;
+
+        // 3. 長生推算
+        const riGan = gzParts[2] ? gzParts[2][0] : "丁";
+        const shiZhi = gzParts[3] ? gzParts[3][1] : "卯";
+        const stage = STAGE_MAP[riGan]?.[shiZhi] || "平";
+
+        // 更新 UI
+        $('#v-score').text((score > 0 ? "+" : "") + score);
+        $('#v-urgency').text(urgency);
+        $('#v-type').text(urgency > 60 ? "急劇變革" : "穩定發展");
+
+        // 渲染五行能量圖
+        let eHtml = "";
+        const colors = { 木:"#10b981", 火:"#ef4444", 土:"#f59e0b", 金:"#94a3b8", 水:"#3b82f6" };
+        Object.entries(energies).forEach(([k, v]) => {
+            eHtml += `<div>${k}: ${v}%</div><div class="energy-bar-container"><div class="energy-bar" style="width:${v}%; background:${colors[k]}"></div></div>`;
         });
-        // 2. 急緩度模組
-        Object.entries(ECI_ENGINE.Urgency).forEach(([name, val]) => {
-            if(input.includes(name)) { urgency = val; }
-        });
+        $('#energy-zone').html(eHtml);
+        $('#stage-zone').html(`長生狀態：${riGan}見${shiZhi} ➔ <span style="color:var(--deep-gold)">${stage}</span>`);
 
-        $('#total-score').text((score > 0 ? "+" : "") + score);
-        $('#urgency-val').text(urgency);
-
-        report += `● 數據比對：檢測到 ${matches.length} 個核心星標。\n`;
-        report += `● 判分結果：${score >= 0 ? '吉' : '凶'} (得分: ${score})\n`;
-        report += `● 急緩判定：${urgency > 50 ? '急變 (速戰速決)' : '緩進 (事緩則圓)'}\n`;
-        report += `● 深度建議：依據乙巳占數據，${score > 5 ? '主氣運亨通，宜大膽進取。' : '主地氣波動，宜守成守靜。'}\n`;
+        // 生成報告
+        let rpt = `【集成推論結果】\n`;
+        rpt += `● 乙巳占：得分 ${score}，當前氣數為${score >= 0 ? '旺' : '衰'}。\n`;
+        rpt += `● 事態：急緩度為 ${urgency}，建議${urgency > 50 ? '速決以免夜長夢多' : '靜待時機成熟'}。\n`;
+        rpt += `● 命理：日干${riGan}處於${stage}位，能量流動以${Object.keys(energies).reduce((a,b)=>energies[a]>energies[b]?a:b)}為主導。\n`;
+        rpt += `● 綜合：天時與地氣${(score > 0 && stage !== '胎') ? '感應良好，大吉之兆' : '稍有滯礙，宜保守行事'}。`;
         
-        if(Core.data?.astro) {
-            report += "\n--- 星象字典詳細索引 ---\n";
-            matches.forEach(m => {
-                if(Core.data.astro[m]) report += `[${m}]: ${JSON.stringify(Core.data.astro[m]).substring(0,60)}...\n`;
-            });
-        }
-        return report;
-    }
-
-    async function runAnalysis(){
-        const input = $('#main-in').val();
-        $('#run-btn').prop('disabled', true).text('⌛ 推演中...');
-        
-        if(!IS_AI_OK) {
-            $('#out-report').html(runLocalEngine(input));
-            goTab(1); $('#run-btn').prop('disabled', false).text('🚀 啟動推演');
-            return;
-        }
-
-        try {
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${API_KEY}`, {
-                method: 'POST', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ contents:[{parts:[{text: `仿乙巳占風格分析：${input}。回傳JSON:{"report":"..","score":0,"urgency":50}`}]}], generationConfig:{responseMimeType:"application/json"} })
-            });
-            const d = await res.json();
-            const r = JSON.parse(d.candidates[0].content.parts[0].text);
-            $('#out-report').html(r.report);
-            $('#total-score').text(r.score); $('#urgency-val').text(r.urgency);
-            goTab(1);
-        } catch(e) {
-            $('#out-report').html(runLocalEngine(input) + `\n\n(AI 異常回退: ${e.message})`);
-            goTab(1);
-        } finally { $('#run-btn').prop('disabled', false).text('🚀 啟動推演'); }
+        $('#full-report').text(rpt);
+        goTab(1);
     }
 
     function goTab(i){ $('.page').removeClass('active'); $(`#p${i}`).addClass('active'); $('.tab').removeClass('active').eq(i).addClass('active'); }
-    function downloadThis(){ const b=new Blob([document.documentElement.outerHTML],{type:'text/html'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='Golden_ECI_V10.html'; a.click(); }
+    function downloadThis(){ const b=new Blob([document.documentElement.outerHTML],{type:'text/html'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='Integrated_Astro_V11.html'; a.click(); }
     $(document).ready(init);
 </script>
 </body>
