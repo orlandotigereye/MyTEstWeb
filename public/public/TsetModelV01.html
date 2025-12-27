@@ -1,101 +1,32 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8" />
-<title>TestModel V03 - Loader Panel</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<title>TestModel V05 - 外部 core.js</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
 body { font-family: system-ui; font-size: 13px; padding: 10px; }
 .ok { color: #2ecc71; }
 .fail { color: #e74c3c; }
-.wait { color: #999; }
 button { margin: 6px 0; }
 pre { background:#111;color:#0f0;padding:8px;overflow:auto; }
 </style>
 
-<!-- =====================================================
- CORE（一定最上）
-===================================================== -->
-<script>
-window.Core = {
-  loaded: false,
-  modules: {},
-  data: {},
-  mark(name, status, err) {
-    this.modules[name] = { status, err: err || null };
-  },
-  reset() {
-    this.modules = {};
-    this.data = {};
-    this.loaded = false;
-  }
-};
-</script>
-
-<!-- =====================================================
- CDN 模組
-===================================================== -->
-<!-- 替換後 -->
-<script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"
-        onload="Core.mark('astronomy-engine', true)"
-        onerror="Core.mark('astronomy-engine', false, 'cdn load failed')">
-</script>
-
-
-<script src="https://cdn.jsdelivr.net/npm/d3@7"
-onload="Core.mark('d3', true)"
-onerror="Core.mark('d3', false, 'cdn load failed')">
-</script>
-
-<script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.12/lunar.min.js"
-onload="Core.mark('lunar', true)"
-onerror="Core.mark('lunar', false, 'cdn load failed')">
-</script>
-
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"
-onload="Core.mark('html2canvas', true)"
-onerror="Core.mark('html2canvas', false, 'cdn load failed')">
-</script>
-
-<!-- =====================================================
- 初始化失敗保護
-===================================================== -->
-<script>
-(function safeInit(){
-  try {
-    Core.loaded = true;
-    Core.mark("Core", true);
-  } catch (e) {
-    Core.loaded = false;
-    Core.mark("Core", false, e.message);
-  }
-})();
-</script>
+<!-- 引用外部 core.js -->
+<script src="https://orlandotigereye.github.io/mytestweb/public/public/core.js"></script>
 </head>
-
 <body>
 
 <h3>📦 載入檢查面板</h3>
 
 <div id="status"></div>
-
 <button onclick="reInit()">🔄 重新初始化</button>
-
 <pre id="log"></pre>
 
 <script>
 /* =====================================================
- 固定資料來源（你提供的真實 URL）
-===================================================== */
-const ASTRO_DICT_URL =
-"https://raw.githubusercontent.com/orlandotigereye/Analy13/refs/heads/main/astrology_merged.json";
-
-const URL_CJK =
-"https://raw.githubusercontent.com/orlandotigereye/mytestweb/4ea567726353330f2301bca768a6325ab5611699/public/public/Dictionary_lite.json";
-
-/* =====================================================
- 工具
+ 渲染模組狀態
 ===================================================== */
 function renderStatus() {
   const box = document.getElementById("status");
@@ -104,48 +35,24 @@ function renderStatus() {
     const d=document.createElement("div");
     d.className = v.status ? "ok" : "fail";
     d.textContent = `${k}: ${v.status ? "OK" : "FAILED"}`;
+    if(v.err) d.textContent += ` (${v.err})`;
     box.appendChild(d);
   });
 }
 
-async function loadJSON(name, url) {
-  try {
-    const r = await fetch(url);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    Core.data[name] = await r.json();
-    Core.mark(name, true);
-  } catch (e) {
-    Core.mark(name, false, e.message);
-  }
+/* =====================================================
+ 重新初始化
+===================================================== */
+async function reInit() {
+  document.getElementById("log").textContent = "初始化中...";
+  await Core.initAll();
+  renderStatus();
+  document.getElementById("log").textContent = JSON.stringify(Core.modules, null, 2);
 }
 
 /* =====================================================
- 重新初始化（不刷新頁面）
+ 頁面初始執行
 ===================================================== */
-async function reInit() {
-  Core.reset();
-  document.getElementById("log").textContent = "";
-
-  // Core
-  Core.mark("Core", true);
-
-  // CDN 狀態沿用（已在 onload / onerror 標記）
-  if (window.Astronomy) Core.mark("astronomy-engine", true);
-  if (window.d3) Core.mark("d3", true);
-  if (window.Lunar) Core.mark("lunar", true);
-  if (window.html2canvas) Core.mark("html2canvas", true);
-
-  // JSON
-  await loadJSON("Astro JSON", ASTRO_DICT_URL);
-  await loadJSON("CJK Dict", URL_CJK);
-
-  renderStatus();
-
-  document.getElementById("log").textContent =
-    JSON.stringify(Core.modules, null, 2);
-}
-
-// 初始執行
 reInit();
 </script>
 
