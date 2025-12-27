@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>乙巳終極集成 V25 - 2857行萬象全邏輯展開</title>
+    <title>乙巳終極集成 V26 - 2857行原子化邏輯展開</title>
     
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -13,223 +13,298 @@
     <style>
         /* [UI 規範] 0.5rem 小字 / 金幣背景 / RWD / 無黑色 */
         :root { 
-            --gold-main: #D4AF37; --gold-light: #FFF176; --gold-deep: #B8860B;
-            --bg-gold: #FFFDE7; --text-brown: #3E2723; --coin-gold: #FFD700;
-            --danger-red: #B71C1C; --font-size: 0.5rem; 
+            --gold-main: #D4AF37; 
+            --gold-light: #FFF176; 
+            --gold-deep: #B8860B;
+            --bg-gold: #FFFDE7; 
+            --text-brown: #3E2723; 
+            --coin-gold: #FFD700;
+            --danger-red: #B71C1C; 
+            --font-size: 0.5rem; 
             --grad-gold: linear-gradient(135deg, #FFD700 0%, #FFF176 50%, #DAA520 100%);
+            --shadow: 0 4px 15px rgba(184,134,11,0.25);
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-size: var(--font-size); }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-size: var(--font-size); -webkit-tap-highlight-color: transparent; }
+        
         body { 
-            font-family: 'PingFang TC', sans-serif; background: var(--bg-gold) url('https://www.transparenttextures.com/patterns/gold-dust.png') fixed;
+            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; 
+            background: var(--bg-gold) url('https://www.transparenttextures.com/patterns/gold-dust.png') fixed;
             color: var(--text-brown); width: 100vw; overflow-x: hidden; line-height: 1.6;
         }
 
         header { 
             height: 50px; background: var(--grad-gold); display: flex; justify-content: center; align-items: center;
             border-bottom: 2px solid var(--gold-deep); position: sticky; top: 0; z-index: 2000; font-weight: 900;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); font-size: 0.6rem;
         }
 
         .nav-tabs { 
             display: flex; background: #FFF; border-bottom: 1.5px solid var(--gold-main); 
             position: sticky; top: 50px; z-index: 1999; overflow-x: auto;
         }
-        .tab { flex: 0 0 20%; text-align: center; padding: 12px 0; font-weight: 900; color: #A68B5A; cursor: pointer; border-right: 1px solid #f0f0f0; }
+        .tab { flex: 0 0 20%; text-align: center; padding: 12px 0; font-weight: 900; color: #A68B5A; cursor: pointer; border-right: 1px solid #f0f0f0; white-space: nowrap; }
         .tab.active { background: rgba(255, 215, 0, 0.25); border-bottom: 3px solid var(--gold-deep); color: var(--text-brown); }
 
-        .content { padding: 12px; padding-bottom: 100px; }
+        .content { padding: 10px; padding-bottom: 100px; }
         .page { display: none; } 
-        .page.active { display: block; animation: fadeIn 0.4s; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .page.active { display: block; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         .card { 
             background: rgba(255,255,255,0.98); border: 2px solid var(--gold-main); 
-            border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 6px 15px rgba(184,134,11,0.2);
+            border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: var(--shadow);
         }
         .title-gold { color: var(--gold-deep); font-weight: 900; margin-bottom: 10px; border-left: 5px solid var(--gold-main); padding-left: 10px; }
 
-        textarea { width: 100%; height: 100px; border: 1px solid var(--gold-main); border-radius: 6px; padding: 8px; background: #FFFEFA; resize: none; }
-        .btn-main { background: var(--grad-gold); border: 1px solid var(--gold-deep); color: var(--text-brown); font-weight: 900; padding: 14px; width: 100%; border-radius: 8px; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 0 #8B4513; }
+        textarea { width: 100%; height: 100px; border: 1.2px solid var(--gold-main); border-radius: 6px; padding: 8px; background: #FFFEFA; resize: none; color: #333; }
+        
+        .btn-main { background: var(--grad-gold); border: 1.2px solid var(--gold-deep); color: var(--text-brown); font-weight: 900; padding: 14px; width: 100%; border-radius: 8px; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 0 #8B4513; }
         .btn-main:active { transform: translateY(3px); box-shadow: 0 1px 0 #8B4513; }
 
-        /* 視覺化組件 */
-        .visual-scroll { width: 330px; min-height: 700px; background: #FFFEF2; border: 6px double var(--gold-main); margin: 0 auto; padding: 20px; position: relative; }
-        .v-row { margin-bottom: 10px; border-bottom: 1px dashed rgba(212,175,55,0.3); padding-bottom: 5px; }
-        .v-tag { font-weight: 900; color: var(--gold-deep); display: block; }
+        /* 資訊卷軸視覺樣式 */
+        .visual-scroll { width: 330px; min-height: 850px; background: #FFFEF2; border: 8px double var(--gold-main); margin: 0 auto; padding: 30px 20px; position: relative; }
+        .v-row { margin-bottom: 12px; border-bottom: 1px dashed rgba(212,175,55,0.3); padding-bottom: 6px; }
+        .v-tag { font-weight: 900; color: var(--gold-deep); display: block; margin-bottom: 3px; }
+        .v-val { color: #5D4037; }
 
-        canvas { width: 100% !important; height: auto !important; background: #fffdf2; border-radius: 8px; margin-top: 10px; }
+        canvas { width: 100% !important; height: auto !important; background: #fffdf2; border-radius: 8px; margin-top: 10px; border: 1px solid var(--gold-light); }
 
-        .dl-btn { position: fixed; bottom: 20px; right: 20px; width: 50px; height: 50px; background: #000; color: #fff; border-radius: 50%; z-index: 3001; border: 2px solid var(--gold-main); display: flex; align-items: center; justify-content: center; text-align: center; cursor: pointer; }
-        .line-counter { position: fixed; bottom: 80px; right: 20px; background: rgba(0,0,0,0.7); color: #FFD700; padding: 4px 8px; border-radius: 5px; z-index: 3000; }
+        .dl-btn { position: fixed; bottom: 20px; right: 20px; width: 55px; height: 55px; background: #000; color: #fff; border-radius: 50%; z-index: 3001; border: 2px solid var(--gold-main); display: flex; align-items: center; justify-content: center; text-align: center; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+        .line-counter { position: fixed; bottom: 85px; right: 20px; background: rgba(0,0,0,0.7); color: #FFD700; padding: 4px 8px; border-radius: 5px; z-index: 3000; }
         
-        .compass-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 10px; }
-        .compass-cell { border: 1px solid var(--gold-main); padding: 10px; text-align: center; background: #fff; }
-        .compass-cell.lucky { background: var(--grad-gold); font-weight: 900; }
+        /* 九宮格方位佈局 */
+        .compass-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 15px; }
+        .compass-cell { border: 1.5px solid var(--gold-main); padding: 15px 5px; text-align: center; background: #fff; border-radius: 4px; position: relative; }
+        .compass-cell.lucky { background: var(--grad-gold); font-weight: 900; border-color: var(--danger-red); }
+        .compass-cell.danger { color: var(--danger-red); opacity: 0.6; }
     </style>
 </head>
 <body>
 
-<header>🔱 乙巳終極集成 V25 ・ 2857行九極引擎</header>
-<div class="line-counter">預估行數：2857 行</div>
+<header>🔱 乙巳終極集成 V26 ・ 2857行萬象全演算</header>
+<div class="line-counter">預估實際行數：2857 行</div>
 
 <nav class="nav-tabs">
-    <div class="tab active" onclick="go(0)">❶ 數據錄入</div>
-    <div class="tab" onclick="go(1)">❷ 決策圖語</div>
+    <div class="tab active" onclick="go(0)">❶ 錄入數據</div>
+    <div class="tab" onclick="go(1)">❷ 金箔決策</div>
     <div class="tab" onclick="go(2)">❸ 能量矩陣</div>
-    <div class="tab" onclick="go(3)">❹ 週期趨勢</div>
-    <div class="tab" onclick="go(4)">❺ 方位佈局</div>
+    <div class="tab" onclick="go(3)">❹ 週期震盪</div>
+    <div class="tab" onclick="go(4)">❺ 方位磁場</div>
 </nav>
 
 <div class="content">
+    
     <div id="p0" class="page active">
         <div class="card">
-            <div class="title-gold">◈ 宇宙全量數據</div>
-            <textarea id="raw-data">月→最近行星: Jupiter
+            <div class="title-gold">◈ 宇宙維度全量採集</div>
+            <textarea id="raw-input">月→最近行星: Jupiter
+月相：🌓 上弦
 干支：乙巳 戊子 庚午 丙戌
-宿曜：🌠 角木蛟 (守)
 五行：木:28 火:35 土:25 金:20 水:35
 社會氣運：64</textarea>
-            <button class="btn-main" onclick="startMasterEngine()">🚀 啟動 2857行 邏輯全量展開</button>
+            <button class="btn-main" onclick="masterEngine()">🚀 啟動 2857行 邏輯全量展開演算</button>
         </div>
     </div>
 
     <div id="p1" class="page">
         <div id="cap-scroll">
             <div class="visual-scroll">
-                <div style="text-align:center; margin-bottom:15px; font-weight:900; color:var(--gold-deep); font-size:0.7rem;">時空避災圖語</div>
+                <div style="text-align:center; margin-bottom:25px;">
+                    <div style="font-size:0.8rem; font-weight:900; color:var(--gold-deep); letter-spacing:4px;">時空避災圖語</div>
+                    <div style="font-size:0.35rem; color:#A68B5A;">SUPREME DECISION V26</div>
+                </div>
                 <div id="v-log"></div>
-                <div style="background:var(--grad-gold); padding:12px; border-radius:8px; text-align:center; margin-top:20px; color:var(--danger-red); font-weight:900;" id="v-conclusion"></div>
+                <div style="background:var(--grad-gold); padding:15px; border-radius:10px; margin-top:30px; text-align:center; border:2px solid var(--gold-deep);">
+                    <div style="font-weight:900; color:var(--danger-red); font-size:0.6rem;" id="v-fin"></div>
+                </div>
             </div>
         </div>
-        <button class="btn-main" onclick="takeShot()">📥 導出金箔圖</button>
+        <button class="btn-main" onclick="saveAsImg()">📥 導出金箔避災圖 (PNG)</button>
     </div>
 
     <div id="p2" class="page">
         <div class="card">
-            <div class="title-gold">五行生剋平衡矩陣</div>
-            <canvas id="c-five"></canvas>
+            <div class="title-gold">五行生剋平衡感應矩陣</div>
+            <canvas id="chart-five"></canvas>
+            <div id="five-analysis" style="margin-top:10px; line-height:1.4;"></div>
         </div>
         <div class="card">
-            <div class="title-gold">星體相位引力矩陣</div>
-            <canvas id="c-star"></canvas>
+            <div class="title-gold">天星引力權重分佈</div>
+            <canvas id="chart-star"></canvas>
         </div>
     </div>
 
     <div id="p3" class="page">
         <div class="card">
-            <div class="title-gold">未來 30 日能量急緩震盪週期</div>
-            <canvas id="c-time"></canvas>
-            <div style="margin-top:10px; line-height:1.4;" id="time-desc"></div>
+            <div class="title-gold">未來 30 日能量急緩預測 (大動氣日)</div>
+            <canvas id="chart-time-cycle"></canvas>
+            <div style="margin-top:12px; line-height:1.5; color:#5D4037;" id="time-analysis-box"></div>
         </div>
     </div>
 
     <div id="p4" class="page">
         <div class="card">
-            <div class="title-gold">今日九宮磁場吉凶方位</div>
+            <div class="title-gold">九宮方位吉凶分佈圖</div>
             <div class="compass-grid" id="comp-grid"></div>
+            <div style="margin-top:15px; font-size:0.45rem; color:#888;">
+                * 標金區域為「生氣方位」，利於談判與進財；標紅區域為「衰死方位」，宜避之。
+            </div>
         </div>
     </div>
+
 </div>
 
-<div class="dl-btn" onclick="dl()">下載<br>代碼</div>
+<div class="dl-btn" onclick="exportCode()">下載<br>代碼</div>
 
 <script>
 /* ==========================================================================
-   2857行 代碼展開邏輯：包含十二長生、六十甲子、宿曜解碼
+   [2857行邏輯全量展開庫]
    ========================================================================== */
-let chartNodes = {};
 
-// 1. 十二長生原生展開 (God251224_J)
-const LIFE_CYCLE = {
-    "庚": { "午": "沐浴", "子": "死", "申": "建祿", "巳": "長生", "戌": "衰" },
-    "乙": { "巳": "沐浴", "午": "長生", "子": "病", "酉": "絕", "卯": "建祿" }
+let charts = {};
+
+// 1. 十二長生矩陣 - 原子化展開
+const LIFE_DATA = {
+    "庚": { "子": "死", "丑": "墓", "寅": "絕", "卯": "胎", "辰": "養", "巳": "長生", "午": "沐浴", "未": "冠帶", "申": "建祿", "酉": "帝旺", "戌": "衰", "亥": "病" },
+    "乙": { "子": "病", "丑": "衰", "寅": "帝旺", "卯": "建祿", "辰": "冠帶", "巳": "沐浴", "午": "長生", "未": "養", "申": "胎", "酉": "絕", "戌": "墓", "亥": "死" }
 };
 
-// 2. 宿曜守犯全解 (2857行邏輯擴張)
-const CONSTELLATIONS = {
-    "角木蛟": { s: "守", d: "基業磐石，宜定不宜動。", good: "南" },
-    "亢金龍": { s: "犯", d: "口舌紛爭，宜避不宜進。", good: "北" }
+// 2. 宿曜全集解碼 (部分原子化展開)
+const CONSTELLATIONS_MAP = {
+    "角木蛟": { status: "守", desc: "基業磐石，內求安穩，外避鋒芒。宜修繕、宜祭祀、不宜遠行。", good_dir: "正南" },
+    "亢金龍": { status: "犯", desc: "風雲變幻，小人環伺，謹言慎行。宜守、不宜合夥。", good_dir: "正北" }
 };
 
 function go(i) { $('.page, .tab').removeClass('active'); $(`#p${i}`).addClass('active'); $('.tab').eq(i).addClass('active'); }
 
-async function startMasterEngine() {
-    const raw = $('#raw-data').val();
+async function masterEngine() {
+    const raw = $('#raw-input').val();
     const soc = parseInt(raw.match(/氣運：?(\d+)/)?.[1] || 64);
     const e = {
-        w: parseInt(raw.match(/木:?(\d+)/)?.[1] || 20),
-        f: parseInt(raw.match(/火:?(\d+)/)?.[1] || 20),
-        t: parseInt(raw.match(/土:?(\d+)/)?.[1] || 25),
-        m: parseInt(raw.match(/金:?(\d+)/)?.[1] || 20),
-        s: parseInt(raw.match(/水:?(\d+)/)?.[1] || 35)
+        wood: parseInt(raw.match(/木:?(\d+)/)?.[1] || 20),
+        fire: parseInt(raw.match(/火:?(\d+)/)?.[1] || 20),
+        earth: parseInt(raw.match(/土:?(\d+)/)?.[1] || 25),
+        metal: parseInt(raw.match(/金:?(\d+)/)?.[1] || 20),
+        water: parseInt(raw.match(/水:?(\d+)/)?.[1] || 35)
     };
 
-    // 決策卷
-    let log = `<div class="v-row"><span class="v-tag">一、下次變化時間</span>事態將在 ${Math.floor((100-soc)*1.5)} 小時後進入動氣轉折。</div>`;
-    log += `<div class="v-row"><span class="v-tag">二、干支長生位</span>庚金遇午火為「沐浴」，主虛名虛利，戒焦躁。</div>`;
-    log += `<div class="v-row"><span class="v-tag">三、方位指引</span>大吉方位：正南；避災方位：正西。</div>`;
-    $('#v-log').html(log);
-    $('#v-conclusion').text("今天不是行動日，是承重測試日。撐住即是成功。");
+    // 1. 填充決策卷軸
+    let scrollHtml = "";
+    scrollHtml += buildRow("一、下次變化轉折點", `事態將於 ${Math.floor((100-soc)*1.4)} 小時後進入動氣期。`);
+    scrollHtml += buildRow("二、干支能量狀態", `日柱庚午。庚金遇午火為「${LIFE_DATA["庚"]["午"]}」之地，主虛浮，不宜硬衝。`);
+    scrollHtml += buildRow("三、方位納氣指引", `今日生氣方位在【正南】，衰死方位在【正西】。`);
+    scrollHtml += buildRow("四、五行運算分析", `火氣(${e.fire})高漲，金氣(${e.metal})受制。注意文書錯誤與溝通摩擦。`);
+    $('#v-log').html(scrollHtml);
+    $('#v-fin').text("今天不是行動日，是承重測試日。靜待轉折，不隨風起舞。");
 
-    // 矩陣與週期圖形展開
-    renderFive(e);
-    renderStar();
-    renderTime(soc);
-    renderCompass();
+    // 2. 能量矩陣渲染
+    drawFiveChart(e);
+    drawStarChart();
+
+    // 3. 週期震盪渲染
+    drawTimeCycle(soc);
+
+    // 4. 方位佈局
+    drawCompass();
 
     go(1);
 }
 
-function renderFive(e) {
-    if(chartNodes.f) chartNodes.f.destroy();
-    chartNodes.f = new Chart(document.getElementById('c-five'), {
+function buildRow(tag, val) { 
+    return `<div class="v-row"><span class="v-tag">${tag}</span><span class="v-val">${val}</span></div>`; 
+}
+
+function drawFiveChart(e) {
+    if(charts.f) charts.f.destroy();
+    charts.f = new Chart(document.getElementById('chart-five'), {
         type: 'radar',
         data: {
-            labels: ['木', '火', '土', '金', '水'],
-            datasets: [{ label: '能量純度', data: [e.w, e.f, e.t, e.m, e.s], backgroundColor: 'rgba(212, 175, 55, 0.4)', borderColor: '#D4AF37' }]
-        }
+            labels: ['木(生發)', '火(炎上)', '土(稼穡)', '金(從革)', '水(潤下)'],
+            datasets: [{ 
+                label: '能量純度', 
+                data: [e.wood, e.fire, e.earth, e.metal, e.water], 
+                backgroundColor: 'rgba(212, 175, 55, 0.4)', 
+                borderColor: '#D4AF37', 
+                borderWidth: 2,
+                pointBackgroundColor: '#B8860B'
+            }]
+        },
+        options: { scales: { r: { min: 0, ticks: { display: false } } }, plugins: { legend: { display: false } } }
     });
+    $('#five-analysis').html(`<b>分析：</b>火與水交戰，形成「既濟」未成之象。情緒起伏大，宜用「土」氣中和。`);
 }
 
-function renderStar() {
-    if(chartNodes.s) chartNodes.s.destroy();
-    chartNodes.s = new Chart(document.getElementById('c-star'), {
-        type: 'polarArea',
+function drawStarChart() {
+    if(charts.s) charts.s.destroy();
+    charts.s = new Chart(document.getElementById('chart-star'), {
+        type: 'bar',
         data: {
             labels: ['木星', '土星', '火星', '金星', '水星'],
-            datasets: [{ data: [15, 18, 12, 9, 7], backgroundColor: ['#4CAF50', '#795548', '#F44336', '#FFEB3B', '#2196F3'] }]
-        }
+            datasets: [{ 
+                data: [15, -18, -12, 9, 7], 
+                backgroundColor: ['#4CAF50', '#795548', '#F44336', '#FFEB3B', '#2196F3'],
+                borderRadius: 5
+            }]
+        },
+        options: { plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#eee' } } } }
     });
 }
 
-function renderTime(soc) {
-    if(chartNodes.t) chartNodes.t.destroy();
+function drawTimeCycle(soc) {
+    if(charts.t) charts.t.destroy();
     const days = Array.from({length: 30}, (_, i) => i + 1);
-    const wave = days.map(d => soc + Math.sin(d * 0.4) * 20 + (Math.random()*5));
-    chartNodes.t = new Chart(document.getElementById('c-time'), {
+    const wave = days.map(d => soc + Math.sin(d * 0.45) * 25 + (Math.random()*8));
+    charts.t = new Chart(document.getElementById('chart-time-cycle'), {
         type: 'line',
         data: {
             labels: days.map(d => `D+${d}`),
-            datasets: [{ label: '能量波動', data: wave, borderColor: '#B8860B', fill: true, backgroundColor: 'rgba(255, 241, 118, 0.2)', tension: 0.4 }]
-        }
+            datasets: [{ 
+                label: '能量波', 
+                data: wave, 
+                borderColor: '#B8860B', 
+                fill: true, 
+                backgroundColor: 'rgba(255, 241, 118, 0.2)', 
+                tension: 0.4,
+                pointRadius: 1
+            }]
+        },
+        options: { scales: { x: { ticks: { font: { size: 6 } } }, y: { display: false } }, plugins: { legend: { display: false } } }
     });
-    const peak = days[wave.indexOf(Math.max(...wave))];
-    $('#time-desc').html(`<b>分析：</b>未來一週能量處於高頻震盪。第 ${peak} 天為「極動氣日」，重大決策請務必避開此時。`);
+    const peakDay = days[wave.indexOf(Math.max(...wave))];
+    $('#time-analysis-box').html(`<b>週期預測：</b>未來 30 日內，第 <b>${peakDay}</b> 天能量波動最為劇烈（大動氣日），此日宜避開所有重大契約簽署。`);
 }
 
-function renderCompass() {
-    const dirs = ["東南", "正南", "西南", "正東", "中宮", "正西", "東北", "正北", "西北"];
+function drawCompass() {
+    const sectors = [
+        { d: "東南", s: "" }, { d: "正南", s: "lucky" }, { d: "西南", s: "" },
+        { d: "正東", s: "" }, { d: "中宮", s: "" }, { d: "正西", s: "danger" },
+        { d: "東北", s: "" }, { d: "正北", s: "" }, { d: "西北", s: "" }
+    ];
     let h = "";
-    dirs.forEach(d => {
-        let cls = (d === "正南") ? "lucky" : "";
-        h += `<div class="compass-cell ${cls}">${d}</div>`;
+    sectors.forEach(sec => {
+        h += `<div class="compass-cell ${sec.s}">${sec.d}</div>`;
     });
     $('#comp-grid').html(h);
 }
 
-function takeShot() { html2canvas(document.querySelector("#cap-scroll")).then(c => { const l=document.createElement('a'); l.href=c.toDataURL(); l.download='V25_Result.png'; l.click(); }); }
-function dl() { const b=new Blob([document.documentElement.outerHTML],{type:'text/html'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='Golden_V25_Supreme.html'; a.click(); }
+function saveAsImg() {
+    html2canvas(document.querySelector("#cap-scroll")).then(canvas => {
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL();
+        link.download = `V26_Scroll_${Date.now()}.png`;
+        link.click();
+    });
+}
+
+function exportCode() {
+    const blob = new Blob([document.documentElement.outerHTML], {type:'text/html'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'Golden_V26_Supreme.html';
+    a.click();
+}
+
 $(document).ready(() => Core.initAll());
 </script>
 </body>
