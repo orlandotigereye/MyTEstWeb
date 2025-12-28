@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>雙平台管理面板 - GitLab 修復版</title>
+    <title>雙平台管理面板 - 導覽增強版</title>
     <style>
         :root { --gold-primary: #ffd700; --gold-dark: #b8860b; --text-size: 0.5rem; }
         body { background: radial-gradient(circle, #ffec8b, #daa520, #8b6508); background-attachment: fixed; color: #333; font-family: sans-serif; font-size: var(--text-size); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         .container { width: 100%; max-width: 900px; background: rgba(255, 255, 255, 0.95); border: 2px solid var(--gold-primary); box-shadow: 0 0 15px #ffd700; border-radius: 8px; padding: 10px; box-sizing: border-box; }
-        .header { text-align: center; margin-bottom: 10px; border-bottom: 1px solid var(--gold-primary); }
+        .header { text-align: center; border-bottom: 1px solid var(--gold-primary); padding-bottom: 5px; margin-bottom: 10px; }
         .tabs { display: flex; gap: 5px; margin-bottom: 10px; }
         .tab-btn { padding: 5px 10px; cursor: pointer; background: #fffacd; border: 1px solid var(--gold-dark); font-size: var(--text-size); border-radius: 4px 4px 0 0; }
         .tab-btn.active { background: var(--gold-primary); font-weight: bold; color: white; }
@@ -17,9 +17,10 @@
         .btn { padding: 3px 8px; background: linear-gradient(to bottom, #ffd700, #b8860b); color: white; border: none; border-radius: 3px; cursor: pointer; font-size: var(--text-size); }
         .list-group { list-style: none; padding: 0; margin: 0; border: 1px solid #ddd; background: #fff; }
         .list-item { display: flex; align-items: center; padding: 6px; border-bottom: 1px solid #eee; }
-        .list-item a { text-decoration: none; color: #0056b3; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+        .list-item:hover { background: #fffacd; }
+        .list-item a { text-decoration: none; color: #0056b3; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .folder-link { color: #e24329 !important; font-weight: bold; cursor: pointer; }
-        .msg { background: #fff3cd; padding: 4px; margin-bottom: 5px; text-align: center; border-radius: 3px; }
+        .msg { background: #fff3cd; padding: 4px; margin-bottom: 5px; text-align: center; border-radius: 3px; font-weight: bold; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
@@ -27,8 +28,8 @@
 
 <div class="container">
     <div class="header">
-        <h1>✨ 雙平台管理系統 (GitLab 深度讀取版) ✨</h1>
-        <button class="btn" id="dl-btn">⬇️ 下載此原始碼</button>
+        <h1>✨ 雙平台檔案索引系統 (Main 分支修正) ✨</h1>
+        <button class="btn" id="dl-btn">⬇️ 下載此程式碼</button>
     </div>
 
     <div class="tabs">
@@ -37,16 +38,17 @@
     </div>
 
     <div id="gh-tab" class="tab-content active">
-        <div class="msg" id="gh-msg">GitHub 準備就緒</div>
+        <div class="msg" id="gh-msg">GitHub 載入中...</div>
         <div style="margin-bottom:5px;"><button class="btn" onclick="fetchGH('')">🏠 根目錄</button></div>
         <ul id="gh-list" class="list-group"></ul>
     </div>
 
     <div id="gl-tab" class="tab-content">
-        <div class="msg" id="gl-msg">GitLab 準備就緒</div>
-        <div style="margin-bottom:5px;">
+        <div class="msg" id="gl-msg">GitLab 載入中...</div>
+        <div style="margin-bottom:5px; display: flex; gap: 5px; align-items: center;">
             <button class="btn" onclick="fetchGL('')">🏠 根目錄</button>
-            <span id="gl-path-display" style="margin-left:5px; color:#666;">/</span>
+            <button class="btn" onclick="goBackGL()">🔙 回上一層</button>
+            <span id="gl-path-display" style="color:#666; overflow: hidden; text-overflow: ellipsis;">/</span>
         </div>
         <ul id="gl-list" class="list-group"></ul>
     </div>
@@ -58,6 +60,8 @@ const CFG = {
     GL: { BASE: 'https://gitlab.com/api/v4', PID: 'orlandotigereye%2Fanly13', REF: 'main' }
 };
 
+let currentGLPath = "";
+
 function switchTab(e, id) {
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -65,12 +69,13 @@ function switchTab(e, id) {
     e.currentTarget.classList.add('active');
 }
 
+// GitHub 處理
 async function fetchGH(path) {
     const list = document.getElementById('gh-list');
     const msg = document.getElementById('gh-msg');
-    list.innerHTML = ''; msg.innerText = `讀取 GitHub: /${path}...`;
+    list.innerHTML = ''; msg.innerText = `讀取 GitHub: /${path}`;
     try {
-        const res = await fetch(`https://api.github.com/repos/${CFG.GH.OWNER}/${CFG.GH.REPO}/contents/${path}`);
+        const res = await fetch(`https://api.github.com/repos/${CFG.GH.OWNER}/${CFG.GH.REPO}/contents/${path}?t=${Date.now()}`);
         const data = await res.json();
         if(!res.ok) throw new Error(data.message);
         data.sort((a,b)=> (a.type==='dir'?-1:1)).forEach(item => {
@@ -87,16 +92,16 @@ async function fetchGH(path) {
     } catch(e) { msg.innerText = `GH 錯誤: ${e.message}`; }
 }
 
+// GitLab 處理
 async function fetchGL(path) {
+    currentGLPath = path;
     const list = document.getElementById('gl-list');
     const msg = document.getElementById('gl-msg');
     const pathLabel = document.getElementById('gl-path-display');
-    list.innerHTML = ''; msg.innerText = `讀取 GitLab: /${path}...`;
-    pathLabel.innerText = `/${path}`;
+    list.innerHTML = ''; msg.innerText = `讀取 GitLab...`;
+    pathLabel.innerText = path === "" ? "/" : `/${path}`;
 
-    // 使用 encodeURIComponent 處理子資料夾路徑中的斜線
-    const encodedPath = encodeURIComponent(path);
-    const url = `${CFG.GL.BASE}/projects/${CFG.GL.PID}/repository/tree?path=${path}&ref=${CFG.GL.REF}&per_page=100&t=${Date.now()}`;
+    const url = `${CFG.GL.BASE}/projects/${CFG.GL.PID}/repository/tree?path=${encodeURIComponent(path)}&ref=${CFG.GL.REF}&per_page=100&t=${Date.now()}`;
 
     try {
         const res = await fetch(url);
@@ -107,7 +112,6 @@ async function fetchGL(path) {
             const li = document.createElement('li');
             li.className = 'list-item';
             if(item.type==='tree') {
-                // 點擊資料夾時，傳遞 item.path (GitLab 提供的完整相對路徑)
                 li.innerHTML = `📁&nbsp;<a class="folder-link" onclick="fetchGL('${item.path}')">${item.name}</a>`;
             } else {
                 const fileUrl = `https://gitlab.com/orlandotigereye/anly13/-/blob/${CFG.GL.REF}/${item.path}`;
@@ -119,12 +123,20 @@ async function fetchGL(path) {
     } catch(e) { msg.innerText = `GL 錯誤: ${e.message}`; }
 }
 
+function goBackGL() {
+    if (currentGLPath === "") return;
+    const parts = currentGLPath.split('/');
+    parts.pop();
+    fetchGL(parts.join('/'));
+}
+
 document.getElementById('dl-btn').onclick = () => {
     const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
-    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'index.html' });
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'admin_panel.html' });
     a.click();
 };
 
+// 初始加載
 fetchGH('');
 fetchGL('');
 </script>
