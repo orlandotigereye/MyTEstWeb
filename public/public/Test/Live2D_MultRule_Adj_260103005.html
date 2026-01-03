@@ -52,21 +52,22 @@
             align-items: flex-end; justify-content: space-around;
             pointer-events: none; z-index: 5;
         }
+        .char-container {
+            width: 48%; height: 100vh; display: flex; align-items: flex-end; justify-content: center;
+        }
         iframe { 
             border: none; 
             background: transparent !important; 
             pointer-events: auto;
-            align-self: flex-end;
-            transition: all 0.4s ease;
+            width: 100%; height: 100%;
             display: block;
             z-index: 20;
-            width: 48%; height: 100vh;
         }
-        .stage.mode-dual iframe { width: 48%; }
-        .stage.mode-left iframe#char-left { width: 95%; }
-        .stage.mode-left iframe#char-right { display: none; }
-        .stage.mode-right iframe#char-right { width: 95%; }
-        .stage.mode-right iframe#char-left { display: none; }
+        .stage.mode-dual .char-container { width: 48%; }
+        .stage.mode-left .char-container#container-right { display: none; }
+        .stage.mode-left .char-container#container-left { width: 95%; }
+        .stage.mode-right .char-container#container-left { display: none; }
+        .stage.mode-right .char-container#container-right { width: 95%; }
 
         .btn-gold {
             background: linear-gradient(to bottom, #fff, var(--gold-main));
@@ -119,7 +120,7 @@
 <body>
 
 <script>
-    /* 2. 資料與角色清單 (同步加強版) */
+    /* 2. 資料與角色清單 (穩定強化版) */
     const THEMES = {
         gold: "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?q=80&w=2400",
         day: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=2400",
@@ -127,7 +128,6 @@
         night: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=2400"
     };
 
-    // 完整的 Live2D 角色路徑字典
     const AVATARS = {
         "shizuku": "https://unpkg.com/live2d-widget-model-shizuku@1.0.5/assets/shizuku.model.json",
         "koharu": "https://unpkg.com/live2d-widget-model-koharu@1.0.5/assets/koharu.model.json",
@@ -137,7 +137,6 @@
         "tororo": "https://unpkg.com/live2d-widget-model-tororo@1.0.5/assets/tororo.model.json",
         "wanko": "https://unpkg.com/live2d-widget-model-wanko@1.0.5/assets/wanko.model.json",
         "z16": "https://unpkg.com/live2d-widget-model-z16@1.0.5/assets/z16.model.json",
-        "nij": "https://unpkg.com/live2d-widget-model-ni-j@1.0.5/assets/ni-j.model.json",
         "chitose": "https://unpkg.com/live2d-widget-model-chitose@1.0.5/assets/chitose.model.json",
         "tsumiki": "https://unpkg.com/live2d-widget-model-tsumiki@1.0.5/assets/tsumiki.model.json",
         "unitychan": "https://unpkg.com/live2d-widget-model-unitychan@1.0.5/assets/unitychan.model.json",
@@ -222,20 +221,30 @@
 <body>
     <div id="pop"></div>
     <script>
-        window.onload = () => {
-            const h = window.innerHeight;
-            const baseScale = Math.min(1.0, h / 800); 
-            const finalScale = ${scaleSlider} * baseScale;
-            L2Dwidget.init({
-                model: { jsonPath: "${path}" },
-                display: { 
-                    position: "center", width: window.innerWidth, height: window.innerHeight, 
-                    vOffset: ${vOffset}, hOffset: 0 
-                },
-                mobile: { show: true, scale: finalScale },
-                react: { opacity: 1.0 }
-            });
+        const initL2D = () => {
+            if (typeof L2Dwidget === 'undefined') {
+                setTimeout(initL2D, 500);
+                return;
+            }
+            try {
+                const h = window.innerHeight;
+                const baseScale = Math.min(1.0, h / 800); 
+                const finalScale = ${scaleSlider} * baseScale;
+                L2Dwidget.init({
+                    model: { jsonPath: "${path}" },
+                    display: { 
+                        position: "center", width: window.innerWidth, height: window.innerHeight, 
+                        vOffset: ${vOffset}, hOffset: 0 
+                    },
+                    mobile: { show: true, scale: finalScale },
+                    react: { opacity: 1.0 }
+                });
+                window.parent.postMessage({status:'success', side: '${side}'}, '*');
+            } catch(e) {
+                window.parent.postMessage({status:'error', side: '${side}'}, '*');
+            }
         };
+        window.onload = initL2D;
         window.addEventListener('message', e => {
             if (e.data.text) {
                 const p = document.getElementById('pop');
@@ -250,6 +259,12 @@
 </html>`;
     }
 
+    window.addEventListener('message', e => {
+        if (e.data.status === 'error') {
+            sysMsg(`⚠️ ${e.data.side} 角色渲染異常，嘗試重載。`);
+        }
+    });
+
     function initTheatre() {
         applyHostMode();
         const scaleVal = parseFloat(document.getElementById('scale-range').value);
@@ -263,19 +278,25 @@
         ];
 
         config.forEach(c => {
-            const frame = document.getElementById(`char-${c.id}`);
-            if (frame) {
-                // 強制清空並重新寫入，確保穩定
-                frame.src = "about:blank";
+            const container = document.getElementById(`container-${c.id}`);
+            if (container) {
+                // 完全移除並重建 iframe 以防 WebGL 殘留
+                container.innerHTML = `<iframe id="char-${c.id}"></iframe>`;
+                const frame = container.querySelector('iframe');
+                
                 setTimeout(() => {
-                    const doc = frame.contentWindow.document;
-                    doc.open(); 
-                    doc.write(createCharHTML(c.path, c.id, scaleVal, vOffsetVal)); 
-                    doc.close();
-                }, 50);
+                    try {
+                        const doc = frame.contentWindow.document;
+                        doc.open(); 
+                        doc.write(createCharHTML(c.path, c.id, scaleVal, vOffsetVal)); 
+                        doc.close();
+                    } catch (err) {
+                        sysMsg(`❌ 框架寫入失敗: ${c.id}`);
+                    }
+                }, 200);
             }
         });
-        sysMsg(`人物雙側初始化中...`);
+        sysMsg(`正在為舞台角色進行環境隔離與載入...`);
     }
 
     async function runDrama() {
@@ -289,7 +310,7 @@
             const res = await fetch(url);
             const csv = await res.text();
             const rows = csv.split(/\r?\n/).filter(r => r.trim()).slice(1);
-            sysMsg(`劇本載入，共 ${rows.length} 句。`);
+            sysMsg(`劇本載入成功。`);
 
             for (const row of rows) {
                 if(!playing) break;
@@ -320,7 +341,7 @@
                 }
                 await new Promise(r => setTimeout(r, Math.max(5000, text.length * 450)));
             }
-        } catch (e) { sysMsg("劇本執行中斷或異常。"); }
+        } catch (e) { sysMsg("劇本讀取失敗。"); }
         playing = false;
         document.getElementById('p-status').innerText = "IDLE";
     }
@@ -329,7 +350,7 @@
         const blob = new Blob([document.documentElement.outerHTML], { type: "text/html" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = "linve2D_Dual_Stable.html";
+        a.download = "linve2D_Dual_Final_Fixed.html";
         a.click();
     }
 
@@ -342,7 +363,6 @@
         if(content) content.classList.add('active');
     }
 
-    // 建立通用角色選單內容，確保左右一致且穩定
     function populateSelectors() {
         const leftSel = document.getElementById('avatar-left');
         const rightSel = document.getElementById('avatar-right');
@@ -351,7 +371,7 @@
             "經典角色": ["shizuku", "koharu", "haruto", "miku", "izumi", "epsilon"],
             "萌寵系列": ["hijiki", "tororo", "wanko"],
             "少女系列": ["chitose", "tsumiki", "unitychan", "nico", "niiko", "nito"],
-            "戰術軍事": ["z16", "hibiki", "gf_95", "gf_97", "gf_vivi", "gf_hk416", "ni_j"]
+            "戰術軍事": ["hibiki", "gf_95", "gf_97", "gf_vivi", "gf_hk416", "ni_j", "z16"]
         };
 
         let html = "";
@@ -368,14 +388,13 @@
         leftSel.innerHTML = html;
         rightSel.innerHTML = html;
         
-        // 強制設定有效預設值
         leftSel.value = "shizuku";
         rightSel.value = "koharu";
     }
 
     window.onload = () => {
         populateSelectors();
-        sysMsg("系統檢查...");
+        sysMsg("環境初始化中...");
         setTimeout(initTheatre, 1000); 
     };
 </script>
@@ -389,7 +408,7 @@
 <div class="main-ui">
     <div class="ui-header">
         <div class="flex justify-between items-center gap-2">
-            <span class="font-bold text-amber-950 whitespace-nowrap" style="font-size: 0.6rem;">✨ 金輝咖啡廳 V21R (雙側穩定版)</span>
+            <span class="font-bold text-amber-950 whitespace-nowrap" style="font-size: 0.6rem;">✨ 金輝咖啡廳 V21R (雙側穩定加強版)</span>
             <div class="flex gap-1 flex-wrap justify-end">
                 <button class="btn-gold" onclick="runDrama()">啟動劇本</button>
                 <button class="btn-gold" onclick="initTheatre()">重新渲染</button>
@@ -398,7 +417,7 @@
 
         <div class="info-strip">
             <span id="p-status" class="font-black text-amber-800" style="min-width:35px;">IDLE</span>
-            <div id="script-line">同步雙側選單，強化右方角色載入穩定性。</div>
+            <div id="script-line">強化 iframe 實體隔離技術，防止 WebGL 衝突導致空白。</div>
         </div>
 
         <div class="flex mt-1">
@@ -423,7 +442,7 @@
                 <input type="range" id="voffset-range" min="-500" max="500" step="10" value="-100" class="flex-grow" oninput="document.getElementById('val-voff').innerText = this.value">
                 <span id="val-voff" style="min-width:30px;">-100</span>
             </div>
-            <div id="console-log">雙側選單同步完成，支援 23 位角色。</div>
+            <div id="console-log">準備就緒。</div>
         </div>
 
         <div id="tab-settings" class="tab-content pt-1">
@@ -454,8 +473,8 @@
 </div>
 
 <div id="main-stage" class="stage mode-dual">
-    <iframe id="char-left"></iframe>
-    <iframe id="char-right"></iframe>
+    <div class="char-container" id="container-left"></div>
+    <div class="char-container" id="container-right"></div>
 </div>
 
 </body>
