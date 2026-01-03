@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-    <title>金輝咖啡廳 V21R - 佈局修正版</title>
+    <title>金輝咖啡廳 V21R - 自動比例與初始化修正版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* 1. CSS 變數與核心樣式 */
@@ -61,18 +61,18 @@
             transition: all 0.4s ease;
             display: block;
             z-index: 20;
+            width: 48%; height: 100vh;
         }
 
-        /* 調整容器高度 */
-        .stage.mode-dual iframe { width: 45%; height: 80vh; }
-        .stage.mode-left iframe#char-left { width: 85%; height: 90vh; }
+        /* 調整容器模式 */
+        .stage.mode-dual iframe { width: 48%; }
+        .stage.mode-left iframe#char-left { width: 95%; }
         .stage.mode-left iframe#char-right { display: none; }
-        .stage.mode-right iframe#char-right { width: 85%; height: 90vh; }
+        .stage.mode-right iframe#char-right { width: 95%; }
         .stage.mode-right iframe#char-left { display: none; }
 
         @media (max-width: 768px) {
-            .stage.mode-dual iframe { height: 80vh; width: 48%; }
-            .stage.mode-left iframe#char-left, .stage.mode-right iframe#char-right { width: 95%; height: 90vh; }
+            .stage.mode-dual iframe { height: 90vh; width: 50%; }
         }
 
         .btn-gold {
@@ -81,9 +81,9 @@
             color: #451a03; cursor: pointer; font-weight: 900; font-size: 0.5rem;
             box-shadow: 1px 1px 0 #b45309;
         }
-        /* 修正按鈕重疊：調整 top 位置或固定在右側中間 */
+        /* 隱藏/顯示按鈕 */
         .btn-toggle-ui {
-            position: fixed; top: 80px; right: 10px; z-index: 100;
+            position: fixed; top: 85px; right: 10px; z-index: 100;
             background: var(--gold-dark); color: white; padding: 4px 10px; border-radius: 20px;
             font-size: 0.5rem; font-weight: bold; cursor: pointer; border: 1px solid #fff;
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
@@ -167,11 +167,11 @@
         if (ui.classList.contains('hidden-ui')) {
             ui.classList.remove('hidden-ui');
             btn.innerText = "隱藏控制項";
-            btn.style.top = "80px"; // 面板顯示時下移避免重疊
+            btn.style.top = "85px"; 
         } else {
             ui.classList.add('hidden-ui');
             btn.innerText = "顯示控制項";
-            btn.style.top = "10px"; // 面板隱藏時上移節省空間
+            btn.style.top = "10px"; 
         }
     }
 
@@ -194,7 +194,8 @@
         initTheatre();
     }
 
-    function createCharHTML(path, side, scale, vOffset) {
+    function createCharHTML(path, side, scaleSlider, vOffset) {
+        // 核心縮放邏輯
         return `
 <!DOCTYPE html>
 <html>
@@ -217,19 +218,23 @@
             width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent;
             border-top: 15px solid #451a03;
         }
-        #pop:before {
-            content: ''; position: absolute; bottom: -10px;
-            ${side === 'left' ? 'right: 31px;' : 'left: 31px;'} 
-            width: 0; height: 0; border-left: 9px solid transparent; border-right: 9px solid transparent;
-            border-top: 13px solid #fff; z-index: 10001;
+        canvas { 
+            width: 100% !important; 
+            height: 100% !important; 
+            object-fit: contain !important;
+            vertical-align: bottom;
         }
-        canvas { width: 100% !important; height: 100% !important; object-fit: contain !important; }
     </style>
 </head>
 <body>
     <div id="pop"></div>
     <script>
         window.onload = () => {
+            const h = window.innerHeight;
+            // 基礎比例因子：以 800px 作為基準 1.0，畫面愈矮則基礎比例愈小，達成自動縮小
+            const baseScale = Math.min(1.0, h / 800); 
+            const finalScale = ${scaleSlider} * baseScale;
+            
             L2Dwidget.init({
                 model: { jsonPath: "${path}" },
                 display: { 
@@ -239,7 +244,7 @@
                     vOffset: ${vOffset}, 
                     hOffset: 0 
                 },
-                mobile: { show: true, scale: ${scale} },
+                mobile: { show: true, scale: finalScale },
                 react: { opacity: 1.0 }
             });
         };
@@ -260,24 +265,30 @@
     function initTheatre() {
         applyHostMode();
         
-        const scale = parseFloat(document.getElementById('scale-range').value);
-        const vOffset = parseInt(document.getElementById('voffset-range').value);
+        const scaleVal = parseFloat(document.getElementById('scale-range').value);
+        const vOffsetVal = parseInt(document.getElementById('voffset-range').value);
         const leftKey = document.getElementById('avatar-left').value;
         const rightKey = document.getElementById('avatar-right').value;
 
-        const currentConfig = [
+        const config = [
             { id: "left", path: AVATARS[leftKey] },
             { id: "right", path: AVATARS[rightKey] }
         ];
 
-        currentConfig.forEach(c => {
-            const f = document.getElementById(`char-${c.id}`);
-            if (f) {
-                const d = f.contentWindow.document;
-                d.open(); d.write(createCharHTML(c.path, c.id, scale, vOffset)); d.close();
+        config.forEach(c => {
+            const frame = document.getElementById(`char-${c.id}`);
+            if (frame) {
+                // 強制清空內容並重新注入，解決 iframe 載入不穩定的問題
+                frame.src = "about:blank";
+                setTimeout(() => {
+                    const doc = frame.contentWindow.document;
+                    doc.open(); 
+                    doc.write(createCharHTML(c.path, c.id, scaleVal, vOffsetVal)); 
+                    doc.close();
+                }, 50);
             }
         });
-        sysMsg(`重新渲染人物：縮放 ${scale}, 偏移 ${vOffset}`);
+        sysMsg(`角色渲染指令已發送 (適配高度 + ${scaleVal} 調整)`);
     }
 
     async function runDrama() {
@@ -340,20 +351,24 @@
         if(content) content.classList.add('active');
     }
 
-    window.onload = () => setTimeout(initTheatre, 1000);
+    // 啟動時自動載入角色，確保 window 已完全準備好
+    window.onload = () => {
+        sysMsg("系統初始化中...");
+        // 延遲載入確保 iframe DOM 完全穩定
+        setTimeout(initTheatre, 800);
+    };
 </script>
 
 <div id="dynamic-bg"></div>
 <div class="gold-texture"></div>
 
-<!-- 隱藏控制項按鈕：初始位置避開標題列 -->
 <button class="btn-toggle-ui" onclick="toggleUI()">隱藏控制項</button>
 <button id="btn-download" onclick="downloadSource()">💾 下載原始碼</button>
 
 <div class="main-ui">
     <div class="ui-header">
         <div class="flex justify-between items-center gap-2">
-            <span class="font-bold text-amber-950 whitespace-nowrap" style="font-size: 0.6rem;">✨ 金輝咖啡廳 V21R</span>
+            <span class="font-bold text-amber-950 whitespace-nowrap" style="font-size: 0.6rem;">✨ 金輝咖啡廳 V21R (初始化修正)</span>
             <div class="flex gap-1 flex-wrap justify-end">
                 <button class="btn-gold" onclick="runDrama()">啟動劇本</button>
                 <button class="btn-gold" onclick="initTheatre()">重新渲染人物</button>
@@ -362,15 +377,14 @@
 
         <div class="info-strip">
             <span id="p-status" class="font-black text-amber-800" style="min-width:35px;">IDLE</span>
-            <div id="script-line">調整數值後點擊「重新渲染」。</div>
+            <div id="script-line">準備就緒，請操作控制項。</div>
         </div>
 
         <div class="flex mt-1">
-            <div class="tab-btn active" onclick="switchTab('tab-control')">快速控制</div>
-            <div class="tab-btn" onclick="switchTab('tab-settings')">主播與進階</div>
+            <div class="tab-btn active" onclick="switchTab('tab-control')">比例與背景</div>
+            <div class="tab-btn" onclick="switchTab('tab-settings')">人物與劇本</div>
         </div>
 
-        <!-- 快速控制分頁 -->
         <div id="tab-control" class="tab-content active pt-1">
             <div class="flex gap-1 flex-wrap mb-1">
                 <button class="btn-gold" onclick="updateBg('gold')">💰 金輝</button>
@@ -379,38 +393,37 @@
                 <button class="btn-gold" onclick="updateBg('night')">🌙 靜夜</button>
             </div>
             <div class="flex items-center gap-2 mb-1">
-                <span class="control-label">比例 (Scale):</span>
-                <input type="range" id="scale-range" min="0.1" max="1.5" step="0.05" value="0.3" class="flex-grow" oninput="document.getElementById('val-scale').innerText = this.value">
+                <span class="control-label">額外縮放:</span>
+                <input type="range" id="scale-range" min="0.1" max="1.0" step="0.05" value="0.3" class="flex-grow" oninput="document.getElementById('val-scale').innerText = this.value">
                 <span id="val-scale" style="min-width:25px;">0.3</span>
             </div>
             <div class="flex items-center gap-2">
-                <span class="control-label">偏移 (vOffset):</span>
-                <input type="range" id="voffset-range" min="-400" max="400" step="10" value="-100" class="flex-grow" oninput="document.getElementById('val-voff').innerText = this.value">
+                <span class="control-label">垂直偏移:</span>
+                <input type="range" id="voffset-range" min="-500" max="500" step="10" value="-100" class="flex-grow" oninput="document.getElementById('val-voff').innerText = this.value">
                 <span id="val-voff" style="min-width:30px;">-100</span>
             </div>
-            <div id="console-log">佈局已優化，按鈕不再重疊。</div>
+            <div id="console-log">角色已恢復自動載入。縮放比例會隨視窗高度自動適配。</div>
         </div>
 
-        <!-- 進階設定分頁 -->
         <div id="tab-settings" class="tab-content pt-1">
             <div class="grid grid-cols-1 gap-1">
                 <div class="flex gap-1 items-center">
-                    <span class="control-label">模式:</span>
+                    <span class="control-label">主播模式:</span>
                     <select id="host-mode-select" class="flex-grow" onchange="applyHostMode()">
-                        <option value="dual">雙人 (L+R)</option>
-                        <option value="left">單人 (左)</option>
-                        <option value="right">單人 (右)</option>
+                        <option value="dual">雙人主播 (左+右)</option>
+                        <option value="left">單人主播 (左側)</option>
+                        <option value="right">單人主播 (右側)</option>
                     </select>
                 </div>
                 <div class="flex gap-1 items-center">
-                    <span class="control-label">左主播:</span>
+                    <span class="control-label">左方角色:</span>
                     <select id="avatar-left" class="flex-grow" onchange="changeAvatar()">
-                        <option value="shizuku">Shizuku</option>
-                        <option value="haruto">Haruto</option>
-                        <option value="miku">Miku</option>
-                        <option value="hijiki">Hijiki</option>
-                        <option value="tororo">Tororo</option>
-                        <option value="wanko">Wanko</option>
+                        <option value="shizuku">Shizuku (靜)</option>
+                        <option value="haruto">Haruto (晴)</option>
+                        <option value="miku">Miku (初音)</option>
+                        <option value="hijiki">Hijiki (貓)</option>
+                        <option value="tororo">Tororo (白貓)</option>
+                        <option value="wanko">Wanko (小狗)</option>
                         <option value="z16">Z16</option>
                         <option value="nij">Ni-J</option>
                         <option value="chitose">Chitose</option>
@@ -419,9 +432,9 @@
                     </select>
                 </div>
                 <div class="flex gap-1 items-center">
-                    <span class="control-label">右主播:</span>
+                    <span class="control-label">右方角色:</span>
                     <select id="avatar-right" class="flex-grow" onchange="changeAvatar()">
-                        <option value="koharu" selected>Koharu</option>
+                        <option value="koharu" selected>Koharu (小春)</option>
                         <option value="shizuku">Shizuku</option>
                         <option value="haruto">Haruto</option>
                         <option value="miku">Miku</option>
