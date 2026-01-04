@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<title>金輝咖啡廳 V30 - 角色動作系統</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+/* ======================================================
+   🌟 THEME
+====================================================== */
+:root{
+  --gold:#fbbf24;
+  --gold-dark:#b45309;
+  --brown:#451a03;
+  --panel:rgba(255,255,255,.95);
+}
+
+html,body{
+  margin:0;
+  width:100%;
+  height:100%;
+  background:var(--gold);
+  color:var(--brown);
+  font-family:"PingFang TC","Microsoft JhengHei",sans-serif;
+  overflow:hidden;
+}
+
+/* ======================================================
+   📱 MODE STATES
+====================================================== */
+body.mobile-mode{ font-size:.85rem; }
+body.desktop-mode{ font-size:.7rem; }
+body.onehand-mode .main-ui{
+  width:230px;
+  left:8px;
+  bottom:8px;
+  top:auto;
+  position:fixed;
+}
+
+/* ======================================================
+   🧠 UI
+====================================================== */
+.main-ui{
+  position:fixed;
+  top:0;left:0;
+  width:100%;
+  background:var(--panel);
+  z-index:2000;
+  border-bottom:2px solid var(--gold-dark);
+}
+.ui-bar{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  padding:6px;
+}
+.btn{
+  background:linear-gradient(#fff,var(--gold));
+  border:1px solid var(--gold-dark);
+  border-radius:8px;
+  padding:6px 10px;
+  font-weight:800;
+  cursor:pointer;
+  user-select:none;
+}
+.btn.small{ font-size:.75em; padding:4px 6px; }
+
+/* ======================================================
+   🎭 STAGE
+====================================================== */
+.stage{
+  position:fixed;
+  inset:0;
+  z-index:10;
+}
+
+/* ======================================================
+   🎭 CHARACTER NODE
+====================================================== */
+#node-char{
+  position:absolute;
+  left:15vw;
+  top:28vh;
+  width:70vw;
+  height:60vh;
+  pointer-events:auto;
+  touch-action:none;
+  transform-origin:center center;
+}
+
+/* ======================================================
+   🎭 CHARACTER BODY (Placeholder)
+====================================================== */
+.char-body{
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,.05);
+  border-radius:18px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:2rem;
+  font-weight:900;
+}
+
+/* ======================================================
+   💬 SUBTITLE
+====================================================== */
+#node-sub{
+  position:absolute;
+  max-width:90vw;
+  background:white;
+  border:2px solid var(--gold-dark);
+  border-radius:14px;
+  padding:10px 16px;
+  font-weight:900;
+  left:5vw;
+  top:65vh;
+}
+
+/* ======================================================
+   🎞 ACTION ANIMATIONS
+====================================================== */
+
+/* Idle breathing */
+.action-idle{
+  animation:idleBreath 4s ease-in-out infinite;
+}
+@keyframes idleBreath{
+  0%{ transform:scale(1); }
+  50%{ transform:scale(1.02); }
+  100%{ transform:scale(1); }
+}
+
+/* Wave */
+.action-wave{
+  animation:waveHand .8s ease-in-out 2;
+}
+@keyframes waveHand{
+  0%{ transform:rotate(0deg); }
+  25%{ transform:rotate(-6deg); }
+  50%{ transform:rotate(6deg); }
+  75%{ transform:rotate(-6deg); }
+  100%{ transform:rotate(0deg); }
+}
+
+/* Nod */
+.action-nod{
+  animation:nodHead .6s ease-in-out 2;
+}
+@keyframes nodHead{
+  0%{ transform:translateY(0); }
+  50%{ transform:translateY(10px); }
+  100%{ transform:translateY(0); }
+}
+
+/* Shock */
+.action-shock{
+  animation:shockJump .4s ease-out 1;
+}
+@keyframes shockJump{
+  0%{ transform:scale(1); }
+  50%{ transform:scale(1.1); }
+  100%{ transform:scale(1); }
+}
+
+/* Emphasis */
+.action-emphasis{
+  animation:emphasisPulse .5s ease-in-out 2;
+}
+@keyframes emphasisPulse{
+  0%{ filter:brightness(1); }
+  50%{ filter:brightness(1.3); }
+  100%{ filter:brightness(1); }
+}
+
+/* ======================================================
+   📦 FOOTER
+====================================================== */
+.footer{
+  position:fixed;
+  right:8px;
+  bottom:8px;
+  font-size:.65rem;
+  background:rgba(0,0,0,.6);
+  color:white;
+  padding:4px 8px;
+  border-radius:6px;
+  z-index:3000;
+}
+</style>
+</head>
+
+<body class="mobile-mode">
+
+<!-- ================= UI ================= -->
+<div class="main-ui">
+  <div class="ui-bar">
+    <div class="btn" onclick="toggleDevice()">📱/🖥</div>
+    <div class="btn" onclick="toggleOneHand()">🎙 單手</div>
+    <div class="btn small" onclick="doAction('idle')">🧍‍♂️ 待機</div>
+    <div class="btn small" onclick="doAction('wave')">👋 揮手</div>
+    <div class="btn small" onclick="doAction('nod')">🙇 點頭</div>
+    <div class="btn small" onclick="doAction('shock')">😮 驚訝</div>
+    <div class="btn small" onclick="doAction('emphasis')">💥 強調</div>
+  </div>
+</div>
+
+<!-- ================= STAGE ================= -->
+<div class="stage">
+  <div id="node-char">
+    <div id="char-body" class="char-body action-idle">
+      ☕ 主播角色
+    </div>
+  </div>
+
+  <div id="node-sub">
+    <span id="subtitle">字幕示例：現在開始進入角色動作系統。</span>
+  </div>
+</div>
+
+<div class="footer">V30 · Action Engine</div>
+
+<script>
+/* ======================================================
+   🧠 STATE
+====================================================== */
+let deviceMode="mobile";
+let oneHand=false;
+
+/* ======================================================
+   📱 MODE TOGGLES
+====================================================== */
+function toggleDevice(){
+  deviceMode = deviceMode==="mobile"?"desktop":"mobile";
+  document.body.classList.toggle("mobile-mode",deviceMode==="mobile");
+  document.body.classList.toggle("desktop-mode",deviceMode==="desktop");
+}
+function toggleOneHand(){
+  oneHand=!oneHand;
+  document.body.classList.toggle("onehand-mode",oneHand);
+}
+
+/* ======================================================
+   🎭 ACTION ENGINE
+====================================================== */
+const char=document.getElementById("char-body");
+let currentAction="idle";
+
+function clearActions(){
+  char.classList.remove(
+    "action-idle",
+    "action-wave",
+    "action-nod",
+    "action-shock",
+    "action-emphasis"
+  );
+}
+
+function doAction(action){
+  clearActions();
+  currentAction=action;
+
+  if(action==="idle"){
+    char.classList.add("action-idle");
+    return;
+  }
+
+  char.classList.add("action-"+action);
+
+  /* 動作結束後回到 idle */
+  setTimeout(()=>{
+    clearActions();
+    char.classList.add("action-idle");
+    currentAction="idle";
+  },1000);
+}
+
+/* ======================================================
+   🚀 INIT
+====================================================== */
+doAction("idle");
+</script>
+
+</body>
+</html>
