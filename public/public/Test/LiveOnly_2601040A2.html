@@ -1,0 +1,431 @@
+<html lang="zh-Hant"><head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+    <title>金輝咖啡廳 V24R - 錄影上傳整合版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --gold-light: #fef3c7;
+            --gold-main: #fbbf24;
+            --gold-dark: #b45309;
+            --panel-bg: rgba(251, 191, 36, 0.96);
+        }
+        html, body {
+            height: 100%; margin: 0; padding: 0;
+            background-color: #fbbf24; color: #451a03;
+            font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
+            overflow: hidden; font-size: 0.5rem;
+        }
+        #dynamic-bg {
+            position: fixed; inset: 0; z-index: 1;
+            background-size: cover; background-position: center; background-repeat: no-repeat;
+            transition: background-image 0.8s ease-in-out;
+            background-image: url('https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?q=80&w=2400');
+        }
+        .gold-texture {
+            position: fixed; inset: 0; z-index: 2;
+            background-image: url('https://www.transparenttextures.com/patterns/gold-glitter.png');
+            opacity: 0.2; pointer-events: none; mix-blend-mode: overlay;
+        }
+
+        .main-ui {
+            display: flex; flex-direction: column; height: 100vh; width: 100vw; 
+            position: relative; z-index: 2000; transition: transform 0.3s ease-in-out;
+            pointer-events: none;
+        }
+        .main-ui.hidden-ui { transform: translateY(-110%); }
+        .ui-header {
+            padding: 4px 10px; background: var(--panel-bg);
+            border-bottom: 2px solid #fff;
+            box-shadow: 0 4px 15px rgba(180, 83, 9, 0.3);
+            pointer-events: auto;
+        }
+
+        .stage { position: fixed; inset: 0; z-index: 5; pointer-events: none; }
+        
+        .draggable-box {
+            position: absolute; pointer-events: auto; cursor: move; touch-action: none;
+            display: flex; align-items: center; justify-content: center;
+            transform: translate(-50%, -50%);
+            transform-origin: center center;
+        }
+        .draggable-box.dragging { filter: brightness(1.1) drop-shadow(0 0 10px gold); z-index: 1000; }
+        
+        #container-main { width: 350px; height: 500px; z-index: 100; }
+        #subtitle-box { width: 280px; min-height: 120px; z-index: 500; }
+        
+        .bubble-hidden { opacity: 0; pointer-events: none; }
+        .bubble-visible { opacity: 1; pointer-events: auto; }
+        
+        .bubble-svg { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; filter: drop-shadow(4px 4px 0px rgba(0,0,0,0.15)); }
+        .bubble-text { padding: 20px 20px 35px 20px; color: #000; font-weight: 900; font-size: 1.1rem; text-align: center; word-break: break-all; line-height: 1.4; }
+
+        iframe { border: none; background: transparent !important; width: 100%; height: 100%; pointer-events: none; }
+
+        .btn-gold {
+            background: linear-gradient(to bottom, #fff, var(--gold-main));
+            border: 1px solid var(--gold-dark); padding: 2px 8px; border-radius: 4px;
+            color: #451a03; cursor: pointer; font-weight: 900; font-size: 0.5rem;
+            box-shadow: 1px 1px 0 #b45309;
+        }
+        .btn-gold:active { transform: translate(1px, 1px); box-shadow: none; }
+        .btn-rec { background: #ef4444; color: white; border: 1px solid #fff; }
+        .btn-rec.recording { animation: pulse 1s infinite; background: #991b1b; }
+        
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+        .btn-toggle-ui {
+            position: fixed; top: 85px; right: 10px; z-index: 3000;
+            background: var(--gold-dark); color: white; padding: 4px 10px; border-radius: 20px;
+            font-size: 0.5rem; font-weight: bold; cursor: pointer; border: 1px solid #fff;
+        }
+        #console-log { font-size: 0.5rem; height: 40px; overflow-y: auto; background: rgba(255, 255, 255, 0.9); padding: 4px; color: #451a03; margin-top: 4px; border: 1px inset var(--gold-dark); border-radius: 4px; }
+        
+        #btn-download { position: fixed; right: 10px; bottom: 10px; z-index: 5000; background: #059669; color: white; border: 1px solid #fff; font-size: 0.5rem; padding: 3px 12px; border-radius: 20px; font-weight: bold; }
+        input, select { background: white; border: 1px solid var(--gold-dark); font-size: 0.5rem; padding: 2px 6px; border-radius: 4px; }
+        
+        .info-strip { background: rgba(255, 255, 255, 0.3); border-radius: 4px; padding: 2px 8px; margin-top: 3px; display: flex; align-items: center; gap: 6px; }
+        #script-line { font-style: italic; color: #78350f; font-weight: bold; font-size: 0.7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; text-shadow: 1px 1px 1px #fff; }
+        
+        .tab-btn { padding: 2px 8px; cursor: pointer; border-radius: 6px 6px 0 0; background: rgba(180, 83, 9, 0.1); border: 1px solid var(--gold-dark); border-bottom: none; font-weight: bold; margin-right: 2px; font-size: 0.5rem; }
+        .tab-btn.active { background: var(--gold-main); border-bottom: 2px solid var(--gold-main); }
+        .tab-content { display: none; pointer-events: auto; }
+        .tab-content.active { display: block; }
+        .control-label { font-weight: bold; min-width: 65px; color: #451a03; }
+    </style>
+</head>
+<body>
+
+<script>
+    const AVATARS = {
+        "shizuku": "https://unpkg.com/live2d-widget-model-shizuku@1.0.5/assets/shizuku.model.json",
+        "koharu": "https://unpkg.com/live2d-widget-model-koharu@1.0.5/assets/koharu.model.json",
+        "haruto": "https://unpkg.com/live2d-widget-model-haruto@1.0.5/assets/haruto.model.json",
+        "miku": "https://unpkg.com/live2d-widget-model-miku@1.0.5/assets/miku.model.json",
+        "hijiki": "https://unpkg.com/live2d-widget-model-hijiki@1.0.5/assets/hijiki.model.json",
+        "tororo": "https://unpkg.com/live2d-widget-model-tororo@1.0.5/assets/tororo.model.json",
+        "z16": "https://unpkg.com/live2d-widget-model-z16@1.0.5/assets/z16.model.json",
+        "epsilon": "https://unpkg.com/live2d-widget-model-epsilon2_1@1.0.5/assets/epsilon2_1.model.json",
+        "chitose": "https://unpkg.com/live2d-widget-model-chitose@1.0.5/assets/chitose.model.json",
+        "tsumiki": "https://unpkg.com/live2d-widget-model-tsumiki@1.0.5/assets/tsumiki.model.json",
+        "unitychan": "https://unpkg.com/live2d-widget-model-unitychan@1.0.5/assets/unitychan.model.json",
+        "hibiki": "https://unpkg.com/live2d-widget-model-hibiki@1.0.5/assets/hibiki.model.json"
+    };
+
+    let state = {
+        char: { x: "50%", y: "60%", scale: 1.0, rotation: 0 },
+        sub: { x: "50%", y: "25%", scale: 1.0, rotation: 0 },
+        playing: false,
+        currentActor: "",
+        vOffset: -50,
+        sheetId: "1WihMsLmV8ia52pzQICd8-XXfzmwUHxRd-epUayv8Oic"
+    };
+
+    // 錄影相關
+    let mediaRecorder;
+    let recordedChunks = [];
+    let isRecording = false;
+
+    function sysMsg(txt) {
+        const logger = document.getElementById('console-log');
+        if (!logger) return;
+        const d = document.createElement('div');
+        d.innerHTML = `• ${txt}`;
+        logger.prepend(d);
+    }
+
+    function toggleUI() {
+        const ui = document.querySelector('.main-ui');
+        const btn = document.querySelector('.btn-toggle-ui');
+        ui.classList.toggle('hidden-ui');
+        btn.innerText = ui.classList.contains('hidden-ui') ? "顯示控制項" : "隱藏控制項";
+        btn.style.top = ui.classList.contains('hidden-ui') ? "10px" : "85px";
+    }
+
+    // Touch & Drag Logic
+    const getDist = (t1, t2) => Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+    const getAng = (t1, t2) => Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX) * 180 / Math.PI;
+
+    function bindDrag(el, key) {
+        let isDragging = false, isPinching = false;
+        let startX, startY, initL, initT, initDist, initScale, initAngle, initRot;
+
+        const onStart = (e) => {
+            if (e.target.closest('button') || e.target.closest('select') || e.target.closest('input')) return;
+            el.classList.add('dragging');
+            const touches = e.touches;
+            if (touches && touches.length === 2) {
+                isDragging = false; isPinching = true;
+                initDist = getDist(touches[0], touches[1]);
+                initScale = state[key].scale;
+                initAngle = getAng(touches[0], touches[1]);
+                initRot = state[key].rotation;
+            } else {
+                isDragging = true; isPinching = false;
+                const pt = touches ? touches[0] : e;
+                startX = pt.clientX; startY = pt.clientY;
+                initL = el.offsetLeft; initT = el.offsetTop;
+            }
+        };
+
+        const onMove = (e) => {
+            const touches = e.touches;
+            if (isPinching && touches && touches.length === 2) {
+                e.preventDefault();
+                const curDist = getDist(touches[0], touches[1]);
+                if (initDist > 0) state[key].scale = initScale * (curDist / initDist);
+                const curAng = getAng(touches[0], touches[1]);
+                state[key].rotation = initRot + (curAng - initAngle);
+                applyTransform(el, key);
+            } else if (isDragging) {
+                e.preventDefault();
+                const pt = touches ? touches[0] : e;
+                state[key].x = (initL + (pt.clientX - startX)) + 'px';
+                state[key].y = (initT + (pt.clientY - startY)) + 'px';
+                el.style.left = state[key].x;
+                el.style.top = state[key].y;
+            }
+        };
+
+        const onEnd = () => { isDragging = false; isPinching = false; el.classList.remove('dragging'); save(); };
+
+        el.addEventListener('mousedown', onStart);
+        el.addEventListener('touchstart', onStart, { passive: false });
+        window.addEventListener('mousemove', (e) => { if(isDragging || isPinching) onMove(e); });
+        window.addEventListener('touchmove', (e) => { if(isDragging || isPinching) onMove(e); }, { passive: false });
+        window.addEventListener('mouseup', onEnd);
+        window.addEventListener('touchend', onEnd);
+    }
+
+    function applyTransform(el, key) { el.style.transform = `translate(-50%, -50%) scale(${state[key].scale}) rotate(${state[key].rotation}deg)`; }
+
+    function save() { 
+        state.vOffset = parseInt(document.getElementById('voffset-range').value);
+        state.sheetId = document.getElementById('sheet-id').value;
+        localStorage.setItem('CAFE_MANGA_SAVE_V24', JSON.stringify(state)); 
+    }
+    
+    function load() {
+        const data = localStorage.getItem('CAFE_MANGA_SAVE_V24');
+        if (data) state = { ...state, ...JSON.parse(data) };
+        document.getElementById('voffset-range').value = state.vOffset;
+        document.getElementById('v-val').innerText = state.vOffset;
+        document.getElementById('sheet-id').value = state.sheetId;
+        applyLayout('container-main', 'char');
+        applyLayout('subtitle-box', 'sub');
+    }
+
+    function applyLayout(id, key) {
+        const el = document.getElementById(id);
+        el.style.left = state[key].x; el.style.top = state[key].y;
+        applyTransform(el, key);
+    }
+
+    function initChar() {
+        const v = parseInt(document.getElementById('voffset-range').value);
+        const key = document.getElementById('avatar-main').value;
+        const container = document.getElementById(`container-main`);
+        container.innerHTML = `<iframe></iframe>`;
+        const iframeDoc = container.querySelector('iframe').contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(`<!DOCTYPE html><html><head><script src="https://cdn.jsdelivr.net/npm/live2d-widget@3.1.4/lib/L2Dwidget.min.js"><\/script><style>body{margin:0;background:transparent!important;overflow:hidden;height:100vh;width:100vw;}canvas{width:100%!important;height:100%!important;object-fit:contain!important;}</style></head><body><script>L2Dwidget.init({model:{jsonPath:"${AVATARS[key]}"},display:{position:"center",width:350,height:500,vOffset:${v}},mobile:{show:true,scale:1}});<\/script></body></html>`);
+        iframeDoc.close();
+        state.currentActor = key;
+        sysMsg(`載入角色: ${key}`);
+        save();
+    }
+
+    // --- Video Recording Logic ---
+    async function startRecording() {
+        try {
+            // 嘗試擷取整個螢幕或視窗作為串流
+            const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+            recordedChunks = [];
+
+            mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: 'video/mp4' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = `Cafe_Manga_${Date.now()}.mp4`;
+                a.click();
+                sysMsg("錄影已下載為 MP4");
+                document.getElementById('rec-btn').classList.remove('recording');
+                document.getElementById('rec-btn').innerText = "🔴 開始錄影";
+                isRecording = false;
+            };
+
+            mediaRecorder.start();
+            isRecording = true;
+            document.getElementById('rec-btn').classList.add('recording');
+            document.getElementById('rec-btn').innerText = "⏹ 停止錄影";
+            sysMsg("錄影開始 (請選擇視窗分頁)...");
+        } catch (err) {
+            sysMsg("錄影啟動失敗: " + err.message);
+        }
+    }
+
+    function pauseRecording() {
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+            mediaRecorder.pause();
+            sysMsg("錄影暫停");
+            document.getElementById('pause-btn').innerText = "▶ 恢復錄影";
+        } else if (mediaRecorder && mediaRecorder.state === "paused") {
+            mediaRecorder.resume();
+            sysMsg("錄影恢復");
+            document.getElementById('pause-btn').innerText = "⏸ 暫停錄影";
+        }
+    }
+
+    function stopRecording() {
+        if (mediaRecorder) mediaRecorder.stop();
+    }
+
+    function toggleRec() {
+        if (!isRecording) startRecording();
+        else stopRecording();
+    }
+
+    function openYoutube() {
+        window.open("https://www.youtube.com/upload", "_blank");
+        sysMsg("導向 YouTube 上傳頁面...");
+    }
+
+    async function play() {
+        if (state.playing) { state.playing = false; return; }
+        state.playing = true;
+        document.getElementById('p-status').innerText = "PLAYING";
+        const sid = document.getElementById('sheet-id').value.trim();
+        const url = `https://docs.google.com/spreadsheets/d/${sid}/export?format=csv&gid=0&v=${Date.now()}`;
+        
+        try {
+            const res = await fetch(url);
+            const csv = await res.text();
+            const rows = csv.split(/\r?\n/).filter(r => r.trim()).slice(1);
+            
+            for (const row of rows) {
+                if(!state.playing) break;
+                const cols = row.split(',').map(c => c.trim().replace(/"/g, ''));
+                const actor = (cols[0] || "").toLowerCase();
+                const msg = cols[1] || "";
+
+                if (AVATARS[actor] && actor !== state.currentActor) {
+                    document.getElementById('avatar-main').value = actor;
+                    initChar();
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+
+                if (!msg) continue;
+                document.getElementById('script-line').innerText = `[${actor}] ${msg}`;
+                const box = document.getElementById('subtitle-box');
+                document.getElementById('manga-text').innerText = msg;
+                box.classList.remove('bubble-hidden'); box.classList.add('bubble-visible');
+                
+                if (window.speechSynthesis) {
+                    speechSynthesis.cancel();
+                    const u = new SpeechSynthesisUtterance(msg); u.lang = 'zh-TW';
+                    speechSynthesis.speak(u);
+                }
+                
+                await new Promise(r => setTimeout(r, Math.max(3000, msg.length * 250)));
+                box.classList.remove('bubble-visible'); box.classList.add('bubble-hidden');
+            }
+        } catch (e) { sysMsg("劇本異常: " + e.message); }
+        state.playing = false; document.getElementById('p-status').innerText = "IDLE";
+    }
+
+    function switchTab(t) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelector(`[onclick="switchTab('${t}')"]`).classList.add('active');
+        document.getElementById(t).classList.add('active');
+    }
+
+    function downloadHTML() {
+        const b = new Blob([document.documentElement.outerHTML], { type: "text/html" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(b); a.download = "Cafe_Manga_V24R.html"; a.click();
+    }
+
+    window.onload = () => {
+        document.getElementById('avatar-main').innerHTML = Object.keys(AVATARS).map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
+        load();
+        bindDrag(document.getElementById('container-main'), 'char');
+        bindDrag(document.getElementById('subtitle-box'), 'sub');
+        setTimeout(initChar, 500);
+    };
+</script>
+
+<div id="dynamic-bg"></div>
+<div class="gold-texture"></div>
+
+<button class="btn-toggle-ui" onclick="toggleUI()">隱藏控制項</button>
+<button id="btn-download" onclick="downloadHTML()">💾 下載程式碼</button>
+
+<div class="main-ui">
+    <div class="ui-header">
+        <div class="flex justify-between items-center gap-2">
+            <span class="font-bold text-amber-950" style="font-size: 0.6rem;">🎬 金輝 V24R (錄影下載版)</span>
+            <div class="flex gap-1">
+                <button class="btn-gold" onclick="play()">播放劇本</button>
+                <button id="rec-btn" class="btn-gold btn-rec" onclick="toggleRec()">🔴 開始錄影</button>
+                <button id="pause-btn" class="btn-gold" onclick="pauseRecording()">⏸ 暫停</button>
+                <button class="btn-gold" style="background:#cc2b5e;color:white;" onclick="openYoutube()">☁️ 上傳 YouTube</button>
+            </div>
+        </div>
+        
+        <div class="info-strip">
+            <span id="p-status" class="font-black text-amber-800" style="min-width:35px;">IDLE</span>
+            <div id="script-line">選取「此分頁」錄影可獲得最佳效果。</div>
+        </div>
+
+        <div class="flex mt-1">
+            <div class="tab-btn active" onclick="switchTab('tab-main')">佈局與操作</div>
+            <div class="tab-btn" onclick="switchTab('tab-system')">系統設定</div>
+        </div>
+
+        <div id="tab-main" class="tab-content pt-1 active">
+            <div class="grid grid-cols-2 gap-1 mb-1">
+                <button class="btn-gold" onclick="initChar()">渲染/重置角色</button>
+                <button class="btn-gold" onclick="const b=document.getElementById('subtitle-box'); b.classList.toggle('bubble-visible'); b.classList.toggle('bubble-hidden');">切換字幕顯示</button>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="control-label">角色 V 偏移:</span>
+                <input type="range" id="voffset-range" min="-400" max="400" value="-50" class="flex-grow" oninput="document.getElementById('v-val').innerText=this.value">
+                <span id="v-val" style="min-width:30px;">-50</span>
+            </div>
+            <div id="console-log">錄影提示：開始後請選擇「目前的瀏覽器分頁」。</div>
+        </div>
+
+        <div id="tab-system" class="tab-content pt-1">
+            <div class="flex flex-col gap-1">
+                <div class="flex items-center gap-1">
+                    <span class="control-label">預設角色:</span>
+                    <select id="avatar-main" class="flex-grow" onchange="initChar()"></select>
+                </div>
+                <div class="flex items-center gap-1">
+                    <span class="control-label">試算表 ID:</span>
+                    <input type="text" id="sheet-id" class="flex-grow" onchange="save()">
+                </div>
+                <div class="flex items-center gap-1">
+                    <span class="control-label">背景 URL:</span>
+                    <input type="text" class="flex-grow" placeholder="圖片網址..." onchange="document.getElementById('dynamic-bg').style.backgroundImage=`url('${this.value}')`; save();">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="stage">
+    <div id="container-main" class="draggable-box"></div>
+    <div id="subtitle-box" class="draggable-box bubble-hidden">
+        <svg class="bubble-svg" viewBox="0 0 280 120" preserveAspectRatio="none">
+            <path d="M 20,5 L 260,5 Q 275,5 275,20 L 275,80 Q 275,95 260,95 L 165,95 L 140,115 L 115,95 L 20,95 Q 5,95 5,80 L 5,20 Q 5,5 20,5" fill="white" stroke="#451a03" stroke-width="3" />
+        </svg>
+        <div id="manga-text" class="bubble-text">準備好錄影了嗎？</div>
+    </div>
+</div>
+
+</body></html>
+
