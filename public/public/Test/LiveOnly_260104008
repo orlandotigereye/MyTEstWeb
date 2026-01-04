@@ -1,1 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+    <title>金輝咖啡廳 V27S - 縮放限幅優化版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --gold-light: #fef3c7;
+            --gold-main: #fbbf24;
+            --gold-dark: #b45309;
+            --panel-bg: rgba(251, 191, 36, 0.98);
+        }
+        html, body {
+            height: 100%; margin: 0; padding: 0;
+            background-color: #fbbf24; color: #451a03;
+            font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
+            overflow: hidden; font-size: 0.5rem; 
+            touch-action: none;
+        }
+        #dynamic-bg {
+            position: fixed; inset: 0; z-index: 1;
+            background-size: cover; background-position: center; background-repeat: no-repeat;
+            background-image: url('https://images.unsplash.com/photo-1634128221889-82ed6efebfc3?q=80&w=2400');
+        }
+        .gold-texture {
+            position: fixed; inset: 0; z-index: 2;
+            background-image: url('https://www.transparenttextures.com/patterns/gold-glitter.png');
+            opacity: 0.3; pointer-events: none; mix-blend-mode: overlay;
+        }
+
+        /* 互動節點 */
+        .interactive-node {
+            position: absolute; pointer-events: auto; cursor: move;
+            transform-origin: center center;
+            border: none !important; outline: none !important;
+            z-index: 500; user-select: none; touch-action: none;
+            background: transparent !important;
+            transition: filter 0.2s;
+        }
+        .interactive-node.active { 
+            filter: drop-shadow(0 0 8px var(--gold-main));
+            z-index: 600; 
+        }
+
+        #node-char { 
+            width: 80vw; height: 60vh; 
+            top: 35vh; left: 10vw; 
+            overflow: visible; z-index: 400; 
+        }
+        
+        #node-sub { 
+            width: auto; max-width: 85vw; min-height: 40px; 
+            top: 22vh; left: 7.5vw;
+            background: rgba(255, 255, 255, 0.98) !important;
+            border: 2px solid var(--gold-dark) !important;
+            border-radius: 8px; padding: 8px 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            display: flex !important; align-items: center; justify-content: center;
+            text-align: center; font-weight: 900; color: #451a03;
+            font-size: 0.6rem; line-height: 1.3;
+            z-index: 999 !important;
+            word-wrap: break-word; overflow-wrap: anywhere;
+        }
+
+        .main-ui {
+            display: flex; flex-direction: column; width: 100vw; 
+            position: relative; z-index: 2000; transition: transform 0.4s ease-in-out;
+        }
+        .main-ui.hidden-ui { transform: translateY(-110%); }
+        .ui-header {
+            padding: 4px 10px; background: var(--panel-bg);
+            border-bottom: 2px solid #fff; box-shadow: 0 4px 15px rgba(180, 83, 9, 0.4);
+            pointer-events: auto;
+        }
+        .btn-gold {
+            background: linear-gradient(to bottom, #fff, var(--gold-main));
+            border: 1px solid var(--gold-dark); padding: 2px 8px; border-radius: 4px;
+            color: #451a03; cursor: pointer; font-weight: 900; font-size: 0.5rem;
+            box-shadow: 1px 1px 0 #b45309;
+        }
+        .btn-record { background: linear-gradient(to bottom, #ffcccc, #ef4444); color: white; border-color: #991b1b; }
+        .btn-toggle-ui {
+            position: fixed; top: 180px; right: 10px; z-index: 3000;
+            background: var(--gold-dark); color: white; padding: 4px 12px; border-radius: 20px;
+            font-size: 0.5rem; font-weight: bold; cursor: pointer; border: 1px solid #fff;
+        }
+        #console-log {
+            font-size: 0.5rem; height: 35px; overflow-y: auto; background: rgba(255, 255, 255, 0.9);
+            padding: 3px; color: #451a03; border: 1px inset var(--gold-dark); border-radius: 4px; margin-top: 3px;
+        }
+        .timeline-container {
+            width: 100%; background: rgba(255,255,255,0.4); border-radius: 8px;
+            margin-top: 5px; padding: 2px 10px; border: 1px solid var(--gold-dark);
+        }
+        #timeline-slider { width: 100%; height: 18px; cursor: pointer; accent-color: var(--gold-dark); }
+        
+        input, select, textarea { background: white; border: 1px solid var(--gold-dark); font-size: 0.5rem; padding: 3px; border-radius: 4px; }
+        .tab-btn { padding: 4px 12px; cursor: pointer; border-radius: 6px 6px 0 0; border: 1px solid var(--gold-dark); border-bottom: none; font-size: 0.5rem; background: rgba(255,255,255,0.4); margin-right: 2px; }
+        .tab-btn.active { background: var(--gold-main); font-weight: bold; }
+        .tab-content { display: none; height: 150px; overflow-y: auto; padding: 6px; border: 1px solid var(--gold-dark); background: rgba(255,255,255,0.7); }
+        .tab-content.active { display: block; }
+        
+        iframe { border: none !important; background: transparent !important; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
+    </style>
+</head>
+<body>
+
+<div id="dynamic-bg"></div>
+<div class="gold-texture"></div>
+
+<button class="btn-toggle-ui" onclick="toggleUI()">選單</button>
+<button class="btn-gold" style="position:fixed; bottom:30px; right:10px; z-index:9999;" onclick="downloadSource()">💾 下載</button>
+
+<div class="main-ui">
+    <div class="ui-header">
+        <div class="flex justify-between items-center mb-1">
+            <span class="font-bold text-amber-950" style="font-size:0.6rem">💎 金輝 V27S - 縮放限幅優化</span>
+            <div class="flex gap-1">
+                <button class="btn-gold btn-record" onclick="runDrama(true)">🔴 錄製</button>
+                <button id="btn-play" class="btn-gold" onclick="runDrama(false)">▶️ 播放</button>
+                <button class="btn-gold" onclick="stopDrama()">⏹ 停止</button>
+                <button class="btn-gold" onclick="initTheatre()">🔄 重繪</button>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-2 bg-white/60 p-1 rounded shadow-inner">
+            <span id="p-status" class="px-2 py-0.5 rounded bg-amber-200 text-amber-900 font-bold" style="font-size:0.5rem">READY</span>
+            <div id="script-line" class="truncate flex-grow font-bold text-amber-900" style="font-size:0.6rem">縮放上限已鎖定。</div>
+            <div id="count-info" class="text-amber-800 font-mono" style="font-size:0.5rem">0 / 0</div>
+        </div>
+
+        <div class="timeline-container">
+            <input type="range" id="timeline-slider" min="0" max="0" value="0" oninput="jumpToLine(this.value)">
+        </div>
+        
+        <div class="flex mt-2">
+            <div class="tab-btn active" onclick="switchTab('t-actor')">角色背景</div>
+            <div class="tab-btn" onclick="switchTab('t-script')">劇本音色</div>
+        </div>
+
+        <div id="t-actor" class="tab-content active">
+            <div class="grid grid-cols-2 gap-2">
+                <div class="flex flex-col gap-1">
+                    <span class="font-bold">主播:</span>
+                    <select id="avatar-main" onchange="initTheatre()"></select>
+                </div>
+                <div class="flex flex-col gap-1">
+                    <span class="font-bold">場景:</span>
+                    <select id="bg-sel" onchange="updateBg(this.value)">
+                        <option value="gold">金輝咖啡廳</option>
+                        <option value="day">日光午後</option>
+                        <option value="night">靜謐深夜</option>
+                    </select>
+                </div>
+                <div class="flex flex-col gap-1">
+                    <span class="font-bold">重置:</span>
+                    <button class="btn-gold" onclick="resetTransforms()">恢復預設位置</button>
+                </div>
+                <div class="flex flex-col gap-1">
+                    <span class="font-bold">垂直偏移:</span>
+                    <input type="range" id="voffset-range" min="-400" max="400" value="0" oninput="initTheatre()">
+                </div>
+            </div>
+            <div id="console-log">字幕縮放上限設為 2.0x。</div>
+        </div>
+
+        <div id="t-script" class="tab-content">
+            <div class="flex flex-col gap-1 h-full">
+                <textarea id="manual-script" class="flex-grow" placeholder="請在此輸入劇本..."></textarea>
+                <input type="text" id="sheet-id" value="15h6v7zh05fbtNfoauduL9OjpzF8pIeMl86JR9Y9aZbU">
+                <select id="voice-sel"></select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="stage" style="position:fixed; inset:0; z-index:100;">
+    <div id="node-char" class="interactive-node">
+        <div id="container-main" style="width:100%; height:100%;"></div>
+    </div>
+    <div id="node-sub" class="interactive-node">
+        <div id="bubble-text">字幕盒已鎖定最大縮放比例。</div>
+    </div>
+</div>
+
+<audio id="bgm" loop src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"></audio>
+
+<script>
+    const THEMES = {
+        gold: "https://images.unsplash.com/photo-1634128221889-82ed6efebfc3?q=80&w=2400",
+        day: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=2400",
+        night: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=2400"
+    };
+
+    const AVATARS = {
+        "shizuku (經典)": "https://unpkg.com/live2d-widget-model-shizuku@1.0.5/assets/shizuku.model.json",
+        "koharu (可愛)": "https://unpkg.com/live2d-widget-model-koharu@1.0.5/assets/koharu.model.json",
+        "miku (初音)": "https://unpkg.com/live2d-widget-model-miku@1.0.5/assets/miku.model.json",
+        "hijiki (黑貓)": "https://unpkg.com/live2d-widget-model-hijiki@1.0.5/assets/hijiki.model.json",
+        "tororo (白貓)": "https://unpkg.com/live2d-widget-model-tororo@1.0.5/assets/tororo.model.json",
+        "unitychan (戰鬥)": "https://unpkg.com/live2d-widget-model-unitychan@1.0.5/assets/unitychan.model.json",
+        "haruto (男士)": "https://unpkg.com/live2d-widget-model-haruto@1.0.5/assets/haruto.model.json",
+        "chitose (御姐)": "https://unpkg.com/live2d-widget-model-chitose@1.0.5/assets/chitose.model.json",
+        "epsilon2_1 (戰甲)": "https://unpkg.com/live2d-widget-model-epsilon2_1@1.0.5/assets/epsilon2_1.model.json",
+        "gf_95 (少女)": "https://unpkg.com/live2d-widget-model-gf@1.0.5/assets/gf.model.json",
+        "haru (制服)": "https://unpkg.com/live2d-widget-model-haru/01/assets/haru01.model.json",
+        "haru_02 (制服B)": "https://unpkg.com/live2d-widget-model-haru/02/assets/haru02.model.json",
+        "hibiki (和服)": "https://unpkg.com/live2d-widget-model-hibiki@1.0.5/assets/hibiki.model.json",
+        "izumi (學生)": "https://unpkg.com/live2d-widget-model-izumi@1.0.5/assets/izumi.model.json",
+        "katzumi (帥氣)": "https://unpkg.com/live2d-widget-model-katzumi@1.0.5/assets/katzumi.model.json",
+        "mark (眼鏡)": "https://unpkg.com/live2d-widget-model-mark@1.0.5/assets/mark.model.json",
+        "ni-j (q版)": "https://unpkg.com/live2d-widget-model-ni-j@1.0.5/assets/ni-j.model.json",
+        "nico (偶像)": "https://unpkg.com/live2d-widget-model-nico@1.0.5/assets/nico.model.json",
+        "niya (女僕)": "https://unpkg.com/live2d-widget-model-niya@1.0.5/assets/niya.model.json",
+        "rice (精靈)": "https://unpkg.com/live2d-widget-model-rice@1.0.5/assets/rice.model.json",
+        "tsumiki (小巧)": "https://unpkg.com/live2d-widget-model-tsumiki@1.0.5/assets/tsumiki.model.json",
+        "wanko (狗狗)": "https://unpkg.com/live2d-widget-model-wanko@1.0.5/assets/wanko.model.json",
+        "z16 (軍服)": "https://unpkg.com/live2d-widget-model-z16@1.0.5/assets/z16.model.json"
+    };
+
+    let playing = false, dramaLines = [], currentLineIdx = 0;
+    let mediaRecorder, recordedChunks = [], timerHandle = null;
+
+    const transforms = {
+        'node-char': { x: 0, y: 0, scale: 0.8, rotate: 0 },
+        'node-sub': { x: 0, y: 0, scale: 1.0, rotate: 0 }
+    };
+
+    function sysMsg(t) {
+        const c = document.getElementById('console-log');
+        const d = document.createElement('div'); d.innerHTML = `• ${t}`; c.prepend(d);
+    }
+
+    function toggleUI() { document.querySelector('.main-ui').classList.toggle('hidden-ui'); }
+    function updateBg(k) { document.getElementById('dynamic-bg').style.backgroundImage = `url('${THEMES[k]}')`; }
+
+    function initInteraction() {
+        document.querySelectorAll('.interactive-node').forEach(node => {
+            let isDragging = false, startX, startY;
+            let initialDistance = 0, initialScale = 1.0;
+
+            const getDist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+
+            node.addEventListener('mousedown', e => {
+                isDragging = true;
+                startX = e.clientX - transforms[node.id].x;
+                startY = e.clientY - transforms[node.id].y;
+                node.classList.add('active');
+            });
+
+            node.addEventListener('touchstart', e => {
+                node.classList.add('active');
+                if (e.touches.length === 1) {
+                    isDragging = true;
+                    startX = e.touches[0].clientX - transforms[node.id].x;
+                    startY = e.touches[0].clientY - transforms[node.id].y;
+                } else if (e.touches.length === 2) {
+                    isDragging = false;
+                    initialDistance = getDist(e.touches);
+                    initialScale = transforms[node.id].scale;
+                }
+            }, { passive: false });
+
+            const moveHandler = (e) => {
+                const isTouch = e.type.includes('touch');
+                const t = transforms[node.id];
+                
+                if (isTouch && e.touches.length === 2) {
+                    const currentDist = getDist(e.touches);
+                    const factor = currentDist / (initialDistance || 1);
+                    // 限制縮放範圍：0.5 ~ 2.0
+                    t.scale = Math.min(2.0, Math.max(0.3, initialScale * factor));
+                    applyTransform(node);
+                } else if (isDragging) {
+                    const cx = isTouch ? e.touches[0].clientX : e.clientX;
+                    const cy = isTouch ? e.touches[0].clientY : e.clientY;
+                    t.x = cx - startX;
+                    t.y = cy - startY;
+                    applyTransform(node);
+                }
+            };
+
+            window.addEventListener('mousemove', moveHandler);
+            window.addEventListener('touchmove', moveHandler, { passive: false });
+
+            const endHandler = () => { isDragging = false; node.classList.remove('active'); };
+            window.addEventListener('mouseup', endHandler);
+            window.addEventListener('touchend', endHandler);
+
+            node.addEventListener('wheel', e => {
+                e.preventDefault();
+                const t = transforms[node.id];
+                const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                // 滑輪縮放限幅
+                t.scale = Math.min(2.0, Math.max(0.3, t.scale + delta));
+                applyTransform(node);
+            }, { passive: false });
+        });
+    }
+
+    function applyTransform(node) {
+        const t = transforms[node.id];
+        node.style.transform = `translate(${t.x}px, ${t.y}px) scale(${t.scale}) rotate(${t.rotate}deg)`;
+    }
+
+    function resetTransforms() {
+        transforms['node-char'] = { x: 0, y: 0, scale: 0.8, rotate: 0 };
+        transforms['node-sub'] = { x: 0, y: 0, scale: 1.0, rotate: 0 };
+        document.querySelectorAll('.interactive-node').forEach(applyTransform);
+        sysMsg("縮放比例與位置已恢復預設。");
+    }
+
+    function createCharHTML(path, vo) {
+        return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <script src="https://cdn.jsdelivr.net/npm/live2d-widget@3.1.4/lib/L2Dwidget.min.js"><\/script>
+    <style>
+        body{margin:0;overflow:hidden;background:transparent!important;}
+        canvas{width:100%!important;height:100%!important;object-fit:contain!important;outline:none!important;border:none!important;}
+    </style>
+</head>
+<body>
+    <script>
+        window.onload=()=>{
+            L2Dwidget.init({
+                model:{ jsonPath:"${path}" },
+                display:{ position:"center", width:window.innerWidth, height:window.innerHeight, vOffset:${vo} },
+                mobile:{ show:true, scale:1.0 },
+                react:{ opacity:1.0 }
+            });
+        };
+    <\/script>
+</body>
+</html>`;
+    }
+
+    function initTheatre() {
+        const ak=document.getElementById('avatar-main').value;
+        const vo=parseInt(document.getElementById('voffset-range').value);
+        const container=document.getElementById('container-main');
+        container.innerHTML='<iframe id="char-main"></iframe>';
+        const doc=container.querySelector('iframe').contentWindow.document;
+        doc.open(); doc.write(createCharHTML(AVATARS[ak] || AVATARS['shizuku (經典)'], vo)); doc.close();
+        document.querySelectorAll('.interactive-node').forEach(applyTransform);
+        sysMsg(`角色載入中...`);
+    }
+
+    async function fetchDrama() {
+        const manual = document.getElementById('manual-script').value.trim();
+        if(manual) {
+            dramaLines = manual.split('\n').map(l => ({ text: l }));
+        } else {
+            const sid = document.getElementById('sheet-id').value;
+            const url = `https://docs.google.com/spreadsheets/d/${sid}/export?format=csv&gid=0&v=${Date.now()}`;
+            try {
+                const res = await fetch(url);
+                const csv = await res.text();
+                dramaLines = csv.split(/\r?\n/).slice(1).map(r => {
+                    const cols = r.split(',').map(c => c.trim().replace(/"/g, ''));
+                    return { text: cols[1] || "", theme: cols[5] || "" };
+                }).filter(l => l.text !== "");
+            } catch(e) { sysMsg("請輸入劇本或檢查網路..."); return []; }
+        }
+        document.getElementById('timeline-slider').max = Math.max(0, dramaLines.length - 1);
+        document.getElementById('count-info').innerText = `0 / ${dramaLines.length}`;
+        return dramaLines;
+    }
+
+    async function runDrama(withRecord=false) {
+        if(playing) return;
+        if(dramaLines.length === 0) await fetchDrama();
+        if(dramaLines.length === 0) return;
+
+        if(withRecord) {
+            try {
+                const stream = await navigator.mediaDevices.getDisplayMedia({video:true, audio:true});
+                recordedChunks=[]; mediaRecorder=new MediaRecorder(stream);
+                mediaRecorder.ondataavailable=e=>recordedChunks.push(e.data);
+                mediaRecorder.onstop=()=>{
+                    const b=new Blob(recordedChunks, {type:'video/webm'});
+                    const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`GoldCafe_Rec.webm`; a.click();
+                };
+                mediaRecorder.start();
+            } catch(e){ sysMsg("錄製啟動失敗。"); return; }
+        }
+
+        playing = true;
+        document.getElementById('btn-play').innerText = "⏸";
+        document.getElementById('p-status').innerText = "LIVE";
+        document.getElementById('p-status').style.backgroundColor = "#ef4444";
+        document.getElementById('bgm').play();
+        playNextLine();
+    }
+
+    function playNextLine() {
+        if(!playing || currentLineIdx >= dramaLines.length) {
+            if(currentLineIdx >= dramaLines.length) stopDrama();
+            return;
+        }
+
+        const line = dramaLines[currentLineIdx];
+        document.getElementById('bubble-text').innerText = line.text;
+        document.getElementById('script-line').innerText = line.text;
+        document.getElementById('count-info').innerText = `${currentLineIdx + 1} / ${dramaLines.length}`;
+        
+        const slider = document.getElementById('timeline-slider');
+        slider.value = currentLineIdx;
+
+        if(window.speechSynthesis) {
+            speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(line.text);
+            const vs = speechSynthesis.getVoices();
+            const vIdx = document.getElementById('voice-sel').value;
+            if(vs[vIdx]) u.voice = vs[vIdx];
+            u.lang = 'zh-TW';
+            speechSynthesis.speak(u);
+        }
+
+        if(line.theme && THEMES[line.theme.toLowerCase()]) updateBg(line.theme.toLowerCase());
+
+        currentLineIdx++;
+        const delay = Math.max(4500, line.text.length * 350);
+        timerHandle = setTimeout(playNextLine, delay);
+    }
+
+    function jumpToLine(val) {
+        currentLineIdx = parseInt(val);
+        if(playing) { clearTimeout(timerHandle); playNextLine(); }
+    }
+
+    function stopDrama() {
+        playing = false; clearTimeout(timerHandle);
+        document.getElementById('btn-play').innerText = "▶️";
+        document.getElementById('p-status').innerText = "READY";
+        document.getElementById('p-status').style.backgroundColor = "#fde68a";
+        document.getElementById('bgm').pause();
+        if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    }
+
+    function switchTab(id) {
+        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+        document.querySelector(`[onclick="switchTab('${id}')"]`).classList.add('active');
+        document.getElementById(id).classList.add('active');
+    }
+
+    function downloadSource(){
+        const b=new Blob([document.documentElement.outerHTML],{type:'text/html'});
+        const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='Cafe_FixScale_V27S.html'; a.click();
+    }
+
+    window.onload = () => {
+        const sel = document.getElementById('avatar-main');
+        Object.keys(AVATARS).forEach(k => {
+            const o = document.createElement('option'); o.value = k; o.innerText = k; sel.appendChild(o);
+        });
+        
+        setTimeout(() => {
+            const vs = speechSynthesis.getVoices();
+            const vsel = document.getElementById('voice-sel');
+            vs.forEach((v, i) => {
+                if(v.lang.includes('zh')) {
+                    const o = document.createElement('option'); o.value = i; o.innerText = v.name; vsel.appendChild(o);
+                }
+            });
+        }, 1000);
+
+        initInteraction();
+        initTheatre();
+        fetchDrama();
+    };
+</script>
+</body>
+</html>
+
 
