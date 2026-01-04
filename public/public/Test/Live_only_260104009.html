@@ -1,397 +1,421 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport"
-content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 
-<title>金輝咖啡廳 V30X – Product Master Edition</title>
+<html lang="zh-Hant"><head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+    <title>金輝咖啡廳 V21R - 雙指縮放旋轉</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --gold-light: #fef3c7;
+            --gold-main: #fbbf24;
+            --gold-dark: #b45309;
+            --panel-bg: rgba(251, 191, 36, 0.96);
+        }
+        html, body {
+            height: 100%; margin: 0; padding: 0;
+            background-color: #fbbf24; color: #451a03;
+            font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
+            overflow: hidden; font-size: 0.5rem;
+        }
+        #dynamic-bg {
+            position: fixed; inset: 0; z-index: 1;
+            background-size: cover; background-position: center; background-repeat: no-repeat;
+            transition: background-image 0.8s ease-in-out;
+            background-image: url('https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?q=80&w=2400');
+        }
+        .gold-texture {
+            position: fixed; inset: 0; z-index: 2;
+            background-image: url('https://www.transparenttextures.com/patterns/gold-glitter.png');
+            opacity: 0.2; pointer-events: none; mix-blend-mode: overlay;
+        }
+        .main-ui {
+            display: flex; flex-direction: column; height: 100vh; width: 100vw; 
+            position: relative; z-index: 2000; transition: transform 0.3s ease-in-out;
+            pointer-events: none;
+        }
+        .main-ui.hidden-ui { transform: translateY(-110%); }
+        .ui-header {
+            padding: 4px 10px; background: var(--panel-bg);
+            border-bottom: 2px solid #fff;
+            box-shadow: 0 4px 15px rgba(180, 83, 9, 0.3);
+            pointer-events: auto;
+        }
+        .stage {
+            position: fixed; inset: 0; z-index: 5; pointer-events: none;
+        }
+        /* 人員容器 */
+        .char-container {
+            position: absolute; width: 350px; height: 500px;
+            display: flex; align-items: flex-end; justify-content: center;
+            pointer-events: auto; cursor: move; touch-action: none;
+            z-index: 100; transform-origin: center center;
+        }
+        .char-container.dragging { opacity: 0.8; filter: brightness(1.1); outline: 1px dashed #fff; }
+        
+        iframe { 
+            border: none; background: transparent !important; 
+            pointer-events: none; width: 100%; height: 100%;
+        }
 
-<!-- =====================================================
-     UI LIB (ONLY Tailwind)
-===================================================== -->
-<script src="https://cdn.tailwindcss.com"></script>
-
-<style>
-/* =====================================================
-   00. ROOT / THEME
-===================================================== */
-:root{
-  --gold:#fbbf24;
-  --gold-soft:#fde68a;
-  --deep:#451a03;
-  --bg:#fff7ed;
-  --panel:rgba(255,255,255,0.94);
-  --shadow:0 10px 35px rgba(0,0,0,.25);
-}
-
-/* =====================================================
-   01. RESET
-===================================================== */
-*{ box-sizing:border-box; }
-html,body{
-  margin:0;
-  padding:0;
-  width:100%;
-  height:100%;
-  overflow:hidden;
-  background:var(--bg);
-  color:var(--deep);
-  font-family:
-    "PingFang TC",
-    "Noto Sans TC",
-    "Microsoft JhengHei",
-    system-ui,sans-serif;
-}
-
-/* =====================================================
-   02. MODE STATES
-===================================================== */
-body.mobile-mode{ font-size:15px; }
-body.desktop-mode{ font-size:14px; }
-
-body.onehand-mode .main-ui{
-  width:220px;
-  left:8px;
-  bottom:8px;
-  top:auto;
-  border-radius:18px;
-  box-shadow:var(--shadow);
-}
-
-/* =====================================================
-   03. MAIN UI
-===================================================== */
-.main-ui{
-  position:fixed;
-  top:0;left:0;
-  width:100%;
-  background:var(--panel);
-  z-index:5000;
-}
-
-.ui-section{
-  border-bottom:1px solid rgba(0,0,0,.08);
-}
-
-.ui-row{
-  display:flex;
-  flex-wrap:wrap;
-  gap:6px;
-  padding:6px;
-}
-
-.btn{
-  padding:4px 10px;
-  border-radius:10px;
-  border:1px solid var(--deep);
-  background:white;
-  font-weight:800;
-  cursor:pointer;
-  user-select:none;
-}
-.btn:active{ transform:scale(.96); }
-
-/* =====================================================
-   04. STAGE
-===================================================== */
-.stage{
-  position:fixed;
-  inset:0;
-  overflow:hidden;
-  z-index:10;
-}
-
-/* =====================================================
-   05. CHARACTER CONTAINER
-===================================================== */
-.character{
-  position:absolute;
-  left:18vw;
-  top:16vh;
-  width:64vw;
-  height:72vh;
-  pointer-events:auto;
-}
-
-.character-inner{
-  width:100%;
-  height:100%;
-  border-radius:26px;
-  background:linear-gradient(135deg,var(--gold-soft),var(--gold));
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:6vw;
-  font-weight:900;
-  user-select:none;
-  transform-origin:center bottom;
-}
-
-/* =====================================================
-   06. SUBTITLE
-===================================================== */
-.subtitle{
-  position:absolute;
-  left:50%;
-  top:70%;
-  transform:translateX(-50%);
-  background:white;
-  border:2px solid var(--deep);
-  border-radius:16px;
-  padding:10px 20px;
-  font-weight:900;
-  max-width:92vw;
-  pointer-events:auto;
-  z-index:200;
-}
-
-/* =====================================================
-   07. GUIDE LINES
-===================================================== */
-.guide{
-  position:fixed;
-  left:0;
-  width:100%;
-  border-top:2px dashed rgba(0,0,0,.25);
-  pointer-events:none;
-  display:none;
-  z-index:100;
-}
-
-/* =====================================================
-   08. ACTION ANIMATIONS
-===================================================== */
-@keyframes breathe{
-  0%{ transform:scale(1); }
-  50%{ transform:scale(1.03); }
-  100%{ transform:scale(1); }
-}
-@keyframes talk{
-  0%{ transform:scaleY(1); }
-  50%{ transform:scaleY(.95); }
-  100%{ transform:scaleY(1); }
-}
-@keyframes nod{
-  0%{ transform:translateY(0); }
-  35%{ transform:translateY(10px); }
-  100%{ transform:translateY(0); }
-}
-@keyframes wave{
-  0%{ transform:rotate(0deg); }
-  50%{ transform:rotate(5deg); }
-  100%{ transform:rotate(0deg); }
-}
-
-/* =====================================================
-   09. TRANSITION HELPERS
-===================================================== */
-.fade-in{ animation:fadeIn .5s ease; }
-@keyframes fadeIn{
-  from{ opacity:0; }
-  to{ opacity:1; }
-}
-</style>
+        .btn-gold {
+            background: linear-gradient(to bottom, #fff, var(--gold-main));
+            border: 1px solid var(--gold-dark); padding: 2px 6px; border-radius: 4px;
+            color: #451a03; cursor: pointer; font-weight: 900; font-size: 0.5rem;
+            box-shadow: 1px 1px 0 #b45309;
+        }
+        .btn-toggle-ui {
+            position: fixed; top: 85px; right: 10px; z-index: 3000;
+            background: var(--gold-dark); color: white; padding: 4px 10px; border-radius: 20px;
+            font-size: 0.5rem; font-weight: bold; cursor: pointer; border: 1px solid #fff;
+        }
+        #console-log {
+            font-size: 0.5rem; height: 35px; overflow-y: auto; background: rgba(255, 255, 255, 0.9);
+            padding: 4px; color: #451a03; margin-top: 4px; 
+            border: 1px inset var(--gold-dark); border-radius: 4px;
+        }
+        #btn-download { 
+            position: fixed; right: 10px; bottom: 10px; z-index: 5000; 
+            background: #059669; color: white; border: 1px solid #fff; 
+            font-size: 0.5rem; padding: 3px 12px; border-radius: 20px; font-weight: bold;
+        }
+        input, select { 
+            background: white; border: 1px solid var(--gold-dark); 
+            color: #451a03; font-size: 0.5rem; padding: 2px 6px; border-radius: 4px; 
+        }
+        .info-strip {
+            background: rgba(255, 255, 255, 0.3); border-radius: 4px; padding: 2px 8px;
+            margin-top: 3px; display: flex; align-items: center; gap: 6px;
+        }
+        #script-line {
+            font-style: italic; color: #78350f; font-weight: bold; font-size: 0.7rem;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;
+        }
+        .tab-btn {
+            padding: 2px 8px; cursor: pointer; border-radius: 6px 6px 0 0;
+            background: rgba(180, 83, 9, 0.1); border: 1px solid var(--gold-dark);
+            border-bottom: none; font-weight: bold; margin-right: 2px; font-size: 0.5rem;
+        }
+        .tab-btn.active { background: var(--gold-main); border-bottom: 2px solid var(--gold-main); }
+        .tab-content { display: none; pointer-events: auto; }
+        .tab-content.active { display: block; }
+        .control-label { font-weight: bold; min-width: 60px; }
+    </style>
 </head>
-
-<body class="mobile-mode">
-
-<!-- =====================================================
-     UI PANEL
-===================================================== -->
-<div class="main-ui">
-
-  <!-- DEVICE -->
-  <div class="ui-section">
-    <div class="ui-row">
-      <div class="btn" onclick="toggleDevice()">📱 / 🖥 裝置</div>
-      <div class="btn" onclick="toggleOneHand()">🎙 單手直播</div>
-    </div>
-  </div>
-
-  <!-- SUBTITLE -->
-  <div class="ui-section">
-    <div class="ui-row">
-      <div class="btn" onclick="snapSubtitle('bottom')">🧲 底部</div>
-      <div class="btn" onclick="snapSubtitle('golden')">✨ 黃金</div>
-      <div class="btn" onclick="freeSubtitle()">🔓 自由</div>
-    </div>
-  </div>
-
-  <!-- ACTION -->
-  <div class="ui-section">
-    <div class="ui-row">
-      <div class="btn" onclick="setAction('idle')">😐 待機</div>
-      <div class="btn" onclick="setAction('talk')">🗣 說話</div>
-      <div class="btn" onclick="setAction('breathe')">🌬 呼吸</div>
-      <div class="btn" onclick="setAction('nod')">🙂 點頭</div>
-      <div class="btn" onclick="setAction('wave')">👋 揮手</div>
-    </div>
-  </div>
-
-  <!-- SCENE -->
-  <div class="ui-section">
-    <div class="ui-row">
-      <div class="btn" onclick="enterChar()">➡ 入場</div>
-      <div class="btn" onclick="exitChar()">⬅ 離場</div>
-      <div class="btn" onclick="resetAll()">♻ 重置</div>
-    </div>
-  </div>
-
-</div>
-
-<!-- =====================================================
-     GUIDES
-===================================================== -->
-<div id="guide-bottom" class="guide" style="bottom:100px"></div>
-<div id="guide-golden" class="guide" style="top:38%"></div>
-
-<!-- =====================================================
-     STAGE
-===================================================== -->
-<div class="stage">
-
-  <!-- CHARACTER -->
-  <div id="char" class="character">
-    <div id="charInner" class="character-inner">
-      ☕
-    </div>
-  </div>
-
-  <!-- SUBTITLE -->
-  <div id="subtitle" class="subtitle">
-    金輝咖啡廳｜直播準備完成
-  </div>
-
-</div>
+<body>
 
 <script>
-/* =====================================================
-   GLOBAL STATE
-===================================================== */
-let deviceMode="mobile";
-let oneHand=false;
-let subtitleSnap=null;
-let currentAction="idle";
+    const THEMES = {
+        gold: "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?q=80&w=2400",
+        day: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?q=80&w=2400",
+        dusk: "https://images.unsplash.com/photo-1511920170033-f8396924c348?q=80&w=2400",
+        night: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=2400"
+    };
 
-/* =====================================================
-   MODE CONTROL
-===================================================== */
-function toggleDevice(){
-  deviceMode = deviceMode==="mobile"?"desktop":"mobile";
-  applyBodyClass();
-}
-function toggleOneHand(){
-  oneHand=!oneHand;
-  applyBodyClass();
-}
-function applyBodyClass(){
-  document.body.className =
-    deviceMode+"-mode"+(oneHand?" onehand-mode":"");
-}
+    const AVATARS = {
+        "shizuku": "https://unpkg.com/live2d-widget-model-shizuku@1.0.5/assets/shizuku.model.json",
+        "koharu": "https://unpkg.com/live2d-widget-model-koharu@1.0.5/assets/koharu.model.json",
+        "haruto": "https://unpkg.com/live2d-widget-model-haruto@1.0.5/assets/haruto.model.json",
+        "miku": "https://unpkg.com/live2d-widget-model-miku@1.0.5/assets/miku.model.json",
+        "z16": "https://unpkg.com/live2d-widget-model-z16@1.0.5/assets/z16.model.json"
+    };
 
-/* =====================================================
-   SUBTITLE SNAP
-===================================================== */
-const subtitle=document.getElementById("subtitle");
+    let state = {
+        x: 0, y: 0, 
+        scale: 1, 
+        rotation: 0,
+        playing: false
+    };
 
-function snapSubtitle(mode){
-  subtitleSnap=mode;
-  hideGuides();
-  if(mode==="bottom"){
-    showGuide("guide-bottom");
-    subtitle.style.left="50%";
-    subtitle.style.bottom="100px";
-    subtitle.style.top="auto";
-    subtitle.style.transform="translateX(-50%)";
-  }
-  if(mode==="golden"){
-    showGuide("guide-golden");
-    subtitle.style.left="50%";
-    subtitle.style.top="38%";
-    subtitle.style.bottom="auto";
-    subtitle.style.transform="translateX(-50%)";
-  }
-}
-function freeSubtitle(){
-  subtitleSnap=null;
-  hideGuides();
-}
-function hideGuides(){
-  document.querySelectorAll(".guide")
-    .forEach(g=>g.style.display="none");
-}
-function showGuide(id){
-  document.getElementById(id).style.display="block";
-}
+    function sysMsg(txt) {
+        const logger = document.getElementById('console-log');
+        if (!logger) return;
+        const d = document.createElement('div');
+        d.innerHTML = `• ${txt}`;
+        logger.prepend(d);
+    }
 
-/* =====================================================
-   CHARACTER ACTION FSM
-===================================================== */
-const charInner=document.getElementById("charInner");
+    function toggleUI() {
+        const ui = document.querySelector('.main-ui');
+        const btn = document.querySelector('.btn-toggle-ui');
+        ui.classList.toggle('hidden-ui');
+        btn.innerText = ui.classList.contains('hidden-ui') ? "顯示控制項" : "隱藏控制項";
+        btn.style.top = ui.classList.contains('hidden-ui') ? "10px" : "85px";
+    }
 
-function clearAction(){
-  charInner.style.animation="";
-}
-function setAction(action){
-  currentAction=action;
-  clearAction();
+    function updateBg(keyOrUrl) {
+        const bgContainer = document.getElementById('dynamic-bg');
+        let targetUrl = (keyOrUrl.startsWith("http")) ? keyOrUrl : (THEMES[keyOrUrl] || THEMES['gold']);
+        bgContainer.style.backgroundImage = `url('${targetUrl}')`;
+        sysMsg(`背景切換`);
+    }
 
-  if(action==="talk")
-    charInner.style.animation="talk .4s infinite";
-  if(action==="breathe")
-    charInner.style.animation="breathe 3s infinite";
-  if(action==="nod")
-    charInner.style.animation="nod .6s";
-  if(action==="wave")
-    charInner.style.animation="wave .8s ease";
-}
+    // --- 多點觸控計算工具 ---
+    const getDistance = (t1, t2) => Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+    const getAngle = (t1, t2) => Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX) * 180 / Math.PI;
 
-/* =====================================================
-   ENTER / EXIT
-===================================================== */
-function enterChar(){
-  const c=document.getElementById("char");
-  c.style.transition="transform .6s ease";
-  c.style.transform="translateX(0)";
-}
-function exitChar(){
-  const c=document.getElementById("char");
-  c.style.transition="transform .6s ease";
-  c.style.transform="translateX(-120%)";
-}
+    function initDragging() {
+        const el = document.getElementById('container-main');
+        let isDragging = false;
+        let startX, startY, initialLeft, initialTop;
+        
+        let initialDist = 0;
+        let initialScale = 1;
+        let initialAngle = 0;
+        let initialRotation = 0;
 
-/* =====================================================
-   DRAG SUBTITLE
-===================================================== */
-let dragging=false,dx=0,dy=0;
-subtitle.addEventListener("touchstart",e=>{
-  if(subtitleSnap)return;
-  dragging=true;
-  dx=e.touches[0].clientX-subtitle.offsetLeft;
-  dy=e.touches[0].clientY-subtitle.offsetTop;
-});
-window.addEventListener("touchmove",e=>{
-  if(!dragging||subtitleSnap)return;
-  subtitle.style.left=(e.touches[0].clientX-dx)+"px";
-  subtitle.style.top=(e.touches[0].clientY-dy)+"px";
-});
-window.addEventListener("touchend",()=>dragging=false);
+        const onStart = (e) => {
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'SELECT') return;
+            el.classList.add('dragging');
+            
+            if (e.touches && e.touches.length === 2) {
+                // 雙指開始：縮放與旋轉
+                isDragging = false; 
+                initialDist = getDistance(e.touches[0], e.touches[1]);
+                initialScale = state.scale;
+                initialAngle = getAngle(e.touches[0], e.touches[1]);
+                initialRotation = state.rotation;
+            } else {
+                // 單指或滑鼠開始：拖動
+                isDragging = true;
+                const touch = e.type.includes('touch') ? e.touches[0] : e;
+                startX = touch.clientX;
+                startY = touch.clientY;
+                initialLeft = el.offsetLeft;
+                initialTop = el.offsetTop;
+            }
+        };
 
-/* =====================================================
-   RESET
-===================================================== */
-function resetAll(){
-  freeSubtitle();
-  setAction("idle");
-  enterChar();
-}
+        const onMove = (e) => {
+            if (e.touches && e.touches.length === 2) {
+                // 雙指移動
+                const currentDist = getDistance(e.touches[0], e.touches[1]);
+                const scaleFactor = currentDist / initialDist;
+                state.scale = initialScale * scaleFactor;
 
-/* =====================================================
-   INIT
-===================================================== */
-resetAll();
+                const currentAngle = getAngle(e.touches[0], e.touches[1]);
+                const angleDiff = currentAngle - initialAngle;
+                state.rotation = initialRotation + angleDiff;
+
+                applyTransform();
+            } else if (isDragging) {
+                // 單指移動
+                const touch = e.type.includes('touch') ? e.touches[0] : e;
+                const dx = touch.clientX - startX;
+                const dy = touch.clientY - startY;
+                el.style.left = (initialLeft + dx) + 'px';
+                el.style.top = (initialTop + dy) + 'px';
+                el.style.bottom = 'auto';
+                el.style.right = 'auto';
+            }
+        };
+
+        const onEnd = () => {
+            isDragging = false;
+            el.classList.remove('dragging');
+            savePositions();
+        };
+
+        el.addEventListener('mousedown', onStart);
+        el.addEventListener('touchstart', onStart, { passive: false });
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('touchmove', onMove, { passive: false });
+        window.addEventListener('mouseup', onEnd);
+        window.addEventListener('touchend', onEnd);
+    }
+
+    function applyTransform() {
+        const el = document.getElementById('container-main');
+        el.style.transform = `scale(${state.scale}) rotate(${state.rotation}deg)`;
+    }
+
+    function savePositions() {
+        const el = document.getElementById('container-main');
+        state.x = el.style.left;
+        state.y = el.style.top;
+        localStorage.setItem('L2D_PRO_CONFIG', JSON.stringify(state));
+    }
+
+    function loadPositions() {
+        const saved = localStorage.getItem('L2D_PRO_CONFIG');
+        const el = document.getElementById('container-main');
+        if (saved) {
+            const data = JSON.parse(saved);
+            state = { ...state, ...data };
+            if (state.x) {
+                el.style.left = state.x;
+                el.style.top = state.y;
+                el.style.bottom = 'auto';
+            }
+            applyTransform();
+        } else {
+            el.style.left = "50%";
+            el.style.top = "50%";
+            el.style.transform = "translate(-50%, -20%)";
+        }
+    }
+
+    function createCharHTML(path, vOffset) {
+        return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <script src="https://cdn.jsdelivr.net/npm/live2d-widget@3.1.4/lib/L2Dwidget.min.js"><\/script>
+    <style>
+        body { margin: 0; overflow: hidden; background: transparent !important; height: 100vh; width: 100vw; }
+        #pop {
+            position: fixed; top: 10%; left: 50%; transform: translateX(-50%);
+            background: #fff; border: 3px solid #451a03; padding: 6px 12px; 
+            border-radius: 15px; font-size: 18px; font-weight: 900; color: #451a03; 
+            display: none; max-width: 80%; text-align: center;
+        }
+        canvas { width: 100% !important; height: 100% !important; object-fit: contain !important; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div id="pop"></div>
+    <script>
+        window.onload = () => {
+            L2Dwidget.init({
+                model: { jsonPath: "${path}" },
+                display: { position: "center", width: 350, height: 500, vOffset: ${vOffset} },
+                mobile: { show: true, scale: 1.0 },
+                react: { opacity: 1.0 }
+            });
+        };
+        window.addEventListener('message', e => {
+            if (e.data.text) {
+                const p = document.getElementById('pop');
+                p.innerText = e.data.text; p.style.display = 'block';
+                setTimeout(() => p.style.display = 'none', Math.max(3000, e.data.text.length * 400));
+            }
+        });
+    <\/script>
+</body>
+</html>`;
+    }
+
+    function initTheatre() {
+        const vOffsetVal = parseInt(document.getElementById('voffset-range').value);
+        const avatarKey = document.getElementById('avatar-main').value;
+        const container = document.getElementById(`container-main`);
+        container.innerHTML = `<iframe id="char-main"></iframe>`;
+        const frame = container.querySelector('iframe');
+        setTimeout(() => {
+            const doc = frame.contentWindow.document;
+            doc.open(); doc.write(createCharHTML(AVATARS[avatarKey], vOffsetVal)); doc.close();
+        }, 150);
+        sysMsg(`主播渲染成功`);
+    }
+
+    async function runDrama() {
+        if (state.playing) return;
+        state.playing = true;
+        document.getElementById('p-status').innerText = "PLAYING";
+        const sid = document.getElementById('sheet-id').value.trim();
+        const url = `https://docs.google.com/spreadsheets/d/${sid}/export?format=csv&gid=0&v=${Date.now()}`;
+        try {
+            const res = await fetch(url);
+            const csv = await res.text();
+            const rows = csv.split(/\r?\n/).filter(r => r.trim()).slice(1);
+            for (const row of rows) {
+                if(!state.playing) break;
+                const cols = row.split(',').map(c => c.trim().replace(/"/g, ''));
+                const text = (cols[1] || cols[0] || "");
+                document.getElementById('script-line').innerText = text;
+                const frame = document.getElementById('char-main');
+                if (frame) frame.contentWindow.postMessage({ text }, '*');
+                if (window.speechSynthesis) {
+                    speechSynthesis.cancel();
+                    const u = new SpeechSynthesisUtterance(text); u.lang = 'zh-TW';
+                    speechSynthesis.speak(u);
+                }
+                await new Promise(r => setTimeout(r, Math.max(4500, text.length * 400)));
+            }
+        } catch (e) { sysMsg("劇本錯誤"); }
+        state.playing = false; document.getElementById('p-status').innerText = "IDLE";
+    }
+
+    function downloadSource() {
+        const blob = new Blob([document.documentElement.outerHTML], { type: "text/html" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "Cafe_Interactive_Pro.html";
+        a.click();
+    }
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelector(`[onclick="switchTab('${tabId}')"]`).classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+    }
+
+    window.onload = () => {
+        const html = Object.keys(AVATARS).map(m => `<option value="${m}">${m.toUpperCase()}</option>`).join('');
+        document.getElementById('avatar-main').innerHTML = html;
+        loadPositions();
+        initDragging();
+        sysMsg("主播系統就緒");
+        setTimeout(initTheatre, 800); 
+    };
 </script>
 
-</body>
-</html>
+<div id="dynamic-bg"></div>
+<div class="gold-texture"></div>
+
+<button class="btn-toggle-ui" onclick="toggleUI()">隱藏控制項</button>
+<button id="btn-download" onclick="downloadSource()">💾 下載原始碼</button>
+
+<div class="main-ui">
+    <div class="ui-header">
+        <div class="flex justify-between items-center gap-2">
+            <span class="font-bold text-amber-950 whitespace-nowrap" style="font-size: 0.6rem;">✨ 金輝咖啡廳 V21R (雙指互動版)</span>
+            <div class="flex gap-1 flex-wrap justify-end">
+                <button class="btn-gold" onclick="runDrama()">啟動劇本</button>
+                <button class="btn-gold" onclick="initTheatre()">重新渲染</button>
+            </div>
+        </div>
+        <div class="info-strip">
+            <span id="p-status" class="font-black text-amber-800" style="min-width:35px;">IDLE</span>
+            <div id="script-line">雙指可縮放與旋轉主播。單指可移动。</div>
+        </div>
+        <div class="flex mt-1">
+            <div class="tab-btn active" onclick="switchTab('tab-control')">環境與效果</div>
+            <div class="tab-btn" onclick="switchTab('tab-settings')">人員與劇本</div>
+        </div>
+        <div id="tab-control" class="tab-content pt-1 active">
+            <div class="flex gap-1 flex-wrap mb-1">
+                <button class="btn-gold" onclick="updateBg('gold')">💰 金輝</button>
+                <button class="btn-gold" onclick="updateBg('day')">☀️ 晨間</button>
+                <button class="btn-gold" onclick="updateBg('dusk')">🌆 黃昏</button>
+                <button class="btn-gold" onclick="updateBg('night')">🌙 靜夜</button>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="control-label">垂直位置:</span>
+                <input type="range" id="voffset-range" min="-500" max="500" step="10" value="-50" class="flex-grow" oninput="document.getElementById('val-voff').innerText = this.value">
+                <span id="val-voff" style="min-width:30px;">-50</span>
+            </div>
+            <div id="console-log">歡迎。</div>
+        </div>
+        <div id="tab-settings" class="tab-content pt-1">
+            <div class="grid grid-cols-1 gap-1">
+                <div class="flex gap-1 items-center">
+                    <span class="control-label">當前主播:</span>
+                    <select id="avatar-main" class="flex-grow" onchange="initTheatre()"></select>
+                </div>
+                <div class="flex gap-1 items-center">
+                    <span class="control-label">Sheet ID:</span>
+                    <input type="text" id="sheet-id" class="flex-grow" value="15h6v7zh05fbtNfoauduL9OjpzF8pIeMl86JR9Y9aZbU">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="main-stage" class="stage">
+    <div class="char-container" id="container-main"></div>
+</div>
+
+</body></html>
+
