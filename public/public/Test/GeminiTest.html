@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>金幣輝煌 Gemini AI 測試工具</title>
+    <title>金幣輝煌 Gemini AI 全環境測試工具</title>
     <style>
         :root {
             --gold-primary: #ffd700;
@@ -12,7 +12,7 @@
             --bg-color: #fff8e1;
         }
 
-        /* 嚴格控制文字大小 0.5rem，確保所有環境一致 */
+        /* 嚴格控制文字大小 0.5rem */
         * {
             box-sizing: border-box;
             font-size: 0.5rem !important;
@@ -24,7 +24,7 @@
         body {
             background: radial-gradient(circle, var(--gold-light) 0%, var(--gold-primary) 100%);
             background-attachment: fixed;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             color: #5d4037;
             display: flex;
             flex-direction: column;
@@ -35,12 +35,12 @@
             padding: 10px;
         }
 
-        /* 金幣背景裝飾 - 確保在各種寬度下不溢出 */
+        /* 金幣背景 */
         body::before {
             content: "💰";
             position: fixed;
             font-size: 10rem !important;
-            opacity: 0.1;
+            opacity: 0.15;
             z-index: -1;
             top: 50%;
             left: 50%;
@@ -51,11 +51,11 @@
         .container {
             width: 100%;
             max-width: 100%;
-            background: rgba(255, 255, 255, 0.92);
+            background: rgba(255, 255, 255, 0.93);
             border: 2px solid var(--gold-dark);
             border-radius: 12px;
             padding: 10px;
-            box-shadow: 0 8px 16px rgba(184, 134, 11, 0.4);
+            box-shadow: 0 8px 24px rgba(184, 134, 11, 0.45);
             display: flex;
             flex-direction: column;
             gap: 10px;
@@ -68,12 +68,12 @@
         }
 
         .header h1 {
-            font-size: 0.8rem !important;
+            font-size: 0.7rem !important;
             color: var(--gold-dark);
             font-weight: bold;
+            letter-spacing: 1px;
         }
 
-        /* 按鈕群組適配 RWD */
         .btn-group {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -89,30 +89,29 @@
             cursor: pointer;
             text-shadow: 1px 1px 1px rgba(0,0,0,0.4);
             font-weight: bold;
+            transition: all 0.2s;
             display: flex;
             justify-content: center;
             align-items: center;
-            transition: all 0.2s;
         }
 
         button:active {
-            filter: brightness(0.8);
-            transform: scale(0.98);
+            filter: brightness(0.85);
+            transform: scale(0.97);
         }
 
-        /* 狀態顯示區 */
         #status {
             background: #ffffff;
             border: 1px solid var(--gold-primary);
-            padding: 6px;
-            min-height: 30px;
+            padding: 8px;
+            min-height: 45px;
             color: #b71c1c;
             border-radius: 4px;
             word-break: break-all;
-            line-height: 1.2;
+            line-height: 1.3;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
         }
 
-        /* 資料與 AI 內容顯示區 */
         .content-area {
             display: flex;
             flex-direction: column;
@@ -122,21 +121,20 @@
         .data-view {
             background: #fdfaf0;
             border: 1px solid #d4a017;
-            padding: 8px;
-            height: 300px;
+            padding: 10px;
+            height: 320px;
             overflow-y: auto;
             white-space: pre-wrap;
             word-wrap: break-word;
             border-radius: 4px;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.06);
         }
 
-        /* 分頁切換 */
         .pagination {
             display: flex;
             justify-content: space-around;
-            padding: 5px 0;
-            background: rgba(184, 134, 11, 0.1);
+            padding: 6px;
+            background: rgba(184, 134, 11, 0.15);
             border-radius: 6px;
         }
 
@@ -144,10 +142,9 @@
             background: none;
             border: none;
             color: var(--gold-dark);
-            padding: 5px 15px;
+            padding: 6px 15px;
             text-decoration: underline;
-            box-shadow: none;
-            flex: none;
+            cursor: pointer;
         }
 
         .page-btn.active {
@@ -157,24 +154,27 @@
             border-radius: 4px;
         }
 
-        /* 載入動畫 */
         .loader {
             display: none;
             text-align: center;
             font-weight: bold;
-            color: var(--gold-dark);
+            color: #d48806;
             padding: 5px;
+            background: #fffbe6;
+            border: 1px dashed var(--gold-dark);
+            margin: 5px 0;
+            border-radius: 4px;
         }
 
         .line-count {
             position: fixed;
             bottom: 5px;
             right: 5px;
-            background: rgba(0,0,0,0.75);
+            background: rgba(0,0,0,0.8);
             color: #ffd700;
-            padding: 2px 6px;
+            padding: 2px 8px;
             border-radius: 3px;
-            z-index: 1000;
+            z-index: 9999;
             pointer-events: none;
         }
     </style>
@@ -183,23 +183,23 @@
 
 <div class="container">
     <div class="header">
-        <h1>Gemini AI 全環境統一測試工具 (Hex)</h1>
+        <h1>Gemini AI 全環境統一測試工具 (Hex 修復版)</h1>
     </div>
 
-    <div id="status">準備就緒。環境檢查：OK</div>
+    <div id="status">系統就緒。目標網址已更新。</div>
 
     <div class="btn-group">
-        <button onclick="fetchAndProcessData()">1. 獲取資料/轉 Hex</button>
-        <button onclick="pingGemini()">2. 連線測試 (Ping)</button>
-        <button onclick="runAiAnalysis()">3. AI 結構分析</button>
-        <button onclick="downloadSelf()">下載此工具</button>
+        <button onclick="fetchDataProcess()">1. 獲取資料/轉 Hex</button>
+        <button onclick="pingGeminiApi()">2. 連線測試 (Ping)</button>
+        <button onclick="analyzeWithAi()">3. AI 結構分析</button>
+        <button onclick="downloadHtml()">下載此工具</button>
     </div>
 
-    <div id="ai-loader" class="loader">正在處理中... 請稍候...</div>
+    <div id="ai-loader" class="loader">正在通訊中，請稍候... (若長時間未響應請檢查連線)</div>
 
     <div class="content-area">
-        <div id="view-data" class="data-view">尚未載入資料。</div>
-        <div id="view-ai" class="data-view" style="display:none;">AI 結果將在此處呈現。</div>
+        <div id="view-data" class="data-view">等待獲取資料...</div>
+        <div id="view-ai" class="data-view" style="display:none;">AI 結果將呈現於此。</div>
     </div>
 
     <div class="pagination">
@@ -211,65 +211,70 @@
 <div class="line-count" id="lineCountDisplay">目前行數: 0</div>
 
 <script>
-    const CONFIG = {
+    const APP_CONFIG = {
+        // 更新為目標 API 網址
         apiUrl: "https://orlandotigereye.github.io/mytestweb/config/api.js",
-        geminiUrl: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent",
-        apiKey: "" // API Key 會由系統注入
+        geminiModelUrl: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent",
+        apiKey: typeof __api_key !== 'undefined' ? __api_key : "" 
     };
 
-    let sharedRawContent = "";
+    let cachedRawData = "";
 
-    function setLog(msg) {
-        document.getElementById('status').innerText = msg;
+    function updateStatus(msg, isError = false) {
+        const statusEl = document.getElementById('status');
+        statusEl.innerText = msg;
+        statusEl.style.color = isError ? "#d32f2f" : "#b8860b";
     }
 
-    function toHex(str) {
-        return "0x" + Array.from(str).map(c => c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')).join('');
+    function encodeToHex(str) {
+        return "0x" + Array.from(str).map(char => char.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')).join('');
     }
 
-    async function fetchAndProcessData() {
-        setLog("正在連線至 Github 獲取 api.js...");
+    async function fetchDataProcess() {
+        updateStatus("連線至目標位址擷取中...");
         try {
-            const resp = await fetch(`${CONFIG.apiUrl}?v=${Date.now()}`);
-            if (!resp.ok) throw new Error("遠端連線失敗: " + resp.status);
-            const text = await resp.respText ? await resp.respText() : await resp.text();
-            sharedRawContent = text;
+            // 使用 cache-buster 避免行動端緩存問題
+            const response = await fetch(`${APP_CONFIG.apiUrl}?nocache=${Date.now()}`);
+            if (!response.ok) throw new Error(`HTTP 請求失敗: ${response.status}`);
+            
+            const rawText = await response.text();
+            cachedRawData = rawText;
 
-            let output = "// 統一環境處理結果 (Key 轉 Hex)\n\n";
-            const lines = text.split('\n');
+            let resultOutput = "// 全環境統一處理 (Key -> Hex)\n// 來源: " + APP_CONFIG.apiUrl + "\n\n";
+            const lines = rawText.split('\n');
             lines.forEach(line => {
                 const match = line.match(/^\s*["']?([\w-]+)["']?\s*:/);
                 if (match) {
-                    const key = match[1];
-                    const hex = toHex(key);
-                    output += line.replace(key, hex) + " // 原鍵: " + key + "\n";
+                    const originalKey = match[1];
+                    const hexValue = encodeToHex(originalKey);
+                    resultOutput += line.replace(originalKey, hexValue) + " // [Hex] " + hexValue + " (原: " + originalKey + ")\n";
                 } else {
-                    output += line + "\n";
+                    resultOutput += line + "\n";
                 }
             });
 
-            document.getElementById('view-data').innerText = output;
+            document.getElementById('view-data').innerText = resultOutput;
             switchTab('data');
-            setLog("資料處理成功。");
-            updateLines();
-        } catch (e) {
-            setLog("發生錯誤: " + e.message);
+            updateStatus("資料獲取並處理完成。");
+            refreshLineCount();
+        } catch (err) {
+            updateStatus("獲取失敗: " + err.message + " (請確認 CORS 或網路狀態)", true);
         }
     }
 
-    async function callGemini(prompt, systemPrompt = "") {
-        const url = `${CONFIG.geminiUrl}?key=${CONFIG.apiKey}`;
+    async function callGeminiApi(promptText, systemInstruction = "") {
+        const url = `${APP_CONFIG.geminiModelUrl}?key=${APP_CONFIG.apiKey}`;
         const payload = {
-            contents: [{ parts: [{ text: prompt }] }]
+            contents: [{ parts: [{ text: promptText }] }]
         };
-        if (systemPrompt) {
-            payload.systemInstruction = { parts: [{ text: systemPrompt }] };
+        if (systemInstruction) {
+            payload.systemInstruction = { parts: [{ text: systemInstruction }] };
         }
 
-        let retryCount = 0;
-        const maxRetries = 5;
+        let attempt = 0;
+        const maxAttempts = 5;
 
-        while (retryCount < maxRetries) {
+        while (attempt < maxAttempts) {
             try {
                 const response = await fetch(url, {
                     method: 'POST',
@@ -278,64 +283,66 @@
                 });
 
                 if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error?.message || "HTTP " + response.status);
+                    const errorJson = await response.json();
+                    throw new Error(errorJson.error?.message || `HTTP ${response.status}`);
                 }
 
-                const data = await response.json();
-                return data.candidates?.[0]?.content?.parts?.[0]?.text || "無內容回傳";
-            } catch (err) {
-                retryCount++;
-                if (retryCount >= maxRetries) throw err;
-                const backoff = Math.pow(2, retryCount) * 1000;
-                setLog(`通訊重試中 (${retryCount}/5)...`);
-                await new Promise(resolve => setTimeout(resolve, backoff));
+                const resultData = await response.json();
+                return resultData.candidates?.[0]?.content?.parts?.[0]?.text || "無有效回覆";
+            } catch (error) {
+                attempt++;
+                if (attempt >= maxAttempts) throw error;
+                const waitTime = Math.pow(2, attempt) * 1000;
+                updateStatus(`API 通訊重試 (${attempt}/5)... ${error.message}`);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
             }
         }
     }
 
-    async function pingGemini() {
-        setLog("發送測試信號至 Gemini...");
-        document.getElementById('ai-loader').style.display = "block";
+    async function pingGeminiApi() {
+        updateStatus("正在嘗試 API 連線測試...");
+        const loader = document.getElementById('ai-loader');
+        loader.style.display = "block";
         try {
-            const res = await callGemini("系統連線測試，請回覆：連線正常。");
-            document.getElementById('view-ai').innerText = "連線測試成功回傳：\n" + res;
+            const response = await callGeminiApi("測試訊息：請確認 API 連線是否正常。");
+            document.getElementById('view-ai').innerText = "連線測試回報：\n\n" + response;
             switchTab('ai');
-            setLog("Gemini API 通訊成功。");
-        } catch (e) {
-            setLog("API 測試失敗: " + e.message);
+            updateStatus("Gemini API 連線測試成功！");
+        } catch (err) {
+            updateStatus("API 連線失敗: " + err.message, true);
         } finally {
-            document.getElementById('ai-loader').style.display = "none";
-            updateLines();
+            loader.style.display = "none";
+            refreshLineCount();
         }
     }
 
-    async function runAiAnalysis() {
-        if (!sharedRawContent) return setLog("請先執行「獲取資料」。");
-        setLog("AI 正在分析資料結構...");
-        document.getElementById('ai-loader').style.display = "block";
+    async function analyzeWithAi() {
+        if (!cachedRawData) return updateStatus("請先執行「獲取資料」！", true);
+        updateStatus("發送資料至 AI 分析中...");
+        const loader = document.getElementById('ai-loader');
+        loader.style.display = "block";
         try {
-            const prompt = `分析以下 API 設定檔內容並總結其功能：\n${sharedRawContent}`;
-            const sys = "你是一個資深工程師，請用繁體中文簡要分析。";
-            const res = await callGemini(prompt, sys);
-            document.getElementById('view-ai').innerText = "AI 分析報告：\n" + res;
+            const prompt = `請分析此 API 設定檔內容並總結其功能：\n\n${cachedRawData}`;
+            const sys = "你是一位專業的系統架構師，請使用繁體中文進行分析。";
+            const response = await callGeminiApi(prompt, sys);
+            document.getElementById('view-ai').innerText = "AI 結構分析報告：\n\n" + response;
             switchTab('ai');
-            setLog("AI 分析完成。");
-        } catch (e) {
-            setLog("分析失敗: " + e.message);
+            updateStatus("AI 分析任務完成。");
+        } catch (err) {
+            updateStatus("分析出錯: " + err.message, true);
         } finally {
-            document.getElementById('ai-loader').style.display = "none";
-            updateLines();
+            loader.style.display = "none";
+            refreshLineCount();
         }
     }
 
-    function switchTab(type) {
+    function switchTab(tabId) {
         const dView = document.getElementById('view-data');
         const aView = document.getElementById('view-ai');
         const dBtn = document.getElementById('btn-data');
         const aBtn = document.getElementById('btn-ai');
 
-        if (type === 'data') {
+        if (tabId === 'data') {
             dView.style.display = "block";
             aView.style.display = "none";
             dBtn.classList.add('active');
@@ -348,30 +355,29 @@
         }
     }
 
-    function downloadSelf() {
+    function downloadHtml() {
         try {
-            const content = document.documentElement.outerHTML;
-            const blob = new Blob([content], { type: 'text/html' });
+            const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'gemini_universal_test.html';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'gemini_test_updated.html';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
             URL.revokeObjectURL(url);
-            setLog("程式碼下載啟動。");
+            updateStatus("程式碼下載完成。");
         } catch (e) {
-            setLog("下載出錯: " + e.message);
+            updateStatus("下載失敗: " + e.message, true);
         }
     }
 
-    function updateLines() {
-        const total = document.documentElement.outerHTML.split('\n').length;
-        document.getElementById('lineCountDisplay').innerText = "目前計算實際行數: " + total;
+    function refreshLineCount() {
+        const lines = document.documentElement.outerHTML.split('\n').length;
+        document.getElementById('lineCountDisplay').innerText = "目前計算實際行數: " + lines;
     }
 
-    window.onload = updateLines;
+    window.onload = refreshLineCount;
 </script>
 </body>
 </html>
