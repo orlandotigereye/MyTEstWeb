@@ -1,545 +1,368 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>黃金 AI 簡筆草圖工作站 - 大字體版</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Universal Skeleton → Skin → Comic Line System</title>
+<style>
+/* =========================
+   GLOBAL UI / RESET
+========================= */
+*{box-sizing:border-box}
+html,body{
+  margin:0;padding:0;
+  width:100%;height:100%;
+  background:#111;
+  color:#eee;
+  font-family:system-ui,-apple-system,BlinkMacSystemFont;
+  overflow:hidden;
+}
+button,input,select{
+  background:#222;color:#eee;
+  border:1px solid #444;
+  border-radius:6px;
+  padding:6px 10px;
+}
+button:hover{background:#333}
+.panel{
+  background:#1a1a1a;
+  border:1px solid #333;
+  border-radius:8px;
+  padding:8px;
+}
+h3{margin:6px 0;font-size:14px;color:#ffd700}
 
-    <!-- 外部 API 配置 -->
-    <script src="https://orlandotigereye.github.io/mytestweb/config/api.js" id="api-config"></script>
+/* =========================
+   LAYOUT
+========================= */
+#app{
+  display:grid;
+  grid-template-columns:280px 1fr 260px;
+  grid-template-rows:1fr;
+  height:100%;
+}
+#left,#right{
+  overflow:auto;
+}
+#center{
+  position:relative;
+  background:#000;
+}
+#toolbar{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+}
+#canvasWrap{
+  position:absolute;
+  inset:0;
+}
+svg{
+  width:100%;
+  height:100%;
+  touch-action:none;
+}
 
-    <!-- SVG 核心庫 -->
-    <script src="https://cdn.jsdelivr.net/npm/@svgdotjs/svg.js@3.1.2/dist/svg.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@svgdotjs/svg.draggable.js@3.0.2/dist/svg.draggable.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvg@3.0.10/lib/umd.js"></script>
+/* =========================
+   VISUAL LAYERS
+========================= */
+.bone{stroke:#00eaff;stroke-width:3;fill:none}
+.joint{fill:#ff5;stroke:#000;stroke-width:1}
+.skin{stroke:#fff;stroke-width:2;fill:none}
+.comic{stroke:#fff;stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}
 
-    <style>
-        :root {
-            /* ====================
-               大幅放大字體 CSS 變數 (原字體 +40%)
-               ==================== */
-            --text-size-xs: 0.55rem;  /* 原: 0.35rem */
-            --text-size-sm: 0.65rem;  /* 原: 0.45rem */
-            --text-size-md: 0.8rem;   /* 原: 0.55rem */
-            --text-size-lg: 1.0rem;   /* 原: 0.65rem */
-            --text-size-xl: 1.2rem;   /* 新增大標題 */
-            
-            --tool-height: 36px;      /* 按鈕高度放大 */
-            --padding-md: 6px;        /* 內距放大 */
-            --border-width: 2px;      /* 邊框加粗 */
-            
-            --gold-primary: #ffd700;
-            --gold-light: #fff3b0;
-            --gold-dark: #b8860b;
-            --bg-pattern: url('https://www.transparenttextures.com/patterns/gold-glitter.png');
-            --panel-bg: rgba(255, 255, 255, 0.5);
-            --danger: #e53935;
-            --success: #2e7d32;
-            --info: #1565c0;
-            --shadow-strong: 0 12px 35px rgba(0, 0, 0, 0.5);
-        }
-
-        /* ====================
-           RWD 智慧字體調整
-           ==================== */
-        @media (max-width: 480px) {
-            :root {
-                --text-size-xs: 0.6rem;
-                --text-size-sm: 0.7rem;
-                --text-size-md: 0.85rem;
-                --text-size-lg: 1.05rem;
-                --tool-height: 40px;
-            }
-        }
-
-        @media (min-width: 768px) {
-            :root {
-                --text-size-xs: 0.65rem;
-                --text-size-sm: 0.75rem;
-                --text-size-md: 0.9rem;
-                --text-size-lg: 1.1rem;
-                --tool-height: 42px;
-            }
-        }
-
-        @media (min-width: 1024px) {
-            :root {
-                --text-size-xs: 0.7rem;
-                --text-size-sm: 0.8rem;
-                --text-size-md: 1.0rem;
-                --text-size-lg: 1.2rem;
-                --tool-height: 48px;
-            }
-        }
-
-        * {
-            box-sizing: border-box;
-            font-family: "Microsoft JhengHei", "Noto Sans TC", system-ui, sans-serif;
-            -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
-        }
-
-        /* ====================
-           全域文字基礎
-           ==================== */
-        * { font-size: var(--text-size-xs); }
-        .text-sm { font-size: var(--text-size-sm); }
-        .text-md { font-size: var(--text-size-md); }
-        .text-lg { font-size: var(--text-size-lg); }
-        .text-xl { font-size: var(--text-size-xl); }
-
-        body {
-            margin: 0;
-            padding: 4px;
-            background: var(--gold-dark) var(--bg-pattern) fixed;
-            color: #333;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            overflow: hidden;
-        }
-
-        /* ====================
-           主容器 - 適配所有裝置
-           ==================== */
-        .main-card {
-            width: 100%;
-            height: 100vh;
-            max-width: 900px;
-            margin: 0 auto;
-            background: linear-gradient(135deg, #fff9e6 0%, #ffeb99 100%);
-            border: var(--border-width) ridge var(--gold-primary);
-            box-shadow: var(--shadow-strong);
-            border-radius: 16px;
-            padding: var(--padding-md);
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-
-        /* 手機版微調 */
-        @media (max-width: 480px) {
-            body { padding: 2px; }
-            .main-card {
-                border-radius: 12px;
-                padding: 4px;
-            }
-        }
-
-        /* ====================
-           頂部標題 - 大幅放大
-           ==================== */
-        .header {
-            text-align: center;
-            padding: 8px 6px;
-            border-bottom: 3px solid var(--gold-primary);
-            margin-bottom: 6px;
-            position: relative;
-        }
-
-        .header h1 {
-            margin: 0 0 4px 0;
-            color: #7a5d00;
-            text-shadow: 2px 2px 2px rgba(255,255,255,0.8);
-            font-weight: bold;
-        }
-
-        .header-sub {
-            margin: 0;
-            color: #8b6b00;
-            font-weight: 500;
-        }
-
-        /* 版本標籤 */
-        .badge-version {
-            position: absolute;
-            top: 4px;
-            left: 6px;
-            padding: 3px 6px;
-            border-radius: 6px;
-            background: rgba(0, 0, 0, 0.8);
-            color: var(--gold-primary);
-            font-weight: bold;
-        }
-
-        /* ====================
-           右上工具按鈕
-           ==================== */
-        .top-tools {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-            z-index: 20;
-        }
-
-        .top-tool-btn {
-            background: rgba(255, 255, 255, 0.95);
-            border: 2px solid var(--gold-primary);
-            border-radius: 8px;
-            padding: 4px 8px;
-            cursor: pointer;
-            font-size: var(--text-size-sm);
-            font-weight: bold;
-            transition: all 0.2s;
-            min-width: 60px;
-            text-align: center;
-        }
-
-        .top-tool-btn:hover,
-        .top-tool-btn:active {
-            background: var(--gold-primary);
-            transform: scale(1.05);
-        }
-
-        /* ====================
-           頁籤 - 放大按鈕
-           ==================== */
-        .tabs {
-            display: flex;
-            margin-bottom: 6px;
-            background: rgba(184, 134, 11, 0.3);
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .tab-btn {
-            flex: 1;
-            padding: 8px 4px;
-            border: none;
-            background: transparent;
-            cursor: pointer;
-            color: #555;
-            transition: all 0.2s;
-            font-size: var(--text-size-sm);
-            font-weight: 500;
-        }
-
-        .tab-btn.active {
-            background: linear-gradient(135deg, var(--gold-primary), #ffed4a);
-            color: #333;
-            font-weight: bold;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        /* ====================
-           Tab 內容
-           ==================== */
-        .tab-content {
-            display: none;
-            padding: 8px;
-            background: var(--panel-bg);
-            border-radius: 8px;
-            margin-bottom: 6px;
-            border: 2px inset var(--gold-primary);
-            flex-shrink: 0;
-        }
-
-        .tab-content.active {
-            display: block;
-            animation: fadeIn 0.2s ease-in;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-5px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* ====================
-           工具列 - 大按鈕版
-           ==================== */
-        .toolbar {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-            gap: 4px;
-            margin-bottom: 4px;
-        }
-
-        @media (max-width: 480px) {
-            .toolbar {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 3px;
-            }
-        }
-
-        @media (max-width: 360px) {
-            .toolbar {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 2px;
-            }
-        }
-
-        .tool-btn {
-            background: linear-gradient(135deg, #fffdf0, #fff8d0);
-            border: 2px solid var(--gold-dark);
-            border-radius: 8px;
-            padding: 6px 4px;
-            text-align: center;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: var(--tool-height);
-            transition: all 0.2s;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        }
-
-        .tool-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-
-        .tool-btn:active,
-        .tool-btn.selected {
-            background: linear-gradient(135deg, #ff6b35, #f7931e) !important;
-            color: white !important;
-            border-color: #d84315;
-            transform: scale(0.98);
-        }
-
-        .tool-btn span {
-            font-size: var(--text-size-xs);
-            font-weight: 500;
-            margin-top: 1px;
-        }
-
-        /* ====================
-           畫布區 - 彈性空間
-           ==================== */
-        .viewport-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            min-height: 0;
-            margin: 4px 0;
-        }
-
-        #viewport {
-            flex: 1;
-            width: 100%;
-            background: linear-gradient(45deg, #f8f9fa 25%, transparent 25%), 
-                        linear-gradient(-45deg, #f8f9fa 25%, transparent 25%),
-                        linear-gradient(45deg, transparent 75%, #f8f9fa 75%),
-                        linear-gradient(-45deg, transparent 75%, #f8f9fa 75%);
-            background-size: 20px 20px;
-            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-            border: 3px double var(--gold-dark);
-            border-radius: 12px;
-            position: relative;
-            touch-action: none;
-            overflow: hidden;
-            cursor: crosshair;
-            box-shadow: inset 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        /* ====================
-           狀態訊息 - 放大顯示
-           ==================== */
-        .status-section {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            margin-top: 4px;
-        }
-
-        .status-msg {
-            background: linear-gradient(135deg, white, #f5f5f5);
-            border-radius: 10px;
-            padding: 8px 12px;
-            border: 2px solid var(--gold-primary);
-            text-align: center;
-            font-weight: bold;
-            min-height: 20px;
-            white-space: normal;
-            word-break: break-word;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            font-size: var(--text-size-sm);
-        }
-
-        .status-msg.success { border-color: var(--success); background: linear-gradient(135deg, #e8f5e8, #f1f8e9); color: var(--success); }
-        .status-msg.error { border-color: var(--danger); background: linear-gradient(135deg, #ffebee, #ffcdd2); color: var(--danger); }
-        .status-msg.info { border-color: var(--info); background: linear-gradient(135deg, #e3f2fd, #e1f5fe); color: var(--info); }
-
-        /* ====================
-           表單元件放大
-           ==================== */
-        input, textarea, select {
-            width: 100%;
-            padding: 8px 12px;
-            border: 2px solid var(--gold-dark);
-            border-radius: 8px;
-            background: white;
-            font-size: var(--text-size-sm);
-            transition: all 0.2s;
-        }
-
-        input:focus, textarea:focus, select:focus {
-            outline: none;
-            border-color: var(--gold-primary);
-            box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2);
-        }
-
-        .control-grid {
-            display: grid;
-            grid-template-columns: 1.2fr 3fr;
-            gap: 6px;
-            align-items: center;
-            margin-bottom: 6px;
-        }
-
-        @media (max-width: 480px) {
-            .control-grid { grid-template-columns: 1fr; }
-        }
-
-        /* ====================
-           珍藏庫項目
-           ==================== */
-        .archive-list {
-            max-height: 120px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            padding: 2px;
-            background: rgba(255,255,255,0.6);
-            border-radius: 8px;
-        }
-
-        .archive-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 6px 8px;
-            border-radius: 8px;
-            border: 2px solid var(--gold-primary);
-            background: white;
-            gap: 8px;
-            font-size: var(--text-size-xs);
-        }
-
-        /* ====================
-           載入動畫
-           ==================== */
-        #loading-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.95);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            flex-direction: column;
-            backdrop-filter: blur(2px);
-        }
-
-        .spinner {
-            width: 40px; height: 40px;
-            border: 4px solid rgba(184, 134, 11, 0.3);
-            border-top-color: var(--gold-primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 12px;
-        }
-
-        /* ====================
-           底部資訊列
-           ==================== */
-        .footer-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 6px 8px;
-            background: rgba(255,255,255,0.8);
-            border-radius: 10px;
-            font-size: var(--text-size-xs);
-            color: #5c4500;
-            margin-top: 4px;
-        }
-
-        /* ====================
-           全螢幕模式
-           ==================== */
-        .fullscreen-mode {
-            position: fixed !important;
-            top: 0 !important; left: 0 !important;
-            width: 100vw !important; height: 100vh !important;
-            z-index: 9999 !important;
-            border-radius: 0 !important;
-            padding: 4px !important;
-        }
-    </style>
+/* =========================
+   LISTS
+========================= */
+.list{display:flex;flex-direction:column;gap:4px}
+.item{
+  padding:4px 6px;
+  background:#222;
+  border:1px solid #333;
+  border-radius:4px;
+  font-size:12px;
+}
+.item.active{background:#444}
+</style>
 </head>
-
 <body>
-<!-- 完整 HTML 結構保持前版，僅 CSS 字體放大 -->
-<!-- 所有按鈕、文字現在都變得清晰大字體！ -->
+<div id="app">
 
-<div class="main-card" id="mainCard">
-    <!-- 右上工具 -->
-    <div class="top-tools">
-        <button class="top-tool-btn text-sm" onclick="toggleFullscreen()">⛶ 全螢幕</button>
-        <button class="top-tool-btn text-sm" onclick="exportSVG()">📄 SVG 匯出</button>
-        <button class="top-tool-btn text-sm" onclick="downloadCode()">💾 程式碼</button>
-    </div>
+<!-- LEFT PANEL -->
+<div id="left" class="panel">
+<h3>骨架系統</h3>
+<div id="toolbar">
+<button id="addJoint">＋ 關節</button>
+<button id="addBone">＋ 骨</button>
+<button id="delSel">刪除</button>
+<button id="clearAll">清空</button>
+</div>
 
-    <!-- 放大標題 -->
-    <div class="header">
-        <div class="badge-version text-xs">v4.4 大字體版</div>
-        <h1 class="text-xl">🏆 黃金 AI 簡筆草圖工作站</h1>
-        <div class="header-sub text-md" id="orientationInfo">大字體 • RWD 完美適配</div>
-    </div>
+<h3>模式</h3>
+<div id="toolbar">
+<button data-mode="select">選取</button>
+<button data-mode="joint">關節</button>
+<button data-mode="bone">骨</button>
+<button data-mode="move">移動</button>
+</div>
 
-    <!-- 頁籤 -->
-    <div class="tabs">
-        <button class="tab-btn text-sm active" onclick="setTab(0)">🎨 繪製工具</button>
-        <button class="tab-btn text-sm" onclick="setTab(1)">📐 筆觸設定</button>
-        <button class="tab-btn text-sm" onclick="setTab(2)">🪄 AI 生成</button>
-        <button class="tab-btn text-sm" onclick="setTab(3)">📦 珍藏庫</button>
-    </div>
+<h3>姿勢庫</h3>
+<div id="toolbar">
+<button id="savePose">存姿勢</button>
+<button id="loadPose">載入</button>
+</div>
+<div id="poseList" class="list"></div>
+</div>
 
-    <!-- Tab 內容保持前版結構，省略顯示 -->
-    <!-- ... 原有 Tab 內容 ... -->
+<!-- CENTER -->
+<div id="center">
+<div id="canvasWrap">
+<svg id="svg" viewBox="0 0 1000 1000">
+<g id="bonesLayer"></g>
+<g id="jointsLayer"></g>
+<g id="skinLayer"></g>
+<g id="comicLayer"></g>
+</svg>
+</div>
+</div>
 
-    <!-- 狀態 -->
-    <div class="status-section">
-        <div id="status" class="status-msg text-sm">🎉 大字體版已就緒！所有文字都放大 40% ✨</div>
-    </div>
+<!-- RIGHT PANEL -->
+<div id="right" class="panel">
+<h3>包皮 / 線條</h3>
+<div id="toolbar">
+<button id="genSkin">骨架 → 包皮</button>
+<button id="genComic">包皮 → 漫畫線</button>
+<button id="exportSVG">匯出 SVG</button>
+</div>
 
-    <!-- 畫布 -->
-    <div class="viewport-container">
-        <div id="viewport">
-            <div id="loading-overlay">
-                <div class="spinner"></div>
-                <span class="text-md">AI 運算中...</span>
-            </div>
-            <div id="canvas-inner"></div>
-        </div>
-    </div>
+<h3>參數</h3>
+<label>包皮寬度
+<input id="skinWidth" type="range" min="10" max="80" value="30">
+</label>
+<label>漫畫抖動
+<input id="jitter" type="range" min="0" max="10" value="3">
+</label>
 
-    <!-- 底部 -->
-    <div class="footer-info">
-        <span id="cursorInfo" class="text-xs">-</span>
-        <span id="objInfo" class="text-xs">-</span>
-        <span id="lineInfo" class="text-xs">-</span>
-    </div>
+<h3>資料</h3>
+<div id="toolbar">
+<button id="saveLocal">存本機</button>
+<button id="loadLocal">載入</button>
+</div>
+</div>
+
 </div>
 
 <script>
-    /* 原有 JS 邏輯保持不變，僅增加字體狀態提示 */
-    window.onload = () => {
-        // ... 原有初始化 ...
-        msg("✅ 大字體版載入成功！按鈕文字現在超清晰 📱💻", "success");
-    };
+/* =========================================================
+   CORE DATA
+========================================================= */
+const svg = document.getElementById('svg')
+const bonesLayer = document.getElementById('bonesLayer')
+const jointsLayer = document.getElementById('jointsLayer')
+const skinLayer = document.getElementById('skinLayer')
+const comicLayer = document.getElementById('comicLayer')
 
-    // 所有 JS 功能保持前版完整性
+let mode='select'
+let joints=[]
+let bones=[]
+let skins=[]
+let poses=[]
+let selected=null
+let tempBone=null
+
+const uid=()=>Math.random().toString(36).slice(2)
+
+/* =========================================================
+   UTILS
+========================================================= */
+function pt(evt){
+  const r=svg.getBoundingClientRect()
+  return {
+    x:(evt.clientX-r.left)/r.width*1000,
+    y:(evt.clientY-r.top)/r.height*1000
+  }
+}
+function dist(a,b){
+  return Math.hypot(a.x-b.x,a.y-b.y)
+}
+
+/* =========================================================
+   RENDER
+========================================================= */
+function render(){
+  bonesLayer.innerHTML=''
+  jointsLayer.innerHTML=''
+  skinLayer.innerHTML=''
+  comicLayer.innerHTML=''
+
+  bones.forEach(b=>{
+    const j1=joints.find(j=>j.id===b.a)
+    const j2=joints.find(j=>j.id===b.b)
+    if(!j1||!j2)return
+    const l=document.createElementNS('http://www.w3.org/2000/svg','line')
+    l.setAttribute('x1',j1.x)
+    l.setAttribute('y1',j1.y)
+    l.setAttribute('x2',j2.x)
+    l.setAttribute('y2',j2.y)
+    l.classList.add('bone')
+    bonesLayer.appendChild(l)
+  })
+
+  joints.forEach(j=>{
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle')
+    c.setAttribute('cx',j.x)
+    c.setAttribute('cy',j.y)
+    c.setAttribute('r',6)
+    c.classList.add('joint')
+    jointsLayer.appendChild(c)
+  })
+
+  skins.forEach(p=>{
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path')
+    path.setAttribute('d',p)
+    path.classList.add('skin')
+    skinLayer.appendChild(path)
+  })
+
+  skins.forEach(p=>{
+    const jitter=parseInt(document.getElementById('jitter').value)
+    const d=p.replace(/([0-9\.]+)/g,(m)=>{
+      return (parseFloat(m)+(Math.random()-0.5)*jitter).toFixed(2)
+    })
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path')
+    path.setAttribute('d',d)
+    path.classList.add('comic')
+    comicLayer.appendChild(path)
+  })
+}
+
+/* =========================================================
+   INTERACTION
+========================================================= */
+svg.addEventListener('pointerdown',e=>{
+  const p=pt(e)
+  if(mode==='joint'){
+    joints.push({id:uid(),x:p.x,y:p.y})
+    render()
+  }
+  if(mode==='bone'){
+    const j=joints.find(j=>dist(j,p)<10)
+    if(j){
+      if(!tempBone)tempBone=j
+      else{
+        bones.push({id:uid(),a:tempBone.id,b:j.id})
+        tempBone=null
+        render()
+      }
+    }
+  }
+  if(mode==='move'){
+    selected=joints.find(j=>dist(j,p)<10)
+  }
+})
+svg.addEventListener('pointermove',e=>{
+  if(selected&&mode==='move'){
+    const p=pt(e)
+    selected.x=p.x
+    selected.y=p.y
+    render()
+  }
+})
+svg.addEventListener('pointerup',()=>selected=null)
+
+/* =========================================================
+   SKIN GENERATION
+========================================================= */
+function genSkin(){
+  skins=[]
+  const w=parseInt(document.getElementById('skinWidth').value)
+  bones.forEach(b=>{
+    const j1=joints.find(j=>j.id===b.a)
+    const j2=joints.find(j=>j.id===b.b)
+    if(!j1||!j2)return
+    const dx=j2.x-j1.x
+    const dy=j2.y-j1.y
+    const len=Math.hypot(dx,dy)||1
+    const nx=-dy/len*w
+    const ny=dx/len*w
+    const d=`
+      M ${j1.x+nx} ${j1.y+ny}
+      L ${j2.x+nx} ${j2.y+ny}
+      L ${j2.x-nx} ${j2.y-ny}
+      L ${j1.x-nx} ${j1.y-ny}
+      Z`
+    skins.push(d)
+  })
+  render()
+}
+
+/* =========================================================
+   POSE LIBRARY
+========================================================= */
+function savePose(){
+  poses.push(JSON.parse(JSON.stringify(joints)))
+  updatePoseList()
+}
+function loadPose(i){
+  joints=JSON.parse(JSON.stringify(poses[i]))
+  render()
+}
+function updatePoseList(){
+  const list=document.getElementById('poseList')
+  list.innerHTML=''
+  poses.forEach((p,i)=>{
+    const d=document.createElement('div')
+    d.className='item'
+    d.textContent='Pose '+(i+1)
+    d.onclick=()=>loadPose(i)
+    list.appendChild(d)
+  })
+}
+
+/* =========================================================
+   EXPORT / STORAGE
+========================================================= */
+function exportSVG(){
+  const clone=svg.cloneNode(true)
+  const blob=new Blob([clone.outerHTML],{type:'image/svg+xml'})
+  const a=document.createElement('a')
+  a.href=URL.createObjectURL(blob)
+  a.download='skeleton_skin_comic.svg'
+  a.click()
+}
+function saveLocal(){
+  localStorage.setItem('skeletonData',JSON.stringify({joints,bones,poses}))
+}
+function loadLocal(){
+  const d=JSON.parse(localStorage.getItem('skeletonData')||'{}')
+  joints=d.joints||[]
+  bones=d.bones||[]
+  poses=d.poses||[]
+  updatePoseList()
+  render()
+}
+
+/* =========================================================
+   UI BINDINGS
+========================================================= */
+document.querySelectorAll('[data-mode]').forEach(b=>{
+  b.onclick=()=>mode=b.dataset.mode
+})
+document.getElementById('genSkin').onclick=genSkin
+document.getElementById('genComic').onclick=render
+document.getElementById('exportSVG').onclick=exportSVG
+document.getElementById('savePose').onclick=savePose
+document.getElementById('saveLocal').onclick=saveLocal
+document.getElementById('loadLocal').onclick=loadLocal
+document.getElementById('clearAll').onclick=()=>{
+  joints=[];bones=[];skins=[];poses=[]
+  updatePoseList();render()
+}
+
+/* =========================================================
+   INIT
+========================================================= */
+render()
 </script>
 </body>
 </html>
