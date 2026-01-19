@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>皇極經世・皇極感應圖數演算系統</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+:root {
+    --gold-primary: #ffd700;
+    --gold-dark: #b8860b;
+    --gold-light: #fff9e6;
+    --bg-gold: radial-gradient(circle, #fff8e1 0%, #ffd700 100%);
+    --font-size: 0.5rem;
+}
+
+body {
+    font-family: "PingFang TC", "STKaiti", serif;
+    background: var(--bg-gold);
+    background-attachment: fixed;
+    color: #3e2723;
+    margin: 0;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+}
+
+.container {
+    width: 100%;
+    max-width: 950px;
+    background: rgba(255, 255, 255, 0.96);
+    border: 3px double var(--gold-dark);
+    border-radius: 15px;
+    box-shadow: 0 15px 45px rgba(0,0,0,0.3);
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+h1 {
+    font-size: 1.1rem;
+    text-align: center;
+    color: var(--gold-dark);
+    margin: 8px 0;
+    text-shadow: 1px 1px 0px white;
+}
+
+.tiny-text {
+    font-size: var(--font-size) !important;
+    line-height: 1.4;
+}
+
+.tabs {
+    display: flex;
+    flex-wrap: wrap;
+    border-bottom: 2px solid var(--gold-dark);
+    margin-bottom: 8px;
+}
+
+.tab {
+    flex: 1;
+    min-width: 60px;
+    padding: 6px;
+    text-align: center;
+    font-size: var(--font-size);
+    cursor: pointer;
+    background: #fdf5e6;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    transition: 0.3s;
+}
+
+.tab.active {
+    background: var(--gold-dark);
+    color: white;
+    font-weight: bold;
+}
+
+.page {
+    display: none;
+}
+
+.page.active {
+    display: block;
+    animation: fadeIn 0.4s;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.card {
+    background: #fff;
+    border: 1px solid var(--gold-primary);
+    padding: 8px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
+}
+
+.input-section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+}
+
+input, button {
+    font-size: var(--font-size);
+    padding: 4px 8px;
+    border: 1px solid var(--gold-dark);
+    border-radius: 4px;
+}
+
+button {
+    background: linear-gradient(to bottom, #ffd700, #b8860b);
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.chart-svg {
+    background: #fff;
+    width: 100%;
+    height: 280px;
+    border: 1px solid #eee;
+}
+
+.hex-box {
+    display: flex;
+    flex-direction: column-reverse;
+    width: 30px;
+    height: 45px;
+}
+
+.yao {
+    height: 5px;
+    width: 100%;
+    margin: 1px 0;
+}
+.yao.yang { background: #333; }
+.yao.yin { background: linear-gradient(to right, #333 42%, transparent 42%, transparent 58%, #333 58%); }
+
+.log-container {
+    max-height: 400px;
+    overflow-y: auto;
+    background: #fcfcfc;
+    border: 1px inset #eee;
+    padding: 5px;
+}
+
+#download-btn {
+    position: fixed;
+    bottom: 15px;
+    right: 15px;
+    padding: 8px;
+    border-radius: 50%;
+    width: 55px;
+    height: 55px;
+    font-size: 0.5rem;
+    background: var(--gold-dark);
+    color: white;
+    border: 2px solid white;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    z-index: 999;
+}
+
+.history-item {
+    cursor: pointer;
+    background: #eee;
+    padding: 2px 5px;
+    margin: 2px;
+    display: inline-block;
+    border-radius: 3px;
+}
+
+.formula-card {
+    background: #fffde7;
+    border-left: 4px solid var(--gold-dark);
+    padding: 5px;
+    margin: 5px 0;
+}
+
+.table-gz {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size);
+}
+.table-gz td {
+    border: 1px solid #ddd;
+    padding: 2px;
+    text-align: center;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🏺 皇極經世・皇極感應圖數演算系統</h1>
+
+    <div class="card">
+        <div class="input-section tiny-text">
+            <span><b>輸入推算基數：</b></span>
+            <input id="mainInput" type="number" value="1011">
+            <button onclick="runCalculation()">執行全篇感應演算</button>
+            <div id="examples">
+                <b>例：</b>
+                <span class="history-item" onclick="setVal(1011)">邵雍(1011)</span>
+                <span class="history-item" onclick="setVal(1037)">蘇軾(1037)</span>
+                <span class="history-item" onclick="setVal(1563)">萬曆(1563)</span>
+                <span class="history-item" onclick="setVal(1945)">終戰(1945)</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab(0)">12卷全篇推算</div>
+        <div class="tab" onclick="switchTab(1)">感應干涉圖</div>
+        <div class="tab" onclick="switchTab(2)">行為則解析</div>
+        <div class="tab" onclick="switchTab(3)">算法理詳解</div>
+        <div class="tab" onclick="switchTab(4)">元會架構圖</div>
+    </div>
+
+    <!-- 頁面 0: 全篇推算 -->
+    <div id="page0" class="page active">
+        <div class="card">
+            <div id="summary-info" class="tiny-text" style="color: var(--gold-dark); font-weight:bold; margin-bottom:10px;"></div>
+            <div class="log-container" id="full-calc-log"></div>
+        </div>
+    </div>
+
+    <!-- 頁面 1: 感應干涉圖 -->
+    <div id="page1" class="page">
+        <div class="card">
+            <div class="tiny-text" style="margin-bottom:5px;"><b>【皇極感應：體用能量干涉分析圖】</b> (基於 $S(t)$ 模型)</div>
+            <svg id="vibration-svg" class="chart-svg"></svg>
+            <div id="graph-analysis" class="tiny-text" style="margin-top:8px;"></div>
+        </div>
+    </div>
+
+    <!-- 頁面 2: 行為建議 -->
+    <div id="page2" class="page">
+        <div id="behavior-detail" class="tiny-text"></div>
+    </div>
+
+    <!-- 頁面 3: 算法理詳解 (加強圖表說明) -->
+    <div id="page3" class="page">
+        <div class="card tiny-text">
+            <div class="formula-card">
+                <b>數理模型：$S(t) = \text{體} \cdot \cos(\frac{2\pi t}{12}) + \text{用} \cdot \sin(\frac{2\pi t}{30})$</b>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                <div style="flex: 1; min-width: 300px;">
+                    <p><b>1. 體數圖解 (先天定數)：</b> 
+                    以 12 為週期，象徵地基與本質。曲線穩定，決定長期走勢。</p>
+                    <svg id="body-chart" class="chart-svg" style="height: 120px;"></svg>
+                </div>
+                <div style="flex: 1; min-width: 300px;">
+                    <p><b>2. 用數圖解 (後天變量)：</b> 
+                    以 30 為週期，象徵人為、環境與納音消長。波動較頻繁。</p>
+                    <svg id="use-chart" class="chart-svg" style="height: 120px;"></svg>
+                </div>
+            </div>
+            <p><b>3. 感應疊加：</b> 兩圖表疊加即產生頁面二之「干涉圖」。若體用相位同向，波幅擴大，感應最強。</p>
+        </div>
+    </div>
+
+    <!-- 頁面 4: 元會架構圖 -->
+    <div id="page4" class="page">
+        <div class="card tiny-text">
+            <p><b>【皇極經世時間單位架構表】</b></p>
+            <table class="table-gz">
+                <tr style="background:#f0f0f0; font-weight:bold;">
+                    <td>單位</td><td>進位</td><td>年數</td><td>意義</td>
+                </tr>
+                <tr><td>1 元</td><td>12 會</td><td>129,600</td><td>一元復始</td></tr>
+                <tr><td>1 會</td><td>30 運</td><td>10,800</td><td>天地變遷</td></tr>
+                <tr><td>1 運</td><td>12 世</td><td>360</td><td>朝代更迭</td></tr>
+                <tr><td>1 世</td><td>30 年</td><td>30</td><td>一代之治</td></tr>
+            </table>
+            <p style="margin-top:10px;"><b>當前基數在六十甲子中之分布：</b></p>
+            <div id="gz-distribution" style="display:flex; flex-wrap:wrap; gap:2px;"></div>
+        </div>
+    </div>
+</div>
+
+<button id="download-btn" onclick="downloadLogic()">下載代碼</button>
+
+<script>
+/**
+ * 皇極經世・完整演算邏輯
+ */
+
+const HEX_DATA = [
+    { name: "復", yao: [1,0,0,0,0,0], desc: "一陽初生，萬物之始。", do: "長期學習, 儲備資金", dont: "急於求成" },
+    { name: "頤", yao: [1,0,0,0,0,1], desc: "觀其所養，自求口實。", do: "養生, 精進專業", dont: "散播流言" },
+    { name: "屯", yao: [1,0,0,0,1,0], desc: "雲雷屯，創業維艱。", do: "尋找導師, 建立團隊", dont: "獨自冒險" },
+    { name: "益", yao: [1,1,0,0,0,1], desc: "風雷益，見善則遷。", do: "慈善捐助, 共享", dont: "自私自利" },
+    { name: "震", yao: [1,0,1,0,0,0], desc: "雷聲驚人，內心反省。", do: "危機預演, 查核", dont: "驚慌失措" },
+    { name: "噬嗑", yao: [1,0,1,0,0,1], desc: "利用獄，清除障礙。", do: "法律處置, 斷捨離", dont: "優柔寡斷" },
+    { name: "隨", yao: [1,0,0,1,1,0], desc: "隨時而動，順應大勢。", do: "順勢而為, 融入", dont: "剛愎自用" },
+    { name: "無妄", yao: [1,0,0,1,1,1], desc: "天下雷行，不做非分想。", do: "本分工作, 誠實", dont: "投機賭博" },
+    { name: "明夷", yao: [1,0,1,0,0,0], desc: "光明入地，隱藏鋒芒。", do: "韜光養晦, 研發", dont: "鋒芒太露" },
+    { name: "賁", yao: [1,0,1,0,0,1], desc: "山下有火，注重裝飾。", do: "形象升級, 文化", dont: "華而不實" },
+    { name: "既濟", yao: [1,0,1,0,1,0], desc: "水火既濟，防止怠慢。", do: "細節維護, 防範", dont: "掉以輕心" },
+    { name: "家人", yao: [1,0,1,1,0,1], desc: "治家為本，內部穩定。", do: "家庭聚餐, 紀律", dont: "忽視伴侶" },
+    { name: "豐", yao: [1,0,1,1,0,0], desc: "盛大之時，物極必反。", do: "資源整合, 分配", dont: "得意忘形" },
+    { name: "離", yao: [1,0,1,1,0,1], desc: "依附光明，傳承文化。", do: "尋找導師, 傳承", dont: "孤傲獨立" },
+    { name: "革", yao: [1,0,1,1,1,1], desc: "徹底變革與轉型。", do: "結構重組, 更新", dont: "墨守成規" },
+    { name: "同人", yao: [1,1,1,1,0,1], desc: "打破隔閡，尋求大同。", do: "跨界合作, 公開", dont: "建立私派" },
+    { name: "臨", yao: [1,1,0,0,0,0], desc: "地澤臨，主動推進。", do: "展示才華, 推動", dont: "懶惰懈怠" },
+    { name: "損", yao: [1,1,0,0,0,1], desc: "山澤損，減欲修身。", do: "精簡開支, 修煉", dont: "貪得無厭" },
+    { name: "節", yao: [1,1,0,0,1,0], desc: "制定節度，守規矩。", do: "制定規矩, 嚴守", dont: "過度嚴苛" },
+    { name: "中孚", yao: [1,1,0,0,1,1], desc: "誠信力量，感動萬物。", do: "契約誠信, 溝通", dont: "背信忘義" },
+    { name: "歸妹", yao: [1,1,0,1,1,0], desc: "人之終始，名位宜正。", do: "釐清契約, 暫緩", dont: "草率聯姻" },
+    { name: "睽", yao: [1,1,0,1,0,1], desc: "求同存異，獨立思考。", do: "尋求平衡, 思考", dont: "激進爭論" },
+    { name: "兌", yao: [1,1,0,1,1,0], desc: "喜悅和解，藝術表達。", do: "演講教學, 幽默", dont: "口出惡言" },
+    { name: "履", yao: [1,1,0,1,1,1], desc: "履虎尾，禮數周全。", do: "周全禮數, 小心", dont: "魯莽行事" },
+    { name: "泰", yao: [1,1,1,0,0,0], desc: "天地交泰，萬物通。", do: "大膽擴張, 布署", dont: "猶豫不決" },
+    { name: "大畜", yao: [1,1,1,0,0,1], desc: "積蓄巨大能量與知識。", do: "深造學習, 儲蓄", dont: "急於套現" },
+    { name: "需", yao: [1,1,1,0,1,0], desc: "雲上於天，耐心等待。", do: "修身養性, 等待", dont: "急躁不安" },
+    { name: "小畜", yao: [1,1,1,0,1,1], desc: "風行天上，微調細節。", do: "細節修正, 微創", dont: "野心過大" },
+    { name: "大壯", yao: [1,1,1,1,0,0], desc: "雷在天上，守禮守分。", do: "穩健推進, 維持", dont: "橫衝直撞" },
+    { name: "大有", yao: [1,1,1,1,0,1], desc: "火在天上，大公無私。", do: "資源共享, 廣結", dont: "自私霸佔" },
+    { name: "夬", yao: [1,1,1,1,1,0], desc: "澤上於天，果斷清除。", do: "果斷裁員, 清理", dont: "心軟猶豫" },
+    { name: "姤", yao: [0,1,1,1,1,1], desc: "偶然相遇，不宜長久。", do: "隨機應變, 觀察", dont: "輕易承諾" }
+];
+
+const GZ = ["甲子","乙丑","丙寅","丁卯","戊辰","己巳","庚午","辛未","壬申","癸酉","甲戌","乙亥","丙子","丁丑","戊寅","己卯","庚辰","辛巳","壬午","癸未","甲申","乙酉","丙戌","丁亥","戊子","己丑","庚寅","辛卯","壬辰","癸巳","甲午","乙未","丙申","丁酉","戊戌","己亥","庚子","辛丑","壬寅","癸卯","甲辰","乙巳","丙午","丁未","戊申","己酉","庚戌","辛亥","壬子","癸丑","甲寅","乙卯","丙辰","丁巳","戊午","己未","庚申","辛酉","壬戌","癸亥"];
+
+function switchTab(idx) {
+    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === idx));
+    document.querySelectorAll('.page').forEach((p, i) => p.classList.toggle('active', i === idx));
+    if (idx === 3) drawTheoryCharts();
+}
+
+function setVal(v) {
+    document.getElementById('mainInput').value = v;
+    runCalculation();
+}
+
+function runCalculation() {
+    const base = parseInt(document.getElementById('mainInput').value);
+    if (isNaN(base)) return;
+
+    // 1. 全篇推算
+    const log = document.getElementById('full-calc-log');
+    log.innerHTML = "";
+    const offset = (base - 1984) % 60;
+    const currentGZIdx = (offset < 0 ? offset + 60 : offset);
+    const bodyNum = (base % 9) + 1;
+    
+    document.getElementById('summary-info').innerHTML = `
+        起始基數：${base} ｜ 皇極座標：${GZ[currentGZIdx]} ｜ 體數：${bodyNum}
+    `;
+
+    for (let i = 0; i < 60; i++) {
+        const year = base + i;
+        const gzIdx = (currentGZIdx + i) % 60;
+        const hexIdx = (currentGZIdx + i) % HEX_DATA.length;
+        const hex = HEX_DATA[hexIdx];
+        const div = document.createElement('div');
+        div.className = 'tiny-text';
+        div.style.padding = "2px 0";
+        div.style.borderBottom = "1px solid #f0f0f0";
+        div.innerHTML = `<b>西元 ${year} (${GZ[gzIdx]})</b>: 值年卦「${hex.name}」 - ${hex.desc}`;
+        log.appendChild(div);
+    }
+
+    // 2. 干涉圖與行為建議
+    drawInductionChart(base);
+    renderBehavior(HEX_DATA[currentGZIdx % HEX_DATA.length]);
+    renderGZTable(currentGZIdx);
+}
+
+function drawInductionChart(base) {
+    const svg = d3.select("#vibration-svg");
+    svg.selectAll("*").remove();
+    const w = document.getElementById('vibration-svg').clientWidth;
+    const h = 280, pad = 30;
+
+    const bodyNum = (base % 9) + 5; 
+    const data = Array.from({length: 60}, (_, t) => {
+        const useNum = (t % 5) + 3;
+        const s_t = 50 + (bodyNum * 2.5 * Math.cos(2 * Math.PI * t / 12)) + (useNum * 2 * Math.sin(2 * Math.PI * t / 30));
+        return { x: t, y: s_t };
+    });
+
+    const x = d3.scaleLinear().domain([0, 59]).range([pad, w - pad]);
+    const y = d3.scaleLinear().domain([0, 100]).range([h - pad, pad]);
+
+    svg.append("path").datum(data).attr("fill", "none").attr("stroke", "var(--gold-dark)").attr("stroke-width", 2).attr("d", d3.line().x(d => x(d.x)).y(d => y(d.y)).curve(d3.curveBasis));
+    svg.append("circle").attr("cx", x(data[0].x)).attr("cy", y(data[0].y)).attr("r", 5).attr("fill", "red");
+}
+
+function drawTheoryCharts() {
+    const base = parseInt(document.getElementById('mainInput').value) || 1011;
+    const bodyNum = (base % 9) + 5;
+    
+    const draw = (id, type) => {
+        const svg = d3.select(id);
+        svg.selectAll("*").remove();
+        const w = svg.node().clientWidth, h = 120, pad = 20;
+        const data = Array.from({length: 60}, (_, t) => {
+            const val = type === 'body' ? Math.cos(2 * Math.PI * t / 12) : Math.sin(2 * Math.PI * t / 30);
+            return { x: t, y: 50 + val * 30 };
+        });
+        const x = d3.scaleLinear().domain([0, 59]).range([pad, w - pad]);
+        const y = d3.scaleLinear().domain([0, 100]).range([h - pad, pad]);
+        svg.append("path").datum(data).attr("fill", "none").attr("stroke", type==='body'?'#3e2723':'#b8860b').attr("d", d3.line().x(d => x(d.x)).y(d => y(d.y)));
+    };
+    draw("#body-chart", "body");
+    draw("#use-chart", "use");
+}
+
+function renderBehavior(hex) {
+    const el = document.getElementById('behavior-detail');
+    el.innerHTML = `
+        <div class="card" style="display:flex; align-items:center; gap:10px;">
+            <div class="hex-box">
+                ${hex.yao.map(y => `<div class="yao ${y===1?'yang':'yin'}"></div>`).join('')}
+            </div>
+            <div><p><b>當前卦象：${hex.name}</b></p><p>${hex.desc}</p></div>
+        </div>
+        <div class="card" style="background:var(--gold-light);">
+            <p><b>宜：</b> ${hex.do}</p><p><b>忌：</b> ${hex.dont}</p>
+        </div>
+    `;
+}
+
+function renderGZTable(currentIdx) {
+    const el = document.getElementById('gz-distribution');
+    el.innerHTML = "";
+    GZ.forEach((n, i) => {
+        const span = document.createElement('span');
+        span.className = 'history-item';
+        if (i === currentIdx) span.style.background = 'var(--gold-dark)';
+        if (i === currentIdx) span.style.color = 'white';
+        span.innerText = n;
+        el.appendChild(span);
+    });
+}
+
+function downloadLogic() {
+    const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = "HuangJi_Induction_Full_System.html";
+    a.click();
+}
+
+window.onload = runCalculation;
+</script>
+</body>
+</html>
