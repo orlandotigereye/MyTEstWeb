@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>人生 60 卦・黃金決策完整系統</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+:root {
+    --gold-primary: #ffd700;
+    --gold-dark: #b8860b;
+    --gold-light: #fff9e6;
+    --bg-gold: radial-gradient(circle, #fdf5e6 0%, #ffd700 100%);
+    --font-small: 0.5rem;
+}
+
+body {
+    font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: var(--bg-gold);
+    background-image: url('https://www.transparenttextures.com/patterns/gold-dust.png');
+    color: #4a3c00;
+    margin: 0;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.container {
+    width: 100%;
+    max-width: 600px;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
+    border: 3px solid var(--gold-dark);
+    border-radius: 20px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+    padding: 20px;
+    box-sizing: border-box;
+    position: relative;
+}
+
+h1 {
+    font-size: 1.4rem;
+    text-align: center;
+    color: var(--gold-dark);
+    text-shadow: 1px 1px 2px #fff;
+    margin-bottom: 15px;
+}
+
+.tabs {
+    display: flex;
+    justify-content: space-around;
+    border-bottom: 2px solid var(--gold-dark);
+    margin-bottom: 15px;
+}
+
+.tab {
+    padding: 10px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    font-weight: bold;
+    color: #888;
+    transition: 0.3s;
+}
+
+.tab.active {
+    color: var(--gold-dark);
+    border-bottom: 4px solid var(--gold-dark);
+    transform: scale(1.1);
+}
+
+.content-page {
+    display: none;
+    min-height: 300px;
+}
+
+.content-page.active {
+    display: block;
+}
+
+/* 0.5rem 嚴格控制 */
+.tiny-text {
+    font-size: var(--font-small) !important;
+    line-height: 1.4;
+    color: #554400;
+}
+
+.card {
+    background: linear-gradient(135deg, #ffffff 0%, #fffdf0 100%);
+    border: 1px solid var(--gold-primary);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 15px;
+    box-shadow: 3px 3px 10px rgba(184, 134, 11, 0.15);
+}
+
+.input-group {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+}
+
+input, button {
+    border: 2px solid var(--gold-dark);
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 0.8rem;
+    outline: none;
+}
+
+button {
+    background: linear-gradient(to bottom, #ffd700, #b8860b);
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+.grid-60 {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 3px;
+}
+
+.hex-cell {
+    aspect-ratio: 1;
+    background: #eee;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.4rem;
+}
+
+.hex-cell.active {
+    background: var(--gold-dark);
+    color: white;
+    box-shadow: 0 0 8px var(--gold-primary);
+}
+
+.highlight-box {
+    border-left: 4px solid var(--gold-dark);
+    padding-left: 10px;
+    margin: 10px 0;
+}
+
+#download-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    font-size: 0.6rem;
+    padding: 10px;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.strategy-label {
+    display: inline-block;
+    padding: 2px 6px;
+    background: var(--gold-dark);
+    color: white;
+    border-radius: 4px;
+    font-weight: bold;
+    margin-right: 5px;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🏆 人生六十卦・大數據決策系統</h1>
+
+    <div class="card">
+        <div class="input-group">
+            <span class="tiny-text">出生年：</span>
+            <input id="birthYear" type="number" value="1975">
+            <button onclick="calculateDeepFate()">演算天機</button>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab(0)">天時卦象</div>
+        <div class="tab" onclick="switchTab(1)">行為策略</div>
+        <div class="tab" onclick="switchTab(2)">能量地圖</div>
+    </div>
+
+    <!-- 頁面 0: 天時卦象 -->
+    <div id="page0" class="content-page active">
+        <div id="res-header" class="card">
+            <p class="tiny-text">請點擊上方按鈕開始演算您的當前人生座標。</p>
+        </div>
+        <div class="card">
+            <p class="tiny-text"><b>【人生相位進度圖】</b></p>
+            <div id="grid60" class="grid-60"></div>
+            <p class="tiny-text" style="margin-top:8px;">*每一小格代表人生六十個變更點中的一個單位。</p>
+        </div>
+    </div>
+
+    <!-- 頁面 1: 行為策略 -->
+    <div id="page1" class="content-page">
+        <div id="strategy-res">
+            <div class="card">
+                <p class="tiny-text">演算中...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 頁面 2: 能量地圖 -->
+    <div id="page2" class="content-page">
+        <div class="card">
+            <p class="tiny-text"><b>【年度能量分佈】</b></p>
+            <div id="energy-chart"></div>
+            <div id="energy-detail" class="tiny-text"></div>
+        </div>
+    </div>
+
+    <div id="info-status" class="tiny-text" style="text-align:center; color: #b8860b;"></div>
+</div>
+
+<button id="download-btn" onclick="downloadSelf()">下載<br>程式</button>
+
+<script>
+/**
+ * 系統規格：
+ * 1. 結合六十甲子干支與易經動能。
+ * 2. 精確演算 1-60 的行為矩陣。
+ * 3. 嚴格符合 0.5rem 輸出規範。
+ */
+
+const GAN_ZHI = ["甲子","乙丑","丙寅","丁卯","戊辰","己巳","庚午","辛未","壬申","癸酉","甲戌","乙亥","丙子","丁丑","戊寅","己卯","庚辰","辛巳","壬午","癸未","甲申","乙酉","丙戌","丁亥","戊子","己丑","庚寅","辛卯","壬辰","癸巳","甲午","乙未","丙申","丁酉","戊戌","己亥","庚子","辛丑","壬寅","癸卯","甲辰","乙巳","丙午","丁未","戊申","己酉","庚戌","辛亥","壬子","癸丑","甲寅","乙卯","丙辰","丁巳","戊午","己未","庚申","辛酉","壬戌","癸亥"];
+
+// 十年為一旬的深度策略矩陣
+const DEEP_STRATEGY = [
+    {
+        title: "第一旬：甲子起運 (1-10)",
+        core: "潛龍勿用，深根固本",
+        advice: "此階段如春木萌芽。價值在於「吸收」而非「輸出」。宜尋找良師、建立底層邏輯。",
+        do: ["建立閱讀習慣", "多領域打雜磨練", "體能基礎開發"],
+        dont: ["追求短期獲利", "過早公開底牌"],
+        lucky_dir: "正東方"
+    },
+    {
+        title: "第二旬：甲戌管理 (11-20)",
+        core: "見龍在田，利見大人",
+        advice: "能量開始外溢。價值在於「社交」與「反饋」。宜透過外部碰撞修正自己的方向。",
+        do: ["擴大社交圈", "公開發表個人意見", "跨界合作項目"],
+        dont: ["宅家孤軍奮戰", "害怕失敗而止步"],
+        lucky_dir: "東南方"
+    },
+    {
+        title: "第三旬：甲申精進 (21-30)",
+        core: "終日乾乾，夕惕若厲",
+        advice: "能量巔峰。價值在於「效率」與「槓桿」。宜建立標準化流程，避免消耗在重複勞動中。",
+        do: ["自動化工具開發", "品牌護城河建立", "資產結構化"],
+        dont: ["體力搏命", "忽略法律與稅務風險"],
+        lucky_dir: "正南方"
+    },
+    {
+        title: "第四旬：甲午變革 (31-40)",
+        core: "或躍在淵，無咎",
+        advice: "能量轉換點。價值在於「抉擇」與「放棄」。宜做人生減法，專注於最具長期價值的 20% 行動。",
+        do: ["斷捨離無效人脈", "核心技能深挖", "身心健康重啟"],
+        dont: ["硬撐舊業務", "恐懼失去現有光環"],
+        lucky_dir: "西南方"
+    },
+    {
+        title: "第五旬：甲辰結成 (41-50)",
+        core: "飛龍在天，大人造也",
+        advice: "能量成熟期。價值在於「賦能」與「顧問」。宜透過指導他人實現自我價值最大化。",
+        do: ["導師與顧問角色", "知識體系化輸出", "長期資本投資"],
+        dont: ["凡事親力親為", "與年輕人比拼速度"],
+        lucky_dir: "正西方"
+    },
+    {
+        title: "第六旬：甲寅傳承 (51-60)",
+        core: "亢龍有悔，與時偕行",
+        advice: "能量入庫期。價值在於「傳承」與「安靜」。宜專注於靈魂深度，為下一輪大循環蓄能。",
+        do: ["慈善與回饋", "哲學與冥想", "家族傳承規劃"],
+        dont: ["重返高壓戰場", "過度追求感官刺激"],
+        lucky_dir: "西北方"
+    }
+];
+
+function switchTab(idx) {
+    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === idx));
+    document.querySelectorAll('.content-page').forEach((p, i) => p.classList.toggle('active', i === idx));
+}
+
+function calculateDeepFate() {
+    const bYear = parseInt(document.getElementById('birthYear').value);
+    if (!bYear) return;
+
+    const currentYear = new Date().getFullYear();
+    const age = currentYear - bYear;
+    
+    // 干支換算
+    const birthIdx = (bYear - 4) % 60;
+    const currentIdx = (birthIdx + age) % 60;
+    const safeIdx = currentIdx < 0 ? currentIdx + 60 : currentIdx;
+    
+    const hexNum = safeIdx + 1;
+    const strategyIdx = Math.floor(safeIdx / 10);
+    const strat = DEEP_STRATEGY[strategyIdx];
+
+    // 更新當前位置頁面
+    document.getElementById('res-header').innerHTML = `
+        <p class="tiny-text"><b>【當前天時座標】</b></p>
+        <p class="tiny-text" style="color:var(--gold-dark); font-size:0.7rem !important; font-weight:bold;">
+            ${currentYear} 年｜歲次 ${GAN_ZHI[safeIdx]}
+        </p>
+        <div class="highlight-box tiny-text">
+            <b>生命相位：</b>人生第 ${hexNum} 卦<br>
+            <b>目前年齡：</b>${age} 歲<br>
+            <b>本階段主題：</b>${strat.title}
+        </div>
+        <p class="tiny-text"><i>"${strat.core}"</i></p>
+    `;
+
+    // 更新策略頁面
+    document.getElementById('strategy-res').innerHTML = `
+        <div class="card">
+            <p class="tiny-text"><span class="strategy-label">核心建議</span>${strat.advice}</p>
+        </div>
+        <div class="card">
+            <p class="tiny-text"><b>✅ 黃金行動行為指南：</b></p>
+            <ul class="tiny-text" style="padding-left:15px;">
+                ${strat.do.map(d => `<li>${d}</li>`).join('')}
+            </ul>
+        </div>
+        <div class="card">
+            <p class="tiny-text"><b>❌ 黑洞風險禁忌清單：</b></p>
+            <ul class="tiny-text" style="padding-left:15px;">
+                ${strat.dont.map(d => `<li>${d}</li>`).join('')}
+            </ul>
+        </div>
+        <div class="card">
+            <p class="tiny-text"><b>🧭 能量貴人方位：</b>${strat.lucky_dir}</p>
+        </div>
+    `;
+
+    // 繪製格點圖
+    renderGrid(hexNum);
+    // 繪製能量圖
+    renderEnergy(hexNum);
+}
+
+function renderGrid(activeNum) {
+    const container = document.getElementById('grid60');
+    container.innerHTML = '';
+    for (let i = 1; i <= 60; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'hex-cell' + (i === activeNum ? ' active' : '');
+        cell.innerText = i;
+        container.appendChild(cell);
+    }
+}
+
+function renderEnergy(activeNum) {
+    const container = document.getElementById('energy-chart');
+    container.innerHTML = '';
+    
+    // 使用 D3 繪製一個簡單的趨勢曲線
+    const data = Array.from({length: 60}, (_, i) => ({
+        x: i + 1,
+        y: Math.sin((i / 60) * Math.PI * 2) * 50 + 50 // 波動曲線
+    }));
+
+    const width = container.clientWidth || 300;
+    const height = 100;
+
+    const svg = d3.select("#energy-chart")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    const x = d3.scaleLinear().domain([1, 60]).range([0, width]);
+    const y = d3.scaleLinear().domain([0, 100]).range([height, 0]);
+
+    const line = d3.line()
+        .x(d => x(d.x))
+        .y(d => y(d.y))
+        .curve(d3.curveBasis);
+
+    svg.append("path")
+        .datum(data)
+        .attr("fill", "none")
+        .attr("stroke", "var(--gold-dark)")
+        .attr("stroke-width", 2)
+        .attr("d", line);
+
+    // 標註當前位置
+    const currentY = data[activeNum-1].y;
+    svg.append("circle")
+        .attr("cx", x(activeNum))
+        .attr("cy", y(currentY))
+        .attr("r", 5)
+        .attr("fill", "red")
+        .attr("stroke", "white");
+
+    document.getElementById('energy-detail').innerHTML = `
+        <p style="margin-top:10px;">目前能量水位：${Math.round(currentY)}%<br>
+        *曲線代表人生動能的漲落規律。紅點為您現在的能量消耗/產出比率。</p>
+    `;
+}
+
+function downloadSelf() {
+    const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `Life_60_System_${new Date().getTime()}.html`;
+    a.click();
+}
+
+window.onload = calculateDeepFate;
+</script>
+
+</body>
+</html>
