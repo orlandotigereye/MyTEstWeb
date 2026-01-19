@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>皇極經世・河洛理數全篇演算系統</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+:root {
+    --gold-primary: #ffd700;
+    --gold-dark: #b8860b;
+    --gold-light: #fff9e6;
+    --bg-gold: radial-gradient(circle, #fff8e1 0%, #ffd700 100%);
+    --font-size: 0.5rem;
+}
+
+body {
+    font-family: "PingFang TC", "STKaiti", serif;
+    background: var(--bg-gold);
+    background-attachment: fixed;
+    color: #3e2723;
+    margin: 0;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+}
+
+.container {
+    width: 100%;
+    max-width: 900px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 3px double var(--gold-dark);
+    border-radius: 15px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+    padding: 15px;
+    box-sizing: border-box;
+}
+
+h1 {
+    font-size: 1.2rem;
+    text-align: center;
+    color: var(--gold-dark);
+    margin: 10px 0;
+    letter-spacing: 2px;
+}
+
+.tiny-text {
+    font-size: var(--font-size) !important;
+    line-height: 1.5;
+}
+
+/* 分頁系統 */
+.tabs {
+    display: flex;
+    flex-wrap: wrap;
+    border-bottom: 2px solid var(--gold-dark);
+    margin-bottom: 10px;
+}
+
+.tab {
+    flex: 1;
+    min-width: 80px;
+    padding: 8px;
+    text-align: center;
+    font-size: var(--font-size);
+    cursor: pointer;
+    background: #fdf5e6;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    transition: 0.3s;
+}
+
+.tab.active {
+    background: var(--gold-dark);
+    color: white;
+    font-weight: bold;
+}
+
+.page {
+    display: none;
+}
+
+.page.active {
+    display: block;
+}
+
+.card {
+    background: #fff;
+    border: 1px solid var(--gold-primary);
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+}
+
+input, button, select {
+    font-size: var(--font-size);
+    padding: 5px;
+    border: 1px solid var(--gold-dark);
+    border-radius: 4px;
+}
+
+button {
+    background: var(--gold-dark);
+    color: white;
+    cursor: pointer;
+}
+
+/* 圖表 */
+#vibration-svg {
+    background: #fffef0;
+    border: 1px solid #eee;
+    width: 100%;
+    height: 250px;
+}
+
+.hex-box {
+    display: flex;
+    flex-direction: column-reverse;
+    width: 40px;
+    height: 60px;
+    margin: 5px auto;
+}
+
+.yao {
+    height: 6px;
+    width: 100%;
+    margin: 1px 0;
+}
+.yao.yang { background: #333; }
+.yao.yin { background: linear-gradient(to right, #333 42%, transparent 42%, transparent 58%, #333 58%); }
+
+.example-btn {
+    margin-right: 5px;
+    margin-bottom: 5px;
+    background: #a1887f;
+}
+
+#log-output {
+    background: #fdfdfd;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px inset #ccc;
+    padding: 5px;
+}
+
+#download-btn {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    padding: 10px;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    font-size: 0.4rem;
+    z-index: 999;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🏺 皇極經世・河洛理數全篇</h1>
+    
+    <div class="card">
+        <div class="tiny-text">
+            <b>數理輸入：</b>
+            <input id="inputNum" type="number" value="1975" placeholder="輸入年份或任意數">
+            <button onclick="runCalculation()">演算</button>
+            <div style="margin-top:5px;">
+                <b>歷史實例：</b>
+                <button class="example-btn" onclick="setExample(1563)">萬曆皇帝</button>
+                <button class="example-btn" onclick="setExample(1037)">蘇軾</button>
+                <button class="example-btn" onclick="setExample(1011)">邵雍</button>
+                <button class="example-btn" onclick="setExample(1912)">中華民國</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab(0)">十二卷全篇推算</div>
+        <div class="tab" onclick="switchTab(1)">體用平衡圖</div>
+        <div class="tab" onclick="switchTab(2)">白話行為則</div>
+        <div class="tab" onclick="switchTab(3)">元會運世理</div>
+    </div>
+
+    <!-- 頁面 0: 全篇推算 -->
+    <div id="page0" class="page active">
+        <div class="card">
+            <div class="tiny-text" id="calc-summary" style="font-weight:bold; color:#b8860b;"></div>
+            <div id="log-output" class="tiny-text"></div>
+        </div>
+    </div>
+
+    <!-- 頁面 1: 體用圖表 -->
+    <div id="page1" class="page">
+        <div class="card">
+            <div class="tiny-text" style="margin-bottom:10px;"><b>【能量分佈：體用消長曲線】</b></div>
+            <div id="vibration-container">
+                <svg id="vibration-svg"></svg>
+            </div>
+            <div id="graph-info" class="tiny-text" style="margin-top:10px;"></div>
+        </div>
+    </div>
+
+    <!-- 頁面 2: 白話行為 -->
+    <div id="page2" class="page">
+        <div id="behavior-content" class="tiny-text"></div>
+    </div>
+
+    <!-- 頁面 3: 理論依據 -->
+    <div id="page3" class="page">
+        <div class="card tiny-text">
+            <p><b>邵子云：</b>「世界之大，皆由數出。」</p>
+            <p>1. <b>元會運世：</b> 1元=12會=360運=4320世。一世=30年。</p>
+            <p>2. <b>掛氣流轉：</b> 本系統以「皇極經世」先天六十四卦方圓圖為經，去四正卦（乾坤坎離）為緯，演化六十甲子循環。</p>
+            <p>3. <b>體用：</b> 體者靜也，用者動也。圖表呈現數值之起伏，即為體用之盈縮。</p>
+        </div>
+    </div>
+
+    <div id="info-status" class="tiny-text" style="text-align:center; color: #b8860b;">系統已就緒。</div>
+</div>
+
+<button id="download-btn" onclick="downloadCode()">下載<br>原始碼</button>
+
+<script>
+/**
+ * 邵雍皇極經世演算核心
+ * 1. 輸入數值轉為「起數」
+ * 2. 計算對應的元會運世相位
+ * 3. 獲取卦象與行為建議
+ */
+
+const HEX_LIST = [
+    { name: "復", yao: [1,0,0,0,0,0], advice: "萬物更新之初，宜靜不宜動。像種子在土中蓄力。", do: "制定長期計畫", dont: "急於求成" },
+    { name: "頤", yao: [1,0,0,0,0,1], advice: "慎言語，節飲食。注重內在修養與形象。", do: "進修與養生", dont: "口舌是非" },
+    { name: "屯", yao: [1,0,0,0,1,0], advice: "初生之難，雖然艱辛但充滿希望，宜尋求協助。", do: "尋找合作夥伴", dont: "獨自冒險" },
+    { name: "益", yao: [1,1,0,0,0,1], advice: "損上益下，利他即是利己。擴大格局之時。", do: "公益與投資", dont: "吝嗇自守" },
+    { name: "震", yao: [1,0,0,1,0,0], advice: "震驚與警示。面對突發狀況需冷靜應對。", do: "危機備案", dont: "驚慌失措" },
+    { name: "噬嗑", yao: [1,0,1,0,0,1], advice: "障礙必須清除，法律與規則的執行期。", do: "解決陳年舊案", dont: "優柔寡斷" },
+    { name: "隨", yao: [1,0,0,1,1,0], advice: "隨遇而安，順應潮流。此時不宜領導。", do: "加入大團隊", dont: "固執己見" },
+    { name: "無妄", yao: [1,0,0,1,1,1], advice: "守本分，不妄想。踏實生活即有驚喜。", do: "履行承諾", dont: "投機取巧" },
+    { name: "明夷", yao: [1,0,1,0,0,0], advice: "光明受損，才華被壓制，宜韜光養晦。", do: "低調做事", dont: "顯擺招忌" },
+    { name: "賁", yao: [1,0,1,0,0,1], advice: "修飾與包裝。注重文化底蘊與禮儀。", do: "形象公關", dont: "虛有其表" },
+    { name: "既濟", yao: [1,0,1,0,1,0], advice: "小功告成。防止末路崩壞，檢查細節。", do: "維護與防守", dont: "大意輕敵" },
+    { name: "家人", yao: [1,0,1,1,0,1], advice: "家庭與內部團結是核心。先安內再壤外。", do: "處理家族事務", dont: "忽略後勤" },
+    { name: "豐", yao: [1,0,1,1,0,0], advice: "盛大之時。物極必反，宜在巔峰尋退路。", do: "資源共享", dont: "驕傲自滿" },
+    { name: "革", yao: [1,0,1,1,1,1], advice: "舊貌換新顏。徹底的轉型與革命。", do: "技術更新", dont: "墨守成規" },
+    { name: "同人", yao: [1,1,1,1,0,1], advice: "尋找同道中人。建立跨界聯盟。", do: "公開合作", dont: "排外狹隘" },
+    { name: "臨", yao: [1,1,0,0,0,0], advice: "強勢上升期。監督與指導他人。", do: "積極開拓", dont: "鬆懈怠慢" },
+    { name: "損", yao: [1,1,0,0,0,1], advice: "減法生活。捨棄不必要的負擔。", do: "自我控制", dont: "貪圖享樂" },
+    { name: "節", yao: [1,1,0,0,1,0], advice: "制定標準與界限。自律方能自由。", do: "制度化管理", dont: "過度放縱" },
+    { name: "中孚", yao: [1,1,0,0,1,1], advice: "至誠感天。建立深層次的信任。", do: "心靈對話", dont: "虛偽欺騙" },
+    { name: "歸妹", yao: [1,1,0,1,1,0], advice: "位置不當。不要急於達成長期契約。", do: "重新檢視關係", dont: "急於成交" },
+    { name: "睽", yao: [1,1,0,1,0,1], advice: "差異與隔離。求同存異，尋找小平衡。", do: "獨立研發", dont: "激烈爭辯" },
+    { name: "兌", yao: [1,1,0,1,1,0], advice: "和悅與溝通。利於談判與傳達資訊。", do: "公開演說", dont: "言語中傷" },
+    { name: "履", yao: [1,1,0,1,1,1], advice: "如履虎尾。應對權威要極度謹慎。", do: "完善禮法", dont: "頂撞長官" },
+    { name: "泰", yao: [1,1,1,0,0,0], advice: "通順無礙。適合推行大規模計畫。", do: "全面擴張", dont: "錯失時機" },
+    { name: "大畜", yao: [1,1,1,0,0,1], advice: "巨大的積累。不只是錢，還有才德。", do: "進階訓練", dont: "急功近利" },
+    { name: "需", yao: [1,1,1,0,1,0], advice: "雲在天上，耐心等待。時機在路上。", do: "蓄勢待發", dont: "焦躁冒進" },
+    { name: "小畜", yao: [1,1,1,0,1,1], advice: "微小調整。局部性的優化。", do: "細節微調", dont: "大動干戈" },
+    { name: "大壯", yao: [1,1,1,1,0,0], advice: "力量強勁。宜止宜穩，防止失控。", do: "穩健推進", dont: "衝動行事" },
+    { name: "大有", yao: [1,1,1,1,0,1], advice: "富有天下。應天順人，大局為重。", do: "感恩與分享", dont: "獨佔利益" },
+    { name: "夬", yao: [1,1,1,1,1,0], advice: "果斷裁撤。清除負面情緒與人員。", do: "壯士斷腕", dont: "優柔寡斷" },
+    { name: "姤", yao: [0,1,1,1,1,1], advice: "不期而遇。警惕不穩定的誘惑。", do: "防範未然", dont: "輕信他人" },
+    { name: "大過", yao: [0,1,1,1,1,0], advice: "負擔過重。需要尋找核心支撐。", do: "尋求關鍵支柱", dont: "硬撐折斷" },
+    { name: "鼎", yao: [0,1,1,1,0,1], advice: "建立制度，穩固三角。權力更新。", do: "架構重組", dont: "偏聽偏信" },
+    { name: "恆", yao: [0,1,1,1,0,0], advice: "長期堅持。不隨波逐流。", do: "固本培元", dont: "見異思遷" },
+    { name: "巽", yao: [0,1,1,0,1,1], advice: "溫和如風。反覆溝通達成目標。", do: "私下遊說", dont: "強硬介入" },
+    { name: "井", yao: [0,1,1,0,1,0], advice: "守住根源。專業能力的深化。", do: "扎根專業", dont: "頻繁更換" },
+    { name: "蠱", yao: [0,1,1,0,0,1], advice: "修正過往的錯誤。治病救人。", do: "內部改革", dont: "粉飾太平" },
+    { name: "升", yao: [0,1,1,0,0,0], advice: "步步高升。利於尋求上位者支持。", do: "自我推薦", dont: "消極怠工" },
+    { name: "訟", yao: [0,1,0,1,1,1], advice: "爭議與不和。止損為上。", do: "法律諮詢", dont: "意氣用事" },
+    { name: "困", yao: [0,1,0,1,1,0], advice: "受困之時。磨練心志，沈默是金。", do: "節儉度日", dont: "過度解釋" },
+    { name: "未濟", yao: [0,1,0,1,0,1], advice: "最後的考驗。功敗垂成在此一舉。", do: "精益求精", dont: "提早慶祝" },
+    { name: "解", yao: [0,1,0,1,0,0], advice: "解決方案出現。快速行動脫困。", do: "原諒與赦免", dont: "拖延時間" },
+    { name: "渙", yao: [0,1,0,0,1,1], advice: "化解隔閡。用精神力量凝聚大家。", do: "團體凝聚", dont: "分崩離析" },
+    { name: "坎", yao: [0,1,0,0,1,0], advice: "重重危機。誠信是唯一的出路。", do: "艱苦奮鬥", dont: "鋌而走險" },
+    { name: "蒙", yao: [0,1,0,0,0,1], advice: "啟蒙學習。虛心求教，不恥下問。", do: "參加培訓", dont: "自以為是" },
+    { name: "師", yao: [0,1,0,0,0,0], advice: "組織與紀律。出師要有正當性。", do: "建立標準", dont: "紀律鬆散" },
+    { name: "遯", yao: [0,0,1,1,1,1], advice: "適時隱退。不參與無謂爭鬥。", do: "度假或退休", dont: "戀棧權位" },
+    { name: "咸", yao: [0,0,1,0,1,1], advice: "感應與心靈契合。注重第一印象。", do: "情感溝通", dont: "利益至上" },
+    { name: "旅", yao: [0,0,1,0,1,0], advice: "客居他鄉。保持謙遜，靈活變通。", do: "異地發展", dont: "高調炫富" },
+    { name: "小過", yao: [0,0,1,1,0,0], advice: "細微過錯。宜下不宜上。", do: "精準執行", dont: "野心勃勃" },
+    { name: "漸", yao: [0,0,1,0,1,1], advice: "循序漸進。欲速則不達。", do: "按部就班", dont: "拔苗助長" },
+    { name: "蹇", yao: [0,0,1,0,1,0], advice: "行路艱難。反省並尋求回頭路。", do: "檢討策略", dont: "強行推進" },
+    { name: "艮", yao: [0,0,1,0,0,1], advice: "止觀與平靜。不動如山。", do: "冥想修身", dont: "多管閒事" },
+    { name: "謙", yao: [0,0,1,0,0,0], advice: "謙受益。越有成就越要謙卑。", do: "功成不居", dont: "傲慢無禮" },
+    { name: "否", yao: [0,0,0,1,1,1], advice: "閉塞不通。與外界隔絕之感。", do: "儲備體力", dont: "強求合作" },
+    { name: "萃", yao: [0,0,0,1,1,0], advice: "人才聚萃。適合大型聚會。", do: "招聘人才", dont: "孤傲離群" },
+    { name: "晉", yao: [0,0,0,1,0,1], advice: "如日初升。受到長官重用。", do: "積極表現", dont: "自卑保守" },
+    { name: "豫", yao: [0,0,0,1,0,0], advice: "安樂與預備。宜早作打算。", do: "制定預算", dont: "玩物喪志" },
+    { name: "觀", yao: [0,0,0,0,1,1], advice: "觀摩與洗滌。學習他人的長處。", do: "考察學習", dont: "走馬看花" },
+    { name: "比", yao: [0,0,0,0,1,0], advice: "親密依附。尋找強大的核心。", do: "建立聯盟", dont: "猶豫不決" },
+    { name: "剝", yao: [0,0,0,0,0,1], advice: "極度剝落。守住根基，等待寒冬過去。", do: "保守防禦", dont: "最後一搏" },
+    { name: "坤", yao: [0,0,0,0,0,0], advice: "地勢坤，君子以厚德載物。", do: "包容一切", dont: "主動爭鬥" }
+];
+
+const GANZHI = ["甲子","乙丑","丙寅","丁卯","戊辰","己巳","庚午","辛未","壬申","癸酉","甲戌","乙亥","丙子","丁丑","戊寅","己卯","庚辰","辛巳","壬午","癸未","甲申","乙酉","丙戌","丁亥","戊子","己丑","庚寅","辛卯","壬辰","癸巳","甲午","乙未","丙申","丁酉","戊戌","己亥","庚子","辛丑","壬寅","癸卯","甲辰","乙巳","丙午","丁未","戊申","己酉","庚戌","辛亥","壬子","癸丑","甲寅","乙卯","丙辰","丁巳","戊午","己未","庚申","辛酉","壬戌","癸亥"];
+
+function switchTab(idx) {
+    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === idx));
+    document.querySelectorAll('.page').forEach((p, i) => p.classList.toggle('active', i === idx));
+}
+
+function setExample(val) {
+    document.getElementById('inputNum').value = val;
+    runCalculation();
+}
+
+function runCalculation() {
+    const num = parseInt(document.getElementById('inputNum').value);
+    if (isNaN(num)) return;
+
+    const output = document.getElementById('log-output');
+    output.innerHTML = "";
+
+    // 皇極經世元會運世推導
+    // 以 1984 年為甲子年基準 (基準點：上元甲子)
+    const baseYear = 1984;
+    const diff = num - baseYear;
+    const idx = (diff % 60 + 60) % 60;
+    
+    // 計算值年卦 (六十卦循環)
+    const hexIdx = idx % HEX_LIST.length;
+    const currentHex = HEX_LIST[hexIdx];
+
+    // 生成十二卷推算數據 (預測未來 12 個週期/年)
+    let summaryHTML = `當前數理坐標：${GANZHI[idx]} ｜ 值年卦：${currentHex.name}`;
+    document.getElementById('calc-summary').innerHTML = summaryHTML;
+
+    for (let i = 0; i < 60; i++) {
+        const loopIdx = (idx + i) % 60;
+        const hIdx = (idx + i) % HEX_LIST.length;
+        const hex = HEX_LIST[hIdx];
+        const year = num + i;
+        
+        const row = document.createElement('div');
+        row.className = 'tiny-text';
+        row.style.borderBottom = "1px solid #eee";
+        row.style.padding = "3px 0";
+        row.innerHTML = `<b>西元 ${year} (${GANZHI[loopIdx]})</b>：值年卦「${hex.name}」 - ${hex.advice.substring(0, 25)}...`;
+        output.appendChild(row);
+    }
+
+    // 更新行為頁面
+    renderBehavior(currentHex);
+
+    // 繪製 D3 圖表
+    drawD3Graph(idx);
+}
+
+function renderBehavior(hex) {
+    const target = document.getElementById('behavior-content');
+    target.innerHTML = `
+        <div class="card">
+            <div style="display:flex; align-items:center; gap:15px;">
+                <div class="hex-box">
+                    ${hex.yao.map(y => `<div class="yao ${y===1?'yang':'yin'}"></div>`).join('')}
+                </div>
+                <div>
+                    <p style="font-weight:bold; font-size:0.7rem;">值年卦：${hex.name}</p>
+                    <p>卦氣解語：${hex.advice}</p>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <p><b>✨ 黃金行為（宜）：</b> ${hex.do}</p>
+            <p><b>⚠️ 避坑指南（忌）：</b> ${hex.dont}</p>
+        </div>
+    `;
+}
+
+function drawD3Graph(activeIdx) {
+    const svg = d3.select("#vibration-svg");
+    svg.selectAll("*").remove();
+    
+    const width = document.getElementById('vibration-svg').clientWidth;
+    const height = 250;
+    const padding = 30;
+
+    // 體用波動數據：基於河洛理數 60 循環的動態正弦
+    const data = Array.from({length: 60}, (_, i) => ({
+        x: i,
+        // 邵氏理數波動：體(大波)+用(小波)
+        y: 50 + 30 * Math.sin((i / 60) * Math.PI * 2) + 15 * Math.cos((i / 10) * Math.PI)
+    }));
+
+    const xScale = d3.scaleLinear().domain([0, 59]).range([padding, width - padding]);
+    const yScale = d3.scaleLinear().domain([0, 100]).range([height - padding, padding]);
+
+    // 繪製背景線
+    svg.append("line")
+        .attr("x1", padding).attr("y1", yScale(50))
+        .attr("x2", width - padding).attr("y2", yScale(50))
+        .attr("stroke", "#ccc").attr("stroke-dasharray", "4");
+
+    const line = d3.line()
+        .x(d => xScale(d.x))
+        .y(d => yScale(d.y))
+        .curve(d3.curveCardinal);
+
+    svg.append("path")
+        .datum(data)
+        .attr("fill", "none")
+        .attr("stroke", "var(--gold-dark)")
+        .attr("stroke-width", 2)
+        .attr("d", line);
+
+    // 高亮當前點
+    const current = data[activeIdx];
+    svg.append("circle")
+        .attr("cx", xScale(current.x))
+        .attr("cy", yScale(current.y))
+        .attr("r", 8)
+        .attr("fill", "red")
+        .attr("stroke", "white")
+        .attr("stroke-width", 2);
+
+    svg.append("text")
+        .attr("x", xScale(current.x))
+        .attr("y", yScale(current.y) - 15)
+        .attr("text-anchor", "middle")
+        .attr("font-size", "10px")
+        .text("當前相位");
+
+    document.getElementById('graph-info').innerHTML = `
+        當前能量動量：${Math.round(current.y)} 刻。反映《皇極經世》中「體用消長」之動能平衡。
+    `;
+}
+
+function downloadCode() {
+    const html = document.documentElement.outerHTML;
+    const blob = new Blob([html], {type: 'text/html'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "HuangJiJingShi_System.html";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+// 初始化
+window.onload = runCalculation;
+</script>
+</body>
+</html>
