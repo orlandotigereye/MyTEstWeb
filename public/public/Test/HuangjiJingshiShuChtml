@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>皇極經世｜三線時間動能系統</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{background:#0e1116;color:#eee;font-family:system-ui;padding:14px}
+h1,h2,h3{color:#ffd700}
+.card{background:#1a1f2a;border-radius:10px;padding:14px;margin:12px 0}
+input,button{font-size:16px;padding:6px 10px}
+.bar{height:10px;background:#333;border-radius:4px;margin:2px 0}
+.bar.now{background:#ffd700}
+.month{border-left:4px solid #ffd700;padding-left:8px;margin:6px 0}
+.line{margin-top:8px;padding:6px;border-radius:6px}
+.career{background:#223344}
+.health{background:#332222}
+.relation{background:#223322}
+small{color:#aaa}
+</style>
+</head>
+<body>
+
+<h1>皇極經世・三線時間動能系統</h1>
+
+<div class="card">
+  出生年：
+  <input id="birthYear" type="number" value="1975">
+  <button onclick="run()">計算</button>
+</div>
+
+<div id="result"></div>
+<div id="timeline"></div>
+<div id="monthly"></div>
+
+<script>
+/* ===== 勢段 ===== */
+const PHASES=[
+  {name:"生",range:[1,10],core:"啟動"},
+  {name:"盛",range:[11,20],core:"擴張"},
+  {name:"極盛",range:[21,30],core:"高峰"},
+  {name:"轉",range:[31,40],core:"轉型"},
+  {name:"衰",range:[41,50],core:"收斂"},
+  {name:"藏",range:[51,60],core:"蓄勢"}
+];
+
+/* ===== 皇極六十卦位 ===== */
+const HEX60=Array.from({length:60},(_,i)=>{
+  const idx=i+1;
+  const p=PHASES.find(x=>idx>=x.range[0]&&idx<=x.range[1]);
+  return{
+    index:idx,
+    phase:p.name,
+    core:p.core
+  };
+});
+
+/* ===== 月勢能 ===== */
+const MONTH_ENERGY=[-5,-3,-1,1,3,5,6,4,2,0,-2,-4];
+
+/* ===== 生老病死 ===== */
+function lifeState(e){
+  if(e>=5)return"生";
+  if(e>=2)return"盛";
+  if(e>=0)return"轉";
+  if(e>=-2)return"病";
+  return"死";
+}
+
+/* ===== 勢能警告 ===== */
+function warn(p,n){
+  if(p<0&&n>0)return"🌱 勢起：可啟動";
+  if(p>0&&n===0)return"⚠️ 轉關：勿硬推";
+  if(p>0&&n<0)return"⛔ 勢絕：必須收";
+  return"";
+}
+
+/* ===== 三線轉換 ===== */
+function lineEnergy(e){
+  return{
+    career:e,
+    health:e*0.7-1,
+    relation:e*0.8
+  };
+}
+
+/* ===== 主運算 ===== */
+function run(){
+  const birth=+document.getElementById("birthYear").value;
+  const nowY=new Date().getFullYear();
+  const age=nowY-birth;
+
+  const birthIdx=52; // 1975 錨點
+  let pos=(birthIdx+age)%60;
+  if(pos===0)pos=60;
+  const hex=HEX60[pos-1];
+
+  document.getElementById("result").innerHTML=`
+    <div class="card">
+      <h2>人生定位</h2>
+      <p>${nowY}｜${age} 歲</p>
+      <p><b>第 ${hex.index} 卦｜勢：${hex.phase}</b></p>
+      <p>${hex.core}</p>
+    </div>
+  `;
+
+  drawTimeline(hex.index);
+  drawMonthly();
+}
+
+/* ===== 時間軸 ===== */
+function drawTimeline(now){
+  let h=`<div class="card"><h3>人生 60 卦</h3>`;
+  for(let i=1;i<=60;i++){
+    h+=`<div class="bar ${i===now?"now":""}"></div>`;
+  }
+  h+=`</div>`;
+  document.getElementById("timeline").innerHTML=h;
+}
+
+/* ===== 三線月份 ===== */
+function drawMonthly(){
+  let h=`<div class="card"><h3>12 月三線狀態</h3>`;
+  MONTH_ENERGY.forEach((e,i)=>{
+    const prev=i===0?0:MONTH_ENERGY[i-1];
+    const L=lineEnergy(e);
+    h+=`
+      <div class="month">
+        <b>${i+1} 月</b>｜原勢 ${e} ${warn(prev,e)?`<br><small>${warn(prev,e)}</small>`:""}
+        <div class="line career">事業：${lifeState(L.career)}（${L.career.toFixed(1)}）</div>
+        <div class="line health">身體：${lifeState(L.health)}（${L.health.toFixed(1)}）</div>
+        <div class="line relation">關係：${lifeState(L.relation)}（${L.relation.toFixed(1)}）</div>
+      </div>
+    `;
+  });
+  h+=`</div>`;
+  document.getElementById("monthly").innerHTML=h;
+}
+
+run();
+</script>
+</body>
+</html>
