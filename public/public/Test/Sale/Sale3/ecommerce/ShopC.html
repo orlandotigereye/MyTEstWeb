@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🛒 改善商城 - Sale3 V3.5C</title>
+    <script id="path-helper-loader">
+        (function() {
+            const paths = ['/01js/path_helper.js', '../../../01js/path_helper.js', '../../01js/path_helper.js', '../01js/path_helper.js'];
+            let index = 0;
+            function tryNext() {
+                if (index >= paths.length) return;
+                const script = document.createElement('script');
+                script.src = paths[index]; script.async = false;
+                script.onerror = function() { if (script.parentNode) document.head.removeChild(script); index++; tryNext(); };
+                document.head.appendChild(script);
+            }
+            tryNext();
+        })();
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    <style>
+        .product-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .product-card { background: white; border: 1px solid #eee; border-radius: 12px; padding: 10px; position: relative; }
+        .p-price { color: var(--accent-dark); font-weight: bold; margin: 5px 0; }
+        .suggested-tag { position: absolute; top: 5px; left: 5px; background: #1890ff; color: white; font-size: 8px; padding: 1px 4px; border-radius: 3px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="tabs-container">
+        <button class="tab-btn active" onclick="switchTab('shopTab')"><i class="fas fa-store"></i> 商城</button>
+        <button class="tab-btn" onclick="switchTab('orderTab')"><i class="fas fa-receipt"></i> 訂單</button>
+        <button class="tab-btn" onclick="location.href='../indexC.html'"><i class="fas fa-home"></i> 返回</button>
+    </div>
+
+    <div id="shopTab" class="content-section active">
+        <div class="card">
+            <h2 id="shop-title">🛒 挑選改善商品 D1</h2>
+            <div id="product-list" class="product-grid"></div>
+        </div>
+    </div>
+
+    <div id="orderTab" class="content-section">
+        <div class="card"><h2>📜 歷史購買紀錄</h2><div id="order-list"></div></div>
+    </div>
+
+    <script>
+        function renderShop() {
+            const products = APP_CORE.getLocal('sale3_products');
+            const defi = JSON.parse(localStorage.getItem('sale3_deficiency') || '[]');
+            const list = document.getElementById('product-list');
+            
+            list.innerHTML = products.map(p => {
+                const isRec = p.tags && p.tags.some(t => defi.includes('Omega-3') && t === 'omega3');
+                return `
+                    <div class="product-card">
+                        ${isRec ? '<span class="suggested-tag">對策推薦</span>' : ''}
+                        <div style="font-weight:bold; font-size:12px;">${p.name}</div>
+                        <div class="p-price">$${p.price}</div>
+                        <button class="btn-gold" style="width:100%; font-size:10px; height:28px;" onclick="APP_CORE.showToast('已加入購物車')">加入購物車</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderOrders() {
+            const user = APP_CORE.getLocal('currentUser');
+            const orders = APP_CORE.getLocal('sale3_orders').filter(o => o.userId === user.id).reverse();
+            document.getElementById('order-list').innerHTML = orders.map(o => `<div style="padding:10px; border-bottom:1px solid #eee; font-size:11px;"><b>${o.id}</b><br/>金額：$${o.total}</div>`).join('') || '<p>無紀錄</p>';
+        }
+
+        window.addEventListener('coreReady', () => { renderShop(); renderOrders(); });
+    </script>
+</body>
+</html>
