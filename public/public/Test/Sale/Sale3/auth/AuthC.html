@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🔐 身分驗證 - Sale3 V3.5C</title>
+    <script id="path-helper-loader">
+        (function() {
+            const paths = ['/01js/path_helper.js', '../../../01js/path_helper.js', '../../01js/path_helper.js', '../01js/path_helper.js'];
+            let index = 0;
+            function tryNext() {
+                if (index >= paths.length) return;
+                const script = document.createElement('script');
+                script.src = paths[index]; script.async = false;
+                script.onerror = function() { if (script.parentNode) document.head.removeChild(script); index++; tryNext(); };
+                document.head.appendChild(script);
+            }
+            tryNext();
+        })();
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    <style>
+        .auth-card { max-width: 400px; margin: 30px auto; padding: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="tabs-container">
+        <button class="tab-btn active" onclick="switchTab('loginTab')"><i class="fas fa-sign-in-alt"></i> 登入</button>
+        <button class="tab-btn" onclick="location.href='../indexC.html'"><i class="fas fa-home"></i> 返回</button>
+    </div>
+
+    <div id="loginTab" class="content-section active">
+        <div class="card auth-card">
+            <h2>🔐 系統登入</h2>
+            <div class="form-group"><label>帳號</label><input type="text" id="username" class="input-gold" value="user1"></div>
+            <div class="form-group"><label>密碼</label><input type="password" id="password" class="input-gold" value="password"></div>
+            <button class="btn-gold" style="width: 100%" onclick="handleLogin()">進入智控台</button>
+            <p style="font-size:10px; color:#888; margin-top:15px; text-align:center;">測試帳號：user1 / rd1 (密碼 password)</p>
+        </div>
+    </div>
+
+    <script>
+        function handleLogin() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            const users = APP_CORE.getLocal('sale3_users');
+            const user = users.find(x => x.username === u && x.password === p);
+            
+            if (user) {
+                APP_CORE.saveLocal('currentUser', user);
+                APP_CORE.showToast('驗證成功');
+                setTimeout(() => location.href = '../indexC.html', 800);
+            } else {
+                APP_CORE.showToast('帳號或密碼錯誤');
+            }
+        }
+    </script>
+</body>
+</html>
