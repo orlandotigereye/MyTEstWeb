@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>💻 公司後台 - Sale6_db V6.0</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    
+    <style>
+/* Global Theme: Royal Gold Universal v2 */
+:root {
+    --primary-color: #2c3e50;
+    --accent-color: #FFD700;
+    --accent-dark: #B8860B;
+    --accent-light: #FFFACD;
+    --bg-gradient: radial-gradient(circle, #fdf5e6 0%, #ffd700 100%);        
+    --card-bg: rgba(255, 255, 255, 0.95);
+    --text-color: #5d4037;
+    --muted-color: #7f8c8d;
+    --success-color: #27ae60;
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 12px;
+    --space-lg: 20px;
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+    --base-font-size: 13px;
+    --main-font: 'Segoe UI', 'Noto Sans TC', system-ui, sans-serif;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }      
+body {
+    font-family: var(--main-font);
+    font-size: var(--base-font-size);
+    background: var(--bg-gradient);
+    background-attachment: fixed;
+    color: var(--text-color);
+    margin: 0; padding: 0;
+    overflow-x: hidden;
+    line-height: 1.5;
+}
+.tabs-container {
+    display: flex; background: var(--accent-dark);
+    position: sticky; top: 0; z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+.tab-btn {
+    flex: 1; padding: var(--space-md); border: none; background: transparent;
+    color: rgba(255,255,255,0.8); font-size: 11px; font-weight: bold;        
+    cursor: pointer; transition: 0.3s; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;    
+}
+.tab-btn.active {
+    color: #fff; background: rgba(255,255,255,0.15);
+    border-bottom: 3px solid #fff;
+}
+.content-section { display: none; padding: var(--space-md); animation: fadeIn 0.4s ease; }
+.content-section.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+.card {
+    background: var(--card-bg);
+    border: 2px solid var(--accent-dark);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    box-shadow: 0 4px 15px rgba(184, 134, 11, 0.2);
+    margin-bottom: var(--space-md);
+}
+.card h2 {
+    margin-top: 0; font-size: 15px; color: var(--accent-dark);
+    border-bottom: 1px solid var(--accent-dark);
+    padding-bottom: var(--space-xs); margin-bottom: var(--space-md);
+}
+.btn-gold {
+    background: linear-gradient(to bottom, var(--accent-color), var(--accent-dark));
+    color: #fff; border: 1px solid #8b4513;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-sm);
+    font-size: 11px; font-weight: bold; cursor: pointer;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-gold:active { transform: scale(0.95); opacity: 0.9; }
+textarea, input {
+    width: 100%; padding: var(--space-sm); border: 1px solid #ddd;
+    border-radius: var(--radius-sm); font-size: 14px; background: #fffdf0;   
+}
+.toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);   
+    background: rgba(44, 62, 80, 0.95); color: white; padding: 10px 20px;    
+    border-radius: 25px; z-index: 3000; font-size: 12px; display: none;      
+}
+.spinner-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255,255,255,0.7); display: none;
+    flex-direction: column; align-items: center; justify-content: center; z-index: 4000;
+}
+.loader {
+    border: 4px solid #f3f3f3; border-top: 4px solid var(--accent-dark);     
+    border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* Page Specific Styles */
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+.stat-card { background: #fff; border: 1px solid #ddd; padding: 12px; border-radius: 8px; text-align: center; }
+.stat-num { font-size: 20px; font-weight: bold; color: var(--accent-dark); }
+.item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; font-size: 11px; }
+.p-thumb { width: 35px; height: 35px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; margin-right: 10px; color: var(--accent-dark); }
+#arch-sidebar { position: fixed; top: 0; right: -300px; width: 300px; height: 100%; background: white; box-shadow: -5px 0 15px rgba(0,0,0,0.1); z-index: 5000; transition: 0.3s; overflow-y: auto; padding: 15px; border-left: 4px solid var(--accent-dark); }
+#arch-sidebar.open { right: 0; }
+.arch-toggle { position: fixed; bottom: 80px; right: 20px; width: 45px; height: 45px; background: var(--accent-dark); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 5001; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: 2px solid white; }
+.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 6000; justify-content: center; align-items: center; padding: 20px; }
+.modal-content { background: white; width: 100%; max-width: 400px; padding: 20px; border-radius: 12px; }
+.food-item { padding: 8px; border-bottom: 1px dashed #ddd; display: flex; justify-content: space-between; font-size: 11px; }
+    </style>
+    <script>
+const APP_CORE = {
+    version: "6.0.0-DB",
+    firebaseConfig: {
+        apiKey: "AIzaSyBGKIhWjOlx4xyQttT4e3PUc9SeUU7atQo",
+        authDomain: "inventory-y.firebaseapp.com",
+        databaseURL: "https://inventory-y-default-rtdb.firebaseio.com",      
+        projectId: "inventory-y"
+    },
+    db: null,
+    dbRoot: "sale6_shizuku_db",
+    dataCache: {},
+    _initialized: false,
+
+    async init() {
+        if (this._initialized) return;
+        firebase.initializeApp(this.firebaseConfig);
+        this.db = firebase.database();
+        await this.syncFromCloud();
+        this.setupTabs();
+        this._initialized = true;
+        window.dispatchEvent(new CustomEvent('coreReady', { detail: { core: this } }));
+    },
+
+    async syncFromCloud() {
+        const snapshot = await this.db.ref(this.dbRoot).once('value');
+        this.dataCache = snapshot.val() || {};
+    },
+
+    showToast(msg, duration = 3000) {
+        let t = document.getElementById('toast');
+        if (!t) {
+            t = document.createElement('div');
+            t.id = 'toast';
+            t.className = 'toast';
+            document.body.appendChild(t);
+        }
+        t.textContent = msg;
+        t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', duration);
+    },
+
+    toggleSpinner(show) {
+        let s = document.getElementById('spinner');
+        if (!s) {
+            s = document.createElement('div');
+            s.id = 'spinner';
+            s.className = 'spinner-overlay';
+            s.innerHTML = '<div class="loader"></div><p id="spinner-text" style="margin-top:10px; font-weight:bold; color:var(--accent-dark);">Processing...</p>';
+            document.body.appendChild(s);
+        }
+        if(typeof show === 'string') document.getElementById('spinner-text').textContent = show;
+        s.style.display = show ? 'flex' : 'none';
+    },
+
+    setupTabs() {
+        window.switchTab = (tabId) => {
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            const targetContent = document.getElementById(tabId);
+            const targetBtn = document.querySelector(`[onclick*="${tabId}"]`);
+            if (targetContent) targetContent.classList.add('active');        
+            if (targetBtn) targetBtn.classList.add('active');
+            window.dispatchEvent(new CustomEvent('tabChanged', { detail: { tabId } }));
+        };
+    },
+
+    getLocal(key) { return this.dataCache[key] || []; }, 
+    async saveLocal(key, data) { 
+        this.dataCache[key] = data;
+        await this.db.ref(`${this.dbRoot}/${key}`).set(data);
+    }
+};
+
+window.APP_CORE = APP_CORE;
+if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => APP_CORE.init()); } else { APP_CORE.init(); }
+
+function toggleSidebar() { document.getElementById('arch-sidebar').classList.toggle('open'); }
+
+function loadStats() {
+    document.getElementById('cnt-u').innerText = APP_CORE.getLocal('users').length;
+    document.getElementById('cnt-t').innerText = APP_CORE.getLocal('tests').length;
+    document.getElementById('cnt-o').innerText = APP_CORE.getLocal('orders').length;
+}
+
+function renderLogs() {
+    const users = APP_CORE.getLocal('users');
+    const orders = APP_CORE.getLocal('orders');
+    const consults = APP_CORE.getLocal('consults');
+    const list = document.getElementById('member-list-h2');
+    list.innerHTML = users.map(u => {
+        const uOrders = orders.filter(o => o.userId === u.id);
+        const uConsults = consults.filter(c => c.userId === u.id);
+        return `<div class="log-card"><div style="font-weight:bold; border-bottom:1px solid #f0f0f0; padding-bottom:5px; margin-bottom:5px;">${u.name} <span style="font-weight:normal; font-size:10px; color:#999;">(${u.role})</span></div><div style="font-size:11px; color:#666;"><i class="fas fa-shopping-cart"></i> 購物: ${uOrders.length} | 👩‍⚕️ 諮詢: ${uConsults.length}</div></div>`;
+    }).join('') || '<p style="text-align:center;">無資料</p>';
+}
+
+function renderProducts() {
+    const prods = APP_CORE.getLocal('products');
+    document.getElementById('product-list-admin').innerHTML = prods.map(p => `
+        <div class="item-row">
+            <div style="display:flex; align-items:center;"><div class="p-thumb"><i class="fas fa-box"></i></div><div><b>${p.name}</b><br/>$${p.price}</div></div>
+            <div><i class="fas fa-edit" style="color:#1890ff; margin-right:10px;" onclick="openEditProduct('${p.id}')"></i></div>
+        </div>
+    `).join('');
+}
+
+function openEditProduct(id) {
+    const p = APP_CORE.getLocal('products').find(x => x.id === id);
+    document.getElementById('p-id').value = p.id;
+    document.getElementById('p-name').value = p.name;
+    document.getElementById('p-price').value = p.price;
+    document.getElementById('productModal').style.display = "flex";
+}
+
+async function saveProduct() {
+    const id = document.getElementById('p-id').value;
+    const prods = APP_CORE.getLocal('products');
+    const idx = prods.findIndex(x => x.id === id);
+    prods[idx].name = document.getElementById('p-name').value;
+    prods[idx].price = parseInt(document.getElementById('p-price').value);
+    await APP_CORE.saveLocal('products', prods);
+    document.getElementById('productModal').style.display = "none";
+    renderProducts();
+    APP_CORE.showToast('雲端數據已更新');
+}
+
+function runFoodMatch() {
+    const target = document.getElementById('match-acid').value;
+    const foods = APP_CORE.getLocal('foods');
+    const filtered = foods.filter(f => f.major === target);
+    document.getElementById('food-list-container').innerHTML = filtered.map(f => `<div class="food-item"><span>${f.name}</span><b>${f.value}</b></div>`).join('');
+}
+
+function renderCases() {
+    const all = APP_CORE.getLocal('consults');
+    const pending = all.filter(c => c.status === 'pending');
+    document.getElementById('case-list').innerHTML = pending.map(c => `<div class="item-row"><b>${c.userId}</b> <button class="btn-gold" style="padding:2px 8px; font-size:10px;" onclick="acceptCase('${c.id}')">接單</button></div>`).join('');
+}
+
+async function acceptCase(id) { 
+    const all = APP_CORE.getLocal('consults');
+    all.find(x => x.id === id).status = 'accepted';
+    await APP_CORE.saveLocal('consults', all);
+    renderCases(); 
+}
+
+window.addEventListener('coreReady', () => {
+    loadStats(); renderProducts(); renderCases(); renderLogs();
+});
+    </script>
+</head>
+<body>
+    <div class="arch-toggle" onclick="toggleSidebar()"><i class="fas fa-sitemap"></i></div>
+    <div id="arch-sidebar">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0; font-size:14px;">雲端管理架構</h3>
+            <i class="fas fa-times" onclick="toggleSidebar()" style="cursor:pointer"></i>
+        </div>
+        <div style="margin-top:10px; font-size:10px; background:#f9f9f9; padding:10px; border-radius:5px; line-height:1.4;">
+            Firebase Realtime Sync 已啟動。
+        </div>
+    </div>
+
+    <div class="tabs-container">
+        <button class="tab-btn active" onclick="switchTab('statTab')"><i class="fas fa-chart-line"></i> 統計</button>
+        <button class="tab-btn" onclick="switchTab('logTab')"><i class="fas fa-history"></i> 紀錄</button>
+        <button class="tab-btn" onclick="switchTab('prodTab')"><i class="fas fa-boxes"></i> 商品</button>
+        <button class="tab-btn" onclick="switchTab('matchTab')"><i class="fas fa-database"></i> 配對</button>
+        <button class="tab-btn" onclick="location.href='../indexC.html'"><i class="fas fa-home"></i> 返回</button>
+    </div>
+
+    <div id="statTab" class="content-section active">
+        <div class="card">
+            <h2>💻 雲端數據統計</h2>
+            <div class="stat-grid">
+                <div class="stat-card"><div class="stat-num" id="cnt-u">0</div><div style="font-size:10px;">會員</div></div>
+                <div class="stat-card"><div class="stat-num" id="cnt-t">0</div><div style="font-size:10px;">檢測</div></div>
+                <div class="stat-card"><div class="stat-num" id="cnt-o">0</div><div style="font-size:10px;">訂單</div></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="logTab" class="content-section">
+        <div class="card"><h2>💻 業務日誌</h2><div id="member-list-h2"></div></div>
+    </div>
+
+    <div id="prodTab" class="content-section">
+        <div class="card">
+            <h2 style="margin:0;"><i class="fas fa-list"></i> 商品維護</h2>
+            <div id="product-list-admin" style="margin-top:10px;"></div>
+        </div>
+    </div>
+
+    <div id="matchTab" class="content-section">
+        <div class="card">
+            <h2>💻 數據配對</h2>
+            <div style="display:flex; gap:5px; margin-bottom:10px;">
+                <select id="match-acid" class="input-gold" style="flex:1;"><option value="Omega-3">Omega-3</option><option value="MUFA">MUFA</option></select>
+                <button class="btn-gold" onclick="runFoodMatch()">執行</button>
+            </div>
+            <div id="food-list-container"></div>
+        </div>
+    </div>
+
+    <div id="productModal" class="modal">
+        <div class="modal-content card">
+            <h2>編輯雲端商品</h2>
+            <input type="hidden" id="p-id">
+            <div style="margin-bottom:10px;"><label>名稱</label><input type="text" id="p-name" class="input-gold"></div>
+            <div style="margin-bottom:10px;"><label>價格</label><input type="number" id="p-price" class="input-gold"></div>
+            <button class="btn-gold" style="width:100%;" onclick="saveProduct()">雲端同步</button>
+            <button class="btn-gold" style="width:100%; background:#999; margin-top:5px;" onclick="document.getElementById('productModal').style.display='none'">取消</button>
+        </div>
+    </div>
+</body>
+</html>
