@@ -1,0 +1,71 @@
+[Title] : Shizuku Bio-Sync System V4.0 (Sale4) 詳細系統架構圖
+
+[Mermaid Syntax] :
+graph TD
+    %% 全域樣式定義
+    classDef main fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef module fill:#fff4dd,stroke:#d4a017,stroke-width:1px;
+    classDef data fill:#e1f5fe,stroke:#01579b,stroke-width:1px;
+    classDef admin fill:#f3e5f5,stroke:#7b1fa2,stroke-width:1px;
+
+    %% 主入口與權限
+    Start[indexC.html 系統中控台] --> AuthCheck{Auth 權限檢查}
+    AuthCheck -->|未登入| Login[AuthC.html 登入/註冊]
+    AuthCheck -->|已登入| Hub[主功能導航中心]
+
+    %% 數據分析模組 (TestC.html)
+    subgraph Test_Module [🧬 檢測分析模組]
+        Module1[TestC.html] --> Input[數據輸入: EPA/DHA/O6]
+        Input --> Radar[2-2 脂肪酸雷達圖分析]
+        Radar --> Indicators[指標: O3指數/發炎控制/活力]
+        Radar --> Compare[1-1 前後數據重疊對比]
+        Compare --> Trend[長期 O3 指數趨勢圖]
+    end
+
+    %% 專家諮詢模組 (ConsultC.html)
+    subgraph Consult_Module [👩‍⚕️ 專家諮詢模組]
+        Module2[ConsultC.html] --> Appoint[2-3 線上預約諮詢]
+        Appoint --> History[歷史諮詢紀錄]
+        History --> Report[2-4 數位結案報告生成]
+        Report --> Print[報告列印與 PDF 保存]
+    end
+
+    %% 商城交易模組 (ShopC.html)
+    subgraph Shop_Module [🛒 改善商城模組]
+        Module3[ShopC.html] --> Recommend[根據檢測結果自動推薦]
+        Recommend --> Catalog[D1 商品目錄瀏覽]
+        Catalog --> Pay[D1b 安全結帳付款]
+        Pay --> OrderRec[F2 訂單完成紀錄]
+    end
+
+    %% 管理後台模組 (AdminC.html)
+    subgraph Admin_Module [💻 公司營運後台]
+        Module4[AdminC.html] --> Stats[H1 全站營運統計]
+        Stats --> Logs[H2 會員活動/諮詢日誌]
+        Module4 --> ProductMgmt[商品與配對邏輯維護]
+        Module4 --> ReplySys[G2/G3 專家回覆系統]
+        ReplySys --> AIDraft[🤖 AI 智能撰寫建議草稿]
+        AIDraft --> Submit[發布建議至用戶端]
+    end
+
+    %% 數據流向關聯
+    Hub --> Module1
+    Hub --> Module2
+    Hub --> Module3
+    Hub --> Module4
+
+    Test2 -.->|推薦 Omega-3 對策| Module3
+    Submit -.->|通知| Report
+    OrderRec -.->|數據更新| Stats
+
+    %% 套用樣式
+    class Start,Hub main;
+    class Module1,Module2,Module3 module;
+    class Input,Radar,Compare,Appoint,Report,Catalog,Pay data;
+    class Module4,Stats,ReplySys,AIDraft admin;
+
+[Description] :
+此詳細架構圖呈現了 Sale4 系統的核心邏輯：
+1. **多維度分析**：檢測模組不只是顯示數據，還包含 Radar 指標分析與前後對比。
+2. **閉環業務**：後台的 AI 輔助回覆與前台的結案報告直接連動，提升專業感。
+3. **數據驅動銷售**：檢測結果與商城推薦邏輯掛鉤，落實「對策推薦」商業模式。
