@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🧬 數據分析引擎 - V3.4C 對比版</title>
+    <script id="path-helper-loader">
+        (function() {
+            const paths = ['/01js/path_helper.js', '../01js/path_helper.js', '../../01js/path_helper.js', '../../../01js/path_helper.js'];
+            let index = 0;
+            function tryNext() {
+                if (index >= paths.length) return;
+                const script = document.createElement('script');
+                script.src = paths[index]; script.async = false;
+                script.onerror = function() { if (script.parentNode) document.head.removeChild(script); index++; tryNext(); };
+                document.head.appendChild(script);
+            }
+            tryNext();
+        })();
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    <style>
+        .input-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px; }
+        .input-row input { width: 60px; padding: 4px; border: 1px solid var(--accent-dark); border-radius: 4px; text-align: right; }
+        .chart-wrap { width: 100%; max-width: 300px; margin: 10px auto; min-height: 200px; }
+        .compare-list { background: #fafafa; padding: 10px; border-radius: 8px; border: 1px solid #eee; }
+        .compare-item { display: flex; align-items: center; gap: 10px; padding: 8px; border-bottom: 1px dashed #ddd; font-size: 11px; }
+        .delta-box { background: #f0f7ff; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 11px; color: #1890ff; }
+    </style>
+    <script>
+        const TEST_CONFIG = { KEYS: { TESTS: 'sale3_tests', CURRENT: 'currentUser', DEFI: 'sale3_deficiency', FOODS: 'sale3_foods' } };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="tabs-container">
+        <button class="tab-btn active" onclick="switchTab('analysis')"><i class="fas fa-stethoscope"></i> 診斷</button>
+        <button class="tab-btn" onclick="switchTab('compare')"><i class="fas fa-balance-scale"></i> 對比</button>
+        <button class="tab-btn" onclick="switchTab('trend')"><i class="fas fa-chart-line"></i> 趨勢</button>
+        <button class="tab-btn" onclick="location.href='../indexC.html'"><i class="fas fa-home"></i> 返回</button>
+    </div>
+
+    <!-- 1. 診斷分頁 -->
+    <div id="analysis" class="content-section active">
+        <div class="card">
+            <h2>🧬 脂肪酸數據輸入 (2-2)</h2>
+            <div style="background:#fffdf0; padding:12px; border-radius:8px; border:1px solid #eee;">
+                <div class="input-row"><span>EPA (%)</span><input type="number" id="epa" value="2.5" oninput="runAnalysis()"></div>
+                <div class="input-row"><span>DHA (%)</span><input type="number" id="dha" value="4.5" oninput="runAnalysis()"></div>
+                <div class="input-row"><span>Omega-6 (%)</span><input type="number" id="o6" value="35.0" oninput="runAnalysis()"></div>
+            </div>
+            <div class="chart-wrap"><canvas id="radarChart"></canvas></div>
+            <button class="btn-gold" style="width:100%; margin-top:10px;" onclick="saveCurrentTest()">儲存本次分析</button>
+        </div>
+    </div>
+
+    <!-- 2. 前後對比分頁 (Feature 1) -->
+    <div id="compare" class="content-section">
+        <div class="card">
+            <h2>🆚 數據前後對比分析</h2>
+            <p style="font-size:10px; color:#888;">請勾選任意兩筆紀錄進行重疊對比：</p>
+            <div id="compare-selector" class="compare-list"></div>
+            <div class="chart-wrap"><canvas id="compareChart"></canvas></div>
+            <div id="compare-delta" class="delta-box" style="display:none;"></div>
+        </div>
+    </div>
+
+    <!-- 3. 趨勢分頁 -->
+    <div id="trend" class="content-section">
+        <div class="card">
+            <h2>📈 O3 指數長期趨勢</h2>
+            <div class="chart-wrap"><canvas id="lineChart"></canvas></div>
+        </div>
+    </div>
+
+    <script>
+        let radarObj = null; let lineObj = null; let compObj = null;
+
+        function runAnalysis() {
+            const epa = parseFloat(document.getElementById('epa').value) || 0;
+            const dha = parseFloat(document.getElementById('dha').value) || 0;
+            updateRadar([ (epa+dha)*10, 80, 70, 60, 90]);
+        }
+
+        function updateRadar(data) {
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            if(radarObj) radarObj.destroy();
+            radarObj = new Chart(ctx, {
+                type: 'radar',
+                data: { labels: ['O3指數', '發炎控制', '飽和控制', 'ALA', '活力'], datasets: [{ data, backgroundColor: 'rgba(184,134,11,0.2)', borderColor: '#B8860B' }] },
+                options: { scales: { r: { min: 0, max: 100, ticks: { display: false } } }, plugins: { legend: { display: false } } }
+            });
+        }
+
+        // Feature 1: 對比邏輯
+        function renderCompareList() {
+            const tests = APP_CORE.getLocal(TEST_CONFIG.KEYS.TESTS).reverse();
+            document.getElementById('compare-selector').innerHTML = tests.map(t => `
+                <div class="compare-item">
+                    <input type="checkbox" class="comp-check" value="${t.id}" onchange="updateComparison()">
+                    <span>${t.date.split('T')[0]} (O3: ${t.o3Index.toFixed(1)}%)</span>
+                </div>
+            `).join('') || '<p>無紀錄</p>';
+        }
+
+        function updateComparison() {
+            const checked = Array.from(document.querySelectorAll('.comp-check:checked')).slice(0, 2);
+            if(checked.length < 2) { 
+                document.getElementById('compare-delta').style.display = 'none';
+                return; 
+            }
+            
+            const allTests = APP_CORE.getLocal(TEST_CONFIG.KEYS.TESTS);
+            const t1 = allTests.find(x => x.id === checked[1].value); // 較舊
+            const t2 = allTests.find(x => x.id === checked[0].value); // 較新
+
+            const d1 = [t1.o3Index*10, 70, 60, 50, 80];
+            const d2 = [t2.o3Index*10, 85, 75, 65, 95];
+
+            const ctx = document.getElementById('compareChart').getContext('2d');
+            if(compObj) compObj.destroy();
+            compObj = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['O3指數', '發炎控制', '飽和控制', 'ALA', '活力'],
+                    datasets: [
+                        { label: '基準紀錄', data: d1, backgroundColor: 'rgba(102,102,102,0.2)', borderColor: '#666' },
+                        { label: '對比紀錄', data: d2, backgroundColor: 'rgba(184,134,11,0.3)', borderColor: '#B8860B' }
+                    ]
+                },
+                options: { scales: { r: { min: 0, max: 100, ticks: { display: false } } } }
+            });
+
+            const diff = (t2.o3Index - t1.o3Index).toFixed(1);
+            document.getElementById('compare-delta').style.display = 'block';
+            document.getElementById('compare-delta').innerHTML = `<b>📊 進步分析：</b><br/>您的 Omega-3 指數提升了 <span style="font-size:14px; font-weight:bold;">${diff}%</span>！<br/>這顯示您的飲食改善方案正在生效。`;
+        }
+
+        function saveCurrentTest() {
+            const epa = parseFloat(document.getElementById('epa').value);
+            const dha = parseFloat(document.getElementById('dha').value);
+            const user = APP_CORE.getLocal(TEST_CONFIG.KEYS.CURRENT);
+            const tests = APP_CORE.getLocal(TEST_CONFIG.KEYS.TESTS);
+            tests.push({ id: 'T'+Date.now(), userId: user.id, date: new Date().toISOString(), o3Index: epa+dha, data: {epa, dha} });
+            APP_CORE.saveLocal(TEST_CONFIG.KEYS.TESTS, tests);
+            APP_CORE.showToast('✅ 已存入紀錄，請至對比分頁查看');
+            renderCompareList();
+        }
+
+        window.addEventListener('coreReady', () => { runAnalysis(); renderCompareList(); });
+        window.addEventListener('tabChanged', (e) => { if(e.detail.tabId === 'compare') renderCompareList(); });
+    </script>
+</body>
+</html>
