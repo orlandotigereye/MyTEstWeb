@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Shizuku Bio-Sync System V6.0 - 🌐 雲端智控台</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    
+    <style>
+/* Global Theme: Royal Gold Universal v2 */
+:root {
+    --primary-color: #2c3e50;
+    --accent-color: #FFD700;
+    --accent-dark: #B8860B;
+    --accent-light: #FFFACD;
+    --bg-gradient: radial-gradient(circle, #fdf5e6 0%, #ffd700 100%);        
+    --card-bg: rgba(255, 255, 255, 0.95);
+    --text-color: #5d4037;
+    --muted-color: #7f8c8d;
+    --success-color: #27ae60;
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 12px;
+    --space-lg: 20px;
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+    --base-font-size: 13px;
+    --main-font: 'Segoe UI', 'Noto Sans TC', system-ui, sans-serif;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }      
+body {
+    font-family: var(--main-font);
+    font-size: var(--base-font-size);
+    background: var(--bg-gradient);
+    background-attachment: fixed;
+    color: var(--text-color);
+    margin: 0; padding: 0;
+    overflow-x: hidden;
+    line-height: 1.5;
+}
+.tabs-container {
+    display: flex; background: var(--accent-dark);
+    position: sticky; top: 0; z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+.tab-btn {
+    flex: 1; padding: var(--space-md); border: none; background: transparent;
+    color: rgba(255,255,255,0.8); font-size: 11px; font-weight: bold;        
+    cursor: pointer; transition: 0.3s; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;    
+}
+.tab-btn.active {
+    color: #fff; background: rgba(255,255,255,0.15);
+    border-bottom: 3px solid #fff;
+}
+.content-section { display: none; padding: var(--space-md); animation: fadeIn 0.4s ease; }
+.content-section.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+.card {
+    background: var(--card-bg);
+    border: 2px solid var(--accent-dark);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    box-shadow: 0 4px 15px rgba(184, 134, 11, 0.2);
+    margin-bottom: var(--space-md);
+}
+.card h2 {
+    margin-top: 0; font-size: 15px; color: var(--accent-dark);
+    border-bottom: 1px solid var(--accent-dark);
+    padding-bottom: var(--space-xs); margin-bottom: var(--space-md);
+}
+.btn-gold {
+    background: linear-gradient(to bottom, var(--accent-color), var(--accent-dark));
+    color: #fff; border: 1px solid #8b4513;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-sm);
+    font-size: 11px; font-weight: bold; cursor: pointer;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-gold:active { transform: scale(0.95); opacity: 0.9; }
+textarea, input {
+    width: 100%; padding: var(--space-sm); border: 1px solid #ddd;
+    border-radius: var(--radius-sm); font-size: 14px; background: #fffdf0;   
+}
+.toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);   
+    background: rgba(44, 62, 80, 0.95); color: white; padding: 10px 20px;    
+    border-radius: 25px; z-index: 3000; font-size: 12px; display: none;      
+}
+.spinner-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255,255,255,0.7); display: none;
+    flex-direction: column; align-items: center; justify-content: center; z-index: 4000;
+}
+.loader {
+    border: 4px solid #f3f3f3; border-top: 4px solid var(--accent-dark);     
+    border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* Page Specific Styles */
+.module-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-top: 15px; }
+.module-card {
+    background: white; border: 2px solid var(--accent-dark); border-radius: var(--radius-md);
+    padding: 15px; text-align: center; cursor: pointer; transition: 0.3s;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.module-card:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(184, 134, 11, 0.2); background: var(--accent-light); }
+.module-card i { font-size: 28px; color: var(--accent-dark); }
+.user-info { background: var(--accent-dark); color: white; padding: 8px 12px; border-radius: var(--radius-sm); margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+.stat-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+.stat-box { text-align: center; padding: 10px; border-radius: var(--radius-sm); border: 1px solid #eee; background: #fff; }
+.stat-val { font-size: 20px; font-weight: bold; color: var(--accent-dark); }
+.theme-card { padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 2px solid transparent; transition: 0.5s; display: none; }
+.theme-o3 { background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%); border-color: #1890ff; color: #003a8c; }
+.theme-o3 i { color: #1890ff; font-size: 24px; }
+.theme-default { background: #fff; border-color: var(--accent-dark); color: var(--text-color); display: block !important; }
+
+#arch-sidebar { position: fixed; top: 0; right: -300px; width: 300px; height: 100%; background: white; box-shadow: -5px 0 15px rgba(0,0,0,0.1); z-index: 5000; transition: 0.3s; overflow-y: auto; padding: 15px; border-left: 4px solid var(--accent-dark); }
+#arch-sidebar.open { right: 0; }
+.arch-toggle { position: fixed; bottom: 80px; right: 20px; width: 45px; height: 45px; background: var(--accent-dark); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 5001; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: 2px solid white; }
+
+.mermaid-container { overflow-x: auto; background: white; border-radius: 8px; padding: 15px; margin-top: 10px; min-height: 400px; text-align: center; }
+    </style>
+
+    <!-- Mermaid.js -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({ startOnLoad: false, theme: 'forest', flowchart: { useMaxWidth: true, htmlLabels: true } });
+    </script>
+
+    <script>
+const APP_CORE = {
+    version: "6.0.0-DB",
+    firebaseConfig: {
+        apiKey: "AIzaSyBGKIhWjOlx4xyQttT4e3PUc9SeUU7atQo",
+        authDomain: "inventory-y.firebaseapp.com",
+        databaseURL: "https://inventory-y-default-rtdb.firebaseio.com",      
+        projectId: "inventory-y"
+    },
+    db: null,
+    dbRoot: "sale6_shizuku_db",
+    dataCache: {},
+    _initialized: false,
+
+    async init() {
+        if (this._initialized) return;
+        firebase.initializeApp(this.firebaseConfig);
+        this.db = firebase.database();
+        
+        // 初次加載雲端數據到快取
+        await this.syncFromCloud();
+        
+        this.setupTabs();
+        this._initialized = true;
+        window.dispatchEvent(new CustomEvent('coreReady', { detail: { core: this } }));
+    },
+
+    async syncFromCloud() {
+        const snapshot = await this.db.ref(this.dbRoot).once('value');
+        this.dataCache = snapshot.val() || {};
+    },
+
+    showToast(msg, duration = 3000) {
+        let t = document.getElementById('toast');
+        if (!t) {
+            t = document.createElement('div');
+            t.id = 'toast';
+            t.className = 'toast';
+            document.body.appendChild(t);
+        }
+        t.textContent = msg;
+        t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', duration);
+    },
+
+    toggleSpinner(show) {
+        let s = document.getElementById('spinner');
+        if (!s) {
+            s = document.createElement('div');
+            s.id = 'spinner';
+            s.className = 'spinner-overlay';
+            s.innerHTML = '<div class="loader"></div><p id="spinner-text" style="margin-top:10px; font-weight:bold; color:var(--accent-dark);">Cloud Syncing...</p>';
+            document.body.appendChild(s);
+        }
+        if(typeof show === 'string') document.getElementById('spinner-text').textContent = show;
+        s.style.display = show ? 'flex' : 'none';
+    },
+
+    setupTabs() {
+        window.switchTab = (tabId) => {
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            const targetContent = document.getElementById(tabId);
+            const targetBtn = document.querySelector(`[onclick*="${tabId}"]`);
+            if (targetContent) targetContent.classList.add('active');        
+            if (targetBtn) targetBtn.classList.add('active');
+            if (tabId === 'flowTab') { loadMermaidDiagram(); }
+            window.dispatchEvent(new CustomEvent('tabChanged', { detail: { tabId } }));
+        };
+    },
+
+    // 核心異步存取介面
+    getLocal(key) { return this.dataCache[key] || []; }, 
+    
+    async saveLocal(key, data) { 
+        this.dataCache[key] = data;
+        await this.db.ref(`${this.dbRoot}/${key}`).set(data);
+    }
+};
+
+window.APP_CORE = APP_CORE;
+if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => APP_CORE.init()); } else { APP_CORE.init(); }
+
+const APP_CONFIG = {
+    KEYS: { USERS: 'users', TESTS: 'tests', CONSULTS: 'consults', PRODUCTS: 'products', ORDERS: 'orders', FOODS: 'foods', IDEAL: 'ideal', CURRENT_USER: 'currentUser', DEFI: 'deficiency' },
+    DATA_SOURCES: [
+        { key: 'USERS', path: 'data/users.json' }, { key: 'TESTS', path: 'data/tests.json' }, { key: 'CONSULTS', path: 'data/consults.json' }, { key: 'PRODUCTS', path: 'data/products.json' }, { key: 'ORDERS', path: 'data/orders.json' }, { key: 'FOODS', path: 'data/food_match.json' }, { key: 'IDEAL', path: 'data/ideal_fatty_acid_list.json' }
+    ],
+    MERMAID_FILE: 'mermaid/mermaid-2026121 100349.txt'
+};
+
+async function initDatabase() {
+    APP_CORE.toggleSpinner('雲端資料庫初始化...');
+    const users = APP_CORE.getLocal('users');
+    // 如果雲端沒有數據，從本地範本 JSON 補足
+    if (Object.keys(APP_CORE.dataCache).length < 5) {
+        for (const source of APP_CONFIG.DATA_SOURCES) {
+            try {
+                const data = await fetch(source.path).then(r => r.json());
+                await APP_CORE.saveLocal(APP_CONFIG.KEYS[source.key], data);
+            } catch(e) { console.error("Init Error:", e); }
+        }
+    }
+    updateDashboard();
+    renderPersonalizedCard();
+    APP_CORE.toggleSpinner(false);
+}
+
+async function loadMermaidDiagram() {
+    const container = document.getElementById('mermaid-chart');
+    if (container.getAttribute('data-loaded') === 'true') return;
+    try {
+        const response = await fetch(APP_CONFIG.MERMAID_FILE);
+        const text = await response.text();
+        const match = text.match(/[[\]]Mermaid Syntax[\\]\]\s*:\s*\n([\s\S]*?)\n[[\]]Description[\\]\]/);
+        if (match && match[1]) {
+            container.innerHTML = `<div class="mermaid">${match[1].trim()}</div>`;
+            await mermaid.run();
+            container.setAttribute('data-loaded', 'true');
+        }
+    } catch (e) {}
+}
+
+function renderPersonalizedCard() {
+    const defi = APP_CORE.getLocal('deficiency');
+    const card = document.getElementById('dynamic-theme-card');
+    if (Array.isArray(defi) && defi.includes('Omega-3')) {
+        card.className = 'theme-card theme-o3';
+        card.innerHTML = `<div style="display:flex; align-items:center; gap:10px;"><i class="fas fa-heartbeat"></i><div><b style="font-size:14px;">心血管防護模式已開啟</b><br/><span style="font-size:11px;">雲端 O3 指數偏低，系統已為您匹配高純度對策。</span></div></div><button class="btn-gold" style="width:100%; margin-top:10px; background:#1890ff; border-color:#0050b3;" onclick="location.href='ecommerce/ShopC.html?suggested=true'">查看雲端專屬方案</button>`;
+        card.style.display = 'block';
+    } else {
+        card.className = 'theme-card theme-default';
+        card.innerHTML = `<div style="display:flex; align-items:center; gap:10px;"><i class="fas fa-shield-alt" style="color:var(--accent-dark);"></i><div><b style="font-size:14px;">生理同步雲端模式</b><br/><span style="font-size:11px;">數據已同步至 Firebase。完成檢測以開啟個性化防護。</span></div></div>`;
+        card.style.display = 'block';
+    }
+}
+
+function updateDashboard() {
+    animateNum('stat-u', APP_CORE.getLocal('users').length);
+    animateNum('stat-t', APP_CORE.getLocal('tests').length);
+    animateNum('stat-c', APP_CORE.getLocal('consults').length);
+}
+
+function animateNum(id, val) {
+    let start = 0; const obj = document.getElementById(id);
+    if(!obj) return;
+    const timer = setInterval(() => {
+        start += Math.ceil(val / 10) || 1;
+        if(start >= val) { obj.innerText = val; clearInterval(timer); }
+        else { obj.innerText = start; }
+    }, 50);
+}
+
+function checkAuth(url) {
+    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    if(user.id || url.includes('auth')) { location.href = url; }
+    else { APP_CORE.showToast('請先登入系統'); setTimeout(()=>location.href='auth/AuthC.html', 1000); }
+}
+
+window.addEventListener('coreReady', async () => {
+    await initDatabase();
+    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    if (user.id) {
+        document.getElementById('auth-status').innerHTML = `<span><i class="fas fa-user-check"></i> ${user.name}</span><button class="btn-gold" onclick="localStorage.removeItem('currentUser'); location.reload();" style="padding: 2px 10px;">登出</button>`;
+    } else {
+        document.getElementById('auth-status').innerHTML = `<span><i class="fas fa-user-circle"></i> 訪客</span><button class="btn-gold" onclick="location.href='auth/AuthC.html'" style="padding: 2px 10px;">登入</button>`;
+    }
+});
+    </script>
+</head>
+<body>
+    <div class="arch-toggle" onclick="toggleSidebar()"><i class="fas fa-sitemap"></i></div>
+    <div id="arch-sidebar">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px;">
+            <h3 style="margin:0; font-size:14px;">雲端業務導航</h3>
+            <i class="fas fa-times" onclick="toggleSidebar()" style="cursor:pointer"></i>
+        </div>
+        <div style="margin-top:10px; font-size:10px; line-height:1.6; background:#f0f5ff; padding:10px; border-radius:8px;">
+            V6.0 Firebase Realtime Engine 運作中。
+        </div>
+    </div>
+
+    <div class="tabs-container">
+        <button class="tab-btn active" onclick="switchTab('mainTab')"><i class="fas fa-home"></i> 主站</button>
+        <button class="tab-btn" onclick="switchTab('flowTab')"><i class="fas fa-project-diagram"></i> 流程圖</button>
+        <button class="tab-btn" onclick="switchTab('sopTab')"><i class="fas fa-route"></i> 指引</button>
+        <button class="tab-btn" onclick="switchTab('setsTab')"><i class="fas fa-cog"></i> 設定</button>
+    </div>
+
+    <div id="mainTab" class="content-section active">
+        <div class="card">
+            <h2>🧬 生理同步雲端智控台 V6.0</h2>
+            <div id="auth-status" class="user-info"></div>
+            <div id="dynamic-theme-card" class="theme-card"></div>
+            <div class="stat-container">
+                <div class="stat-box"><div class="stat-val" id="stat-u">0</div><div style="font-size:10px;">會員</div></div>
+                <div class="stat-box"><div class="stat-val" id="stat-t">0</div><div style="font-size:10px;">雲端報告</div></div>
+                <div class="stat-box"><div class="stat-val" id="stat-c">0</div><div style="font-size:10px;">線上諮詢</div></div>
+            </div>
+            <div class="module-grid">
+                <div class="module-card" onclick="checkAuth('test/TestC.html')"><i class="fas fa-dna"></i><span>🧬 檢測分析</span></div>
+                <div class="module-card" onclick="checkAuth('ecommerce/ShopC.html')"><i class="fas fa-shopping-cart"></i><span>🛒 改善商城</span></div>
+                <div class="module-card" onclick="checkAuth('expert/ConsultC.html')"><i class="fas fa-user-md"></i><span>👩‍⚕️ 專家諮詢</span></div>
+                <div class="module-card" onclick="checkAuth('admin/AdminC.html')"><i class="fas fa-laptop-code"></i><span>💻 公司後台</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="flowTab" class="content-section">
+        <div class="card">
+            <h2>📊 雲端系統業務流程視覺化</h2>
+            <div id="mermaid-chart" class="mermaid-container">
+                <p style="padding:20px; color:#999;">正在連線雲端...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="sopTab" class="content-section">
+        <div class="card">
+            <h2>📜 系統操作流程</h2>
+            <div class="sop-list">
+                <div class="sop-step"><b>1.</b> <a href="auth/AuthC.html">🔐 身分驗證 C1</a></div>
+                <div class="sop-step"><b>2.</b> <a href="test/TestC.html">🧬 檢測分析 C2</a></div>
+                <div class="sop-step"><b>3.</b> <a href="expert/ConsultC.html">👩‍⚕️ 預約諮詢 E</a></div>
+                <div class="sop-step"><b>4.</b> <a href="ecommerce/ShopC.html">🛒 改善商城 I</a></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="setsTab" class="content-section">
+        <div class="card">
+            <h2>🛠 雲端管理</h2>
+            <button class="btn-gold" style="width:100%" onclick="if(confirm('重置雲端數據？')){APP_CORE.db.ref(APP_CORE.dbRoot).remove();location.reload();}">重置雲端資料庫</button>
+        </div>
+    </div>
+</body>
+</html>
