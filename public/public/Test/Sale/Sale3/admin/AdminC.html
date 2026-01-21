@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>💻 公司後台 - Sale3 V3.3C</title>
+    
+    <!-- Dynamic Pathing -->
+    <script id="path-helper-loader">
+        (function() {
+            const paths = ['/01js/path_helper.js', '../01js/path_helper.js', '../../01js/path_helper.js', '../../../01js/path_helper.js'];
+            let index = 0;
+            function tryNext() {
+                if (index >= paths.length) return;
+                const script = document.createElement('script');
+                script.src = paths[index];
+                script.async = false;
+                script.onerror = function() {
+                    if (script.parentNode) document.head.removeChild(script);
+                    index++;
+                    tryNext();
+                };
+                script.onload = function() { console.log('Path Helper active: ' + paths[index]); };
+                document.head.appendChild(script);
+            }
+            tryNext();
+        })();
+    </script>
+
+    <!-- 1. CSS Layer (Handled by path_helper.js) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    <style>
+        .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+        .stat-card { background: #fff; border: 1px solid #ddd; padding: 12px; border-radius: 8px; text-align: center; }
+        .stat-num { font-size: 20px; font-weight: bold; color: var(--accent-dark); }
+        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; font-size: 11px; }
+        .p-thumb { width: 35px; height: 35px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; margin-right: 10px; color: var(--accent-dark); }
+        
+        /* Sidebar Architecture */
+        #arch-sidebar { position: fixed; top: 0; right: -300px; width: 300px; height: 100%; background: white; box-shadow: -5px 0 15px rgba(0,0,0,0.1); z-index: 5000; transition: 0.3s; overflow-y: auto; padding: 15px; border-left: 4px solid var(--accent-dark); }
+        #arch-sidebar.open { right: 0; }
+        .arch-toggle { position: fixed; bottom: 80px; right: 20px; width: 45px; height: 45px; background: var(--accent-dark); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 5001; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: 2px solid white; }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 6000; justify-content: center; align-items: center; padding: 20px; }
+        .modal-content { background: white; width: 100%; max-width: 400px; padding: 20px; border-radius: 12px; }
+        .food-item { padding: 8px; border-bottom: 1px dashed #ddd; display: flex; justify-content: space-between; font-size: 11px; }
+    </style>
+
+    <!-- 2. Fixed Data Layer -->
+    <script>
+        const ADMIN_CONFIG = {
+            KEYS: { USERS: 'sale3_users', TESTS: 'sale3_tests', CONSULTS: 'sale3_consults', ORDERS: 'sale3_orders', PRODUCTS: 'sale3_products', FOODS: 'sale3_foods', IDEAL: 'sale3_ideal' }
+        };
+    </script>
+
+    <!-- 3. Script Layer -->
+    <script>
+        function toggleSidebar() { document.getElementById('arch-sidebar').classList.toggle('open'); }
+
+        function loadStats() {
+            const u = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.USERS).length;
+            const t = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.TESTS).length;
+            const o = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.ORDERS).length;
+            animateNum('cnt-u', u);
+            animateNum('cnt-t', t);
+            animateNum('cnt-o', o);
+        }
+
+        function animateNum(id, val) {
+            let start = 0;
+            const obj = document.getElementById(id);
+            if(!obj) return;
+            const timer = setInterval(() => {
+                start += Math.ceil(val / 20) || 1;
+                if(start >= val) { obj.innerText = val; clearInterval(timer); }
+                else { obj.innerText = start; }
+            }, 30);
+        }
+
+        function renderLogs() {
+            const users = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.USERS);
+            const orders = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.ORDERS);
+            const consults = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.CONSULTS);
+            const list = document.getElementById('member-list-h2');
+            list.innerHTML = users.map(u => {
+                const uOrders = orders.filter(o => o.userId === u.id);
+                const uConsults = consults.filter(c => c.userId === u.id);
+                return `<div style="padding:10px; border-bottom:1px solid #eee; font-size:11px;"><b>${u.name}</b> (${u.role})<br/>🛒 購物: ${uOrders.length} | 👩‍⚕️ 諮詢: ${uConsults.length}</div>`;
+            }).join('');
+        }
+
+        function renderProducts() {
+            const prods = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.PRODUCTS);
+            document.getElementById('product-list-admin').innerHTML = prods.map(p => `
+                <div class="item-row">
+                    <div style="display:flex; align-items:center;"><div class="p-thumb"><i class="fas fa-box"></i></div><div><b>${p.name}</b><br/>$${p.price}</div></div>
+                    <div><i class="fas fa-edit" style="color:#1890ff; margin-right:10px;" onclick="openEditProduct('${p.id}')"></i><i class="fas fa-trash" style="color:red;" onclick="deleteProduct('${p.id}')"></i></div>
+                </div>
+            `).join('');
+        }
+
+        function openEditProduct(id) {
+            const p = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.PRODUCTS).find(x => x.id === id);
+            document.getElementById('p-id').value = p.id;
+            document.getElementById('p-name').value = p.name;
+            document.getElementById('p-price').value = p.price;
+            document.getElementById('productModal').style.display = "flex";
+        }
+
+        function saveProduct() {
+            const id = document.getElementById('p-id').value;
+            const prods = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.PRODUCTS);
+            const idx = prods.findIndex(x => x.id === id);
+            prods[idx].name = document.getElementById('p-name').value;
+            prods[idx].price = parseInt(document.getElementById('p-price').value);
+            APP_CORE.saveLocal(ADMIN_CONFIG.KEYS.PRODUCTS, prods);
+            document.getElementById('productModal').style.display = "none";
+            renderProducts();
+            APP_CORE.showToast('商品已同步');
+        }
+
+        function runFoodMatch() {
+            const target = document.getElementById('match-acid').value;
+            const foods = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.FOODS);
+            const filtered = foods.filter(f => f.major === target);
+            document.getElementById('food-list-container').innerHTML = filtered.map(f => `<div class="food-item"><span>${f.name}</span><b>${f.value}</b></div>`).join('');
+        }
+
+        function renderCases() {
+            const all = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.CONSULTS);
+            const pending = all.filter(c => c.status === 'pending');
+            document.getElementById('case-list').innerHTML = pending.map(c => `<div class="item-row"><b>${c.userId}</b> <button class="btn-gold" style="padding:2px 8px; font-size:10px;" onclick="acceptCase('${c.id}')">接單 G2</button></div>`).join('');
+            const accepted = all.filter(c => c.status === 'accepted');
+            document.getElementById('work-list').innerHTML = accepted.map(c => `
+                <div style="padding:10px; border-bottom:1px solid #eee;">
+                    <b>進行中：${c.userId}</b>
+                    <div style="margin:5px 0;"><button class="btn-gold" style="padding:2px 8px; font-size:10px; background:#1890ff;" onclick="generateAIDraft('${c.id}', '${c.userId}')"><i class="fas fa-robot"></i> AI 建議草稿</button></div>
+                    <textarea id="reply-${c.id}" class="input-gold" style="height:60px; font-size:11px; margin-top:5px;" placeholder="撰寫建議 G3..."></textarea>
+                    <button class="btn-gold" style="width:100%; margin-top:5px; font-size:10px;" onclick="finishCase('${c.id}')">提交建議 2-4</button>
+                </div>
+            `).join('') || '<p>無進行中案件</p>';
+        }
+
+        // Feature 2: AI 撰寫副手邏輯
+        function generateAIDraft(caseId, userId) {
+            const allTests = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.TESTS);
+            const userTest = allTests.filter(t => t.userId === userId).reverse()[0];
+            
+            let draft = "您好，根據您最近一次的檢測結果顯示：";
+            if(userTest) {
+                const o3 = userTest.o3Index || 5.0;
+                draft += `您的 Omega-3 指數為 ${o3.toFixed(1)}%。`;
+                if(o3 < 8) draft += "目前指數偏低，建議每日額外補充高純度魚油膠囊，並在午餐中加入鯖魚或鮭魚。";
+                else draft += "目前比例理想，請繼續維持目前的飲食習慣。";
+            } else {
+                draft += "目前尚無您的實時數據，建議先完成 2-2 脂肪酸分析。";
+            }
+            draft += " 建議 2 天內調整烹飪用油，改用橄欖油。";
+            
+            document.getElementById(`reply-${caseId}`).value = draft;
+            APP_CORE.showToast('🤖 AI 已為您生成草稿建議');
+        }
+        }
+
+        function acceptCase(id) { 
+            const all = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.CONSULTS);
+            all.find(x => x.id === id).status = 'accepted';
+            APP_CORE.saveLocal(ADMIN_CONFIG.KEYS.CONSULTS, all);
+            renderCases(); 
+        }
+
+        function finishCase(id) {
+            const all = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.CONSULTS);
+            const c = all.find(x => x.id === id);
+            c.status = 'replied';
+            c.advice = document.getElementById(`reply-${id}`).value;
+            APP_CORE.saveLocal(ADMIN_CONFIG.KEYS.CONSULTS, all);
+            APP_CORE.showToast('建議已發送');
+            renderCases(); renderLogs();
+        }
+
+        window.addEventListener('coreReady', () => {
+            loadStats(); renderProducts(); renderCases(); renderLogs();
+        });
+    </script>
+</head>
+<body>
+    <div class="arch-toggle" onclick="toggleSidebar()"><i class="fas fa-sitemap"></i></div>
+    <div id="arch-sidebar">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0; font-size:14px;">Sale3 完整架構圖</h3>
+            <i class="fas fa-times" onclick="toggleSidebar()" style="cursor:pointer"></i>
+        </div>
+        <div style="margin-top:10px; font-size:10px; background:#f9f9f9; padding:10px; border-radius:5px; line-height:1.4;">
+            <b>TD Flowchart</b><br/>
+            Start[主站] --> Auth[身分驗證]<br/>
+            Start --> Test[脂肪酸分析]<br/>
+            Test --> API[獲取報告 2-1]<br/>
+            API --> Result[雷達圖 2-2]<br/>
+            Result --> Consult[預約諮詢 2-3]<br/>
+            Consult --> RD[營養師接單 G2]<br/>
+            RD --> Advice[查看建議 2-4]<br/>
+            Advice --> Shop[訂購商品 D1]<br/>
+            Shop --> Finish[訂單完成 F2]
+        </div>
+    </div>
+
+    <div class="tabs-container">
+        <button class="tab-btn active" onclick="switchTab('statTab')"><i class="fas fa-chart-line"></i> 統計</button>
+        <button class="tab-btn" onclick="switchTab('logTab')"><i class="fas fa-history"></i> 紀錄 H2</button>
+        <button class="tab-btn" onclick="switchTab('prodTab')"><i class="fas fa-boxes"></i> 商品</button>
+        <button class="tab-btn" onclick="switchTab('matchTab')"><i class="fas fa-database"></i> 配對</button>
+        <button class="tab-btn" onclick="switchTab('replyTab')"><i class="fas fa-edit"></i> 回覆</button>
+        <button class="tab-btn" onclick="location.href='../indexA.html'"><i class="fas fa-home"></i> 返回</button>
+    </div>
+
+    <div id="statTab" class="content-section active">
+        <div class="card">
+            <h2>💻 數據統計 H1</h2>
+            <div class="stat-grid">
+                <div class="stat-card"><div class="stat-num" id="cnt-u">0</div><div style="font-size:10px;">會員</div></div>
+                <div class="stat-card"><div class="stat-num" id="cnt-t">0</div><div style="font-size:10px;">檢測</div></div>
+                <div class="stat-card"><div class="stat-num" id="cnt-o">0</div><div style="font-size:10px;">訂單</div></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="logTab" class="content-section">
+        <div class="card"><h2>💻 會員/諮詢/購物紀錄 H2</h2><div id="member-list-h2"></div></div>
+    </div>
+
+    <div id="prodTab" class="content-section">
+        <div class="card">
+            <h2 style="margin:0;"><i class="fas fa-list"></i> 商品管理</h2>
+            <div id="product-list-admin" style="margin-top:10px;"></div>
+        </div>
+    </div>
+
+    <div id="matchTab" class="content-section">
+        <div class="card">
+            <h2>💻 脂肪酸數據配對</h2>
+            <div style="display:flex; gap:5px; margin-bottom:10px;">
+                <select id="match-acid" class="input-gold" style="flex:1;"><option value="Omega-3">Omega-3</option><option value="MUFA">MUFA</option></select>
+                <button class="btn-gold" onclick="runFoodMatch()">配對</button>
+            </div>
+            <div id="food-list-container"></div>
+        </div>
+    </div>
+
+    <div id="replyTab" class="content-section">
+        <div class="card">
+            <h2>💻 整理撰寫回覆 G2/G3</h2>
+            <div id="case-list"></div>
+            <hr>
+            <div id="work-list"></div>
+        </div>
+    </div>
+
+    <div id="productModal" class="modal">
+        <div class="modal-content card">
+            <h2>商品編輯</h2>
+            <input type="hidden" id="p-id">
+            <div style="margin-bottom:10px;"><label>名稱</label><input type="text" id="p-name" class="input-gold"></div>
+            <div style="margin-bottom:10px;"><label>價格</label><input type="number" id="p-price" class="input-gold"></div>
+            <button class="btn-gold" style="width:100%;" onclick="saveProduct()">儲存</button>
+            <button class="btn-gold" style="width:100%; background:#999; margin-top:5px;" onclick="document.getElementById('productModal').style.display='none'">取消</button>
+        </div>
+    </div>
+</body>
+</html>
