@@ -1,0 +1,56 @@
+flowchart TD
+    %% 系統入口
+    Start[👑 系統主站 indexA.html] --> Auth[🔐 身分驗證 AuthA.html]
+    Start --> Test[🧬 檢測分析 TestA.html]
+    Start --> Shop[🛒 改善商城 ShopA.html]
+    Start --> Consult[👩‍⚕️ 專家諮詢 ConsultA.html]
+    Start --> Admin[💻 公司後台 AdminA.html]
+
+    %% 身分驗證模組
+    subgraph Auth_Flow [身分驗證流程 C1]
+        Auth --> Register[帳號註冊]
+        Auth --> Login[會員登入]
+        Login --> Forgot[忘記密碼 C1a]
+    end
+
+    %% 檢測分析模組
+    subgraph Test_Flow [檢測分析流程 C2]
+        Test --> Serial[輸入檢測單號 2-1]
+        Serial --> API[API 獲取檢測報告 2-1]
+        API --> Analysis[脂肪酸數據分析 2-2]
+        Analysis --> Result[查看結果/雷達圖 2-2]
+    end
+
+    %% 專家諮詢模組
+    subgraph Consult_Flow [專業諮詢流程 E]
+        Consult --> Service[選擇服務類型 2-3]
+        Service --> Schedule[選擇時間/營養師]
+        Schedule --> RD_Accept[營養師接單/回覆時間]
+        RD_Accept --> RD_Comm[溝通並填寫諮詢內容]
+        RD_Comm --> Notice[通知會員/2天內上傳]
+        Notice --> ViewAdvice[查看諮詢內容 2-4]
+    end
+
+    %% 電商功能模組
+    subgraph Shop_Flow [電商改善流程 I]
+        Shop --> Browse[挑選商品 D1]
+        ViewAdvice --> Suggest[訂購建議商品/營養師服務]
+        Browse --> Cart[加入購物車 D1a]
+        Suggest --> Cart
+        Cart --> Pay[結帳付款 D1b]
+        Pay --> Finish[訂單完成 F2]
+    end
+
+    %% 管理者功能模組
+    subgraph Admin_Flow [管理者功能 B2]
+        Admin --> DB_Match[脂肪酸數據配對食物資料庫]
+        Admin --> Stats[數據統計 H1]
+        Admin --> Member_Log[會員/諮詢/購物紀錄 H2]
+        Admin --> Reply[整理撰寫回覆 G2/G3]
+    end
+
+    %% 跨模組邏輯
+    Result -->|我要改善| Browse
+    Result -->|我要諮詢| Service
+    ViewAdvice -->|我要改善| Suggest
+    Finish --> Member_Log
