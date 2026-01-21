@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>?·å”®?†æ??‡åŸ·è¡Œè???C - æ·±åº¦?œå???/title>
+    <style>
+        /* 1. CSS */
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #34495e;
+            --accent-color: #3498db;
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+            --card-bg: #fff;
+            --success-color: #27ae60;
+            --highlight-color: #fff9c4;
+        }
+
+        body {
+            font-family: "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+            font-size: 11px; /* å°å?æ¨¡å? */
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Search Section */
+        .search-container {
+            padding: 15px;
+            background: #eef2f3;
+            border-bottom: 2px solid var(--accent-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .quick-tags {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .tag {
+            padding: 3px 12px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 11px;
+            opacity: 0.8;
+        }
+
+        .tag:hover { opacity: 1; }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            background: var(--primary-color);
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            padding: 12px;
+            color: #bdc3c7;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            flex: 1;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .tab-btn.active {
+            color: #fff;
+            background: var(--secondary-color);
+            border-bottom: 3px solid var(--accent-color);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 15px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Results Display */
+        .search-results-area {
+            display: none;
+            padding: 15px;
+            background: #fff;
+        }
+
+        .result-item {
+            border: 1px solid #eee;
+            margin-bottom: 10px;
+            padding: 12px;
+            border-radius: 4px;
+            background: #fff;
+        }
+
+        .result-category {
+            font-weight: bold;
+            color: var(--accent-color);
+            margin-bottom: 5px;
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+
+        .result-basis {
+            background: #f9f9f9;
+            padding: 8px;
+            border-left: 3px solid #ddd;
+            margin-top: 5px;
+            white-space: pre-wrap;
+        }
+
+        /* Content Styling */
+        h2 { border-left: 4px solid var(--accent-color); padding-left: 10px; color: var(--primary-color); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; }
+        .card { border: 1px solid #ddd; border-radius: 6px; padding: 12px; background: #fff; }
+        .card h4 { color: var(--accent-color); margin: 0 0 8px 0; }
+        .highlight { background: var(--highlight-color); }
+
+        .btn-download { margin: 20px; padding: 10px; background: var(--success-color); color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- 2. Fixed Data (Analysis Contents) -->
+    <script>
+        const ANALYSIS_DATA = [
+            { category: "?¶å…¥?°å? (Income Map)", title: "ä¸ç•¶ç¶²ç???12 ç¨®è·¯ç·?, keywords: "?¶å…¥,ä¸éœ²??ç©©å?,?€è¡??ªå???, basis: "1. è»Ÿé??ªå??–å·¥?·è²©??(Gumroad/Notion/Product Hunt)\n2. ?¥æ? (?ç«¯/å¾Œç«¯/API/Excel)\n3. ç³»çµ±ç¶­è­· IT é¡§å?\n4. ?¯æ?å°‹ç”¢??(?»å???æ¨¡æ¿/SOP)\n5. ?§å®¹/API ?å? (? æ?/é¢¨æ°´ API)\n6. å°å? SaaS å·¥å…· (?–ç?é¢¨æ°´?“å?)" },
+            { category: "å®¢æ?å®šä? (Customer Map)", title: "?½ç??å¸«?‡ä?æ¥­å®¢ç¾?, keywords: "å®¢æ?,?å¸«,ä¼æ¥­,?¿ä»²,?½ç›¤,?ªå???, basis: "1. ?½ç??å¸«ï¼šé?è¦æ??¤å·¥?·ã€è‡ª?•å??±å??å®¢è£½å?ç³»çµ± (?®åƒ¹ 1??8??\n2. ä¸­å?ä¼æ¥­ï¼šè‡ª?•å??±è¡¨?Google Sheet ä¸²æ¥?CRM (?®åƒ¹ 1??10??\n3. æµ·å?è²·å®¶ï¼šGumroad?Reddit?Product Hunt ?·å”® API ?‡è??™åº«" },
+            { category: "7å¤©å??•è???(SOP)", title: "å¿«é€Ÿè??¾ä??±è???, keywords: "SOP,è¨ˆç•«,?Ÿå?,ä¸»å??¢å?,?ªå???, basis: "Day 1: ?¢å?å®šä? (?¸ä¸»?›ç”¢?å? AI é¢¨æ°´)\nDay 2: ?¥å£å»ºç? (IG/Discord/Lead Magnet)\nDay 3: æ¡ˆä???(10ä»½ç?å¯¦æ?ä¾‹å»ºç«‹ä¿¡ä»?\nDay 4: ?ªå???(Gumroad ä¿¡ä»¶/LINE ?ªå??è?)\nDay 5: ?§å®¹è³‡ç”¢ (AI ??100 å¼µå?)\nDay 6: ?¹æ ¼?æ¢¯ ($9/$29/$79?¹æ?)\nDay 7: ?æ??‹è³£ (48å°æ??¹æ?)" },
+            { category: "?§å®¹?Ÿå? (Image Gen)", title: "100å¼µé?å®¢å??Ÿæ?", keywords: "?Ÿå?,AI,Canva,å¿ƒç?æ¸¬é?,é¢¨æ°´,?šæ?", basis: "?šæ?ï¼šChatGPT ?Ÿæ??‡æ???Prompt -> ?²å…¥ Canva å¤§é?è£½ä??‚\n?†é?ï¼šå??†æ¸¬é©?20)?é¢¨æ°´å???20)?èƒ½?æ???20)?å¤©è±¡å‘½??20)?æ?è³‡å???20)?‚\né¢¨æ ¼å»ºè­°ï¼šæ?ç¹ªé¢¨?¼ã€Soft Pastel ?²å½©?Watercolor è³ªåœ°?? },
+            { category: "?·è??‡ä»¤ (Prompts)", title: "?‹ç¹ªå¿ƒç?æ¸¬é? Prompt", keywords: "?‡ä»¤,Prompt,?‹ç¹ª,æ¸¬é?,?Ÿå?", basis: "ç¯„ä?ï¼?hand-drawn illustration, soft pastel colors, dreamy ambiguous image combining a tree, a face silhouette, and a bird shape... watercolor texture'\n?‰ç”¨ï¼šé¸ä¸€?‡é??å??Šé‘°?™ã€å?å¹»æ£®?—ã€å??©äºº?¼ã€ç?ç§˜ç?å­ã€? },
+            { category: "ç­–ç•¥è«®è©¢ (Consulting)", title: "é«˜åƒ¹?äº¤è©±è??‡é?è¼?, keywords: "?äº¤,è©±è?,é¡§å?,å®¢è£½??, basis: "å°è€å¸«ï¼??‘å¹«ä½ å?å°ˆå±¬å·¥å…·ï¼Œä??µè¼¸?ºå??å ±?Šï???70% ?‚é???\nå°ä?æ¥­ï?'?ªå??“è¡¨?®å?é¡å?ä¿¡ï??‰æ?ç¨‹èª¿?´ï?å¾?1.5?¬å?æ¨¡ç??‹å???" }
+        ];
+
+        const TASKS = [
+            "æ±ºå?ä¸»å??¢å? (AI é¢¨æ°´/?½ç?å·¥å…·)", "ä¸Šæ¶ Gumroad è³? ´", "å»ºç? Discord/LINE ?¥å£", "å®Œæ? 10 ?‹æ?ä¾?PDF", "?¢å‡º 100 å¼µé?å®¢å? (??5 é¡?", "è¨­å? 48 å°æ??‹å¼µ?¹æ?è¨ˆç•«"
+        ];
+    </script>
+
+    <!-- Search Section -->
+    <div class="search-container">
+        <input type="text" id="searchInput" class="search-input" placeholder="è¼¸å…¥?œéµå­?(å¦? ?Ÿå?, ?å¸«, SOP, ?¶å…¥) å¿«æ‰¾?šæ??¹æ?..." onkeyup="handleSearch()">
+        <div class="quick-tags" id="quickTags"></div>
+    </div>
+
+    <!-- Tabs Area -->
+    <div class="tabs" id="tabBar">
+        <button class="tab-btn active" onclick="showTab('dashboard')">è³‡è???(Cards)</button>
+        <button class="tab-btn" onclick="showTab('details')">è©³ç´°?†æ? (Details)</button>
+        <button class="tab-btn" onclick="showTab('tracking')">?²åº¦ (Tasks)</button>
+        <button class="tab-btn" onclick="showTab('source')">?Ÿå?ç¢?(Source)</button>
+    </div>
+
+    <!-- Search Results Display (Overlays normal content when searching) -->
+    <div id="searchResults" class="search-results-area">
+        <h2>?œéµå­—å¿«?¾ç???(?¹æ??†æ?æ¢å?)</h2>
+        <div id="resultsList"></div>
+    </div>
+
+    <!-- 4. HTML Structure -->
+    <div id="dashboard" class="tab-content active">
+        <h2>?¸å?ç­–ç•¥?¡ç?</h2>
+        <div class="grid">
+            <div class="card"><h4>?€è¡“è???/h4><p>?ªå??–å·¥?·ã€API ?å??SaaS ?½ç?å¹³å°??/p></div>
+            <div class="card"><h4>å®¢æ??‹ç™¼</h4><p>FB ?½ç?ç¤¾å??Reddit ?µå®¢?ä¸­å°ä?æ¥­ä¸»??/p></div>
+            <div class="card"><h4>?†å®¢?Ÿå?</h4><p>AI ?ç”¢ 100 å¼µæ?ç¹ªé¢¨?¼å???é¢¨æ°´?–ã€?/p></div>
+        </div>
+    </div>
+
+    <div id="details" class="tab-content">
+        <h2>è©³ç´°?†æ??§å®¹</h2>
+        <div id="allDetails"></div>
+    </div>
+
+    <div id="tracking" class="tab-content">
+        <h2>?·è??²åº¦</h2>
+        <div id="taskList"></div>
+    </div>
+
+    <div id="source" class="tab-content">
+        <h2>æª”æ??Ÿå?ç¢?/h2>
+        <pre id="codeDisplay" style="background:#f4f4f4; padding:10px; max-height:400px; overflow:auto;"></pre>
+        <button class="btn-download" onclick="downloadSource()">ä¸‹è? Sale_AnalyC.html</button>
+    </div>
+</div>
+
+<script>
+    /* 3. Script */
+    const quickKeywords = ["?Ÿå?", "SOP", "?¶å…¥", "?å¸«", "ä¼æ¥­", "?ªå???, "å¿ƒç?æ¸¬é?", "Prompt", "Gumroad"];
+
+    function init() {
+        // Quick Tags
+        const tagBox = document.getElementById('quickTags');
+        quickKeywords.forEach(kw => {
+            const span = document.createElement('span');
+            span.className = 'tag';
+            span.innerText = kw;
+            span.onclick = () => { document.getElementById('searchInput').value = kw; handleSearch(); };
+            tagBox.appendChild(span);
+        });
+
+        // Tasks
+        const taskBox = document.getElementById('taskList');
+        const saved = JSON.parse(localStorage.getItem('sale_prog_c') || '{}');
+        TASKS.forEach((t, i) => {
+            const div = document.createElement('div');
+            div.style.padding = "5px";
+            div.innerHTML = `<input type="checkbox" ${saved[i]?'checked':''} onchange="saveTask(${i}, this.checked)"> ${t}`;
+            taskBox.appendChild(div);
+        });
+
+        // Detailed View
+        const detailBox = document.getElementById('allDetails');
+        ANALYSIS_DATA.forEach(d => {
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.style.marginBottom = "10px";
+            div.innerHTML = `<h4>${d.category} - ${d.title}</h4><div style="white-space:pre-wrap">${d.basis}</div>`;
+            detailBox.appendChild(div);
+        });
+    }
+
+    function handleSearch() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const resultsArea = document.getElementById('searchResults');
+        const dashboard = document.getElementById('dashboard');
+        const list = document.getElementById('resultsList');
+        const tabBar = document.getElementById('tabBar');
+
+        if (query === "") {
+            resultsArea.style.display = 'none';
+            tabBar.style.display = 'flex';
+            showTab('dashboard');
+            return;
+        }
+
+        resultsArea.style.display = 'block';
+        tabBar.style.display = 'none';
+        document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+        list.innerHTML = "";
+
+        const matches = ANALYSIS_DATA.filter(d => 
+            d.title.toLowerCase().includes(query) || 
+            d.keywords.toLowerCase().includes(query) || 
+            d.basis.toLowerCase().includes(query)
+        );
+
+        if (matches.length === 0) {
+            list.innerHTML = "<p>?¾ä??°ç›¸?œå?æ³•ï?è«‹å?è©¦å…¶ä»–é??µå???/p>";
+        } else {
+            matches.forEach(m => {
+                const item = document.createElement('div');
+                item.className = 'result-item';
+                const highlightedBasis = m.basis.replace(new RegExp(query, 'gi'), match => `<span class="highlight">${match}</span>`);
+                item.innerHTML = `
+                    <div class="result-category">${m.category}</div>
+                    <strong>${m.title}</strong>
+                    <div class="result-basis">${highlightedBasis}</div>
+                `;
+                list.appendChild(item);
+            });
+        }
+    }
+
+    function showTab(id) {
+        document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).style.display = 'block';
+        const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(id));
+        if(activeBtn) activeBtn.classList.add('active');
+        
+        if(id === 'source') {
+            document.getElementById('codeDisplay').innerText = document.documentElement.outerHTML;
+        }
+    }
+
+    function saveTask(i, val) {
+        const saved = JSON.parse(localStorage.getItem('sale_prog_c') || '{}');
+        saved[i] = val;
+        localStorage.setItem('sale_prog_c', JSON.stringify(saved));
+    }
+
+    function downloadSource() {
+        const content = "<!DOCTYPE html>\n" + document.documentElement.innerHTML + "\n</html>";
+        const blob = new Blob([content], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'Sale_AnalyC.html';
+        a.click();
+    }
+
+    window.onload = init;
+</script>
+
+</body>
+</html>
