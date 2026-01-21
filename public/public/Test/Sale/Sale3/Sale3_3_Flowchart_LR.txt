@@ -1,0 +1,91 @@
+================================================================
+Shizuku Bio-Sync System V3.3C - 完整架構與數據定義說明書
+================================================================
+版本：V3.3C (整合版)
+標準：Royal Gold Unified Standards (13px / Tabbed / Dynamic Path)
+日期：2026年1月20日
+
+----------------------------------------------------------------
+【第 1 頁：核心業務流程圖 - Mermaid Architecture】
+----------------------------------------------------------------
+
+flowchart TD
+    %% 系統入口
+    Start[👑 系統主站 indexC.html] --> Auth[🔐 身分驗證 AuthC.html]
+    Start --> Test[🧬 檢測分析 TestC.html]
+    Start --> Shop[🛒 改善商城 ShopC.html]
+    Start --> Consult[👩‍⚕️ 專家諮詢 ConsultC.html]
+    Start --> Admin[💻 公司後台 AdminC.html]
+
+    %% 詳細子流程
+    subgraph Test_Process [🧬 檢測流程 2-1/2-2]
+        Test --> T1[輸入單號] --> T2[API 獲取脂肪酸報告] --> T3[雷達圖視覺化]
+    end
+
+    subgraph Consult_Process [👩‍⚕️ 諮詢流程 2-3/2-4]
+        Consult --> E1[選擇類型] --> E2[預約時間] --> E3[營養師接單 G2] --> E4[正式建議 2-4]
+    end
+
+    subgraph Ecommerce_Process [🛒 電商流程 D1/F2]
+        Shop --> D1[挑選商品] --> D2[加入購物車] --> D3[結帳付款] --> D4[訂單完成]
+    end
+
+    %% 數據連動
+    E4 -->|推薦商品| D1
+    T3 -->|數據指標| E1
+
+----------------------------------------------------------------
+【第 2 頁：數據結構字典 - Data Dictionary (防 Undefined 定義)】
+----------------------------------------------------------------
+為了確保系統無 'undefined' 報錯，所有 JSON 欄位定義如下：
+
+1. 諮詢紀錄 (sale3_consults):
+   - id: [String] 唯一編號 (C + Timestamp)
+   - userId: [String] 關聯用戶 ID
+   - type: [String] 諮詢類別 (e.g., '脂肪酸改善')
+   - time: [String] 預約/回覆時間 (ISO 或 YYYY-MM-DD) -> ❗關鍵：嚴禁缺漏
+   - userQuery: [String] 用戶提問內容
+   - status: [String] 狀態 ('pending', 'accepted', 'replied')
+   - rdName: [String] 負責營養師姓名
+   - rdAdvice: [String] 最終建議內容 (2-4)
+   - createdAt: [String] 建立時間
+
+2. 檢測報告 (sale3_tests):
+   - serial: [String] 檢測單號 (2-1)
+   - results: [Array] 5項脂肪酸指標數值 (0-100)
+   - summary: [String] 結論摘要 (2-2)
+
+3. 食物資料 (sale3_foods / sale3_ideal):
+   - major: [String] 脂肪酸主特徵 (Omega-3, MUFA, SFA)
+   - ratio: [String] 理想比例描述
+
+----------------------------------------------------------------
+【第 3 頁：分頁介面配置 - Tabbed Interface Configuration】
+----------------------------------------------------------------
+
+[分頁 A: 系統主站 (indexC.html)]
+ - MAIN: 生理同步動態看板 (統計 H1)
+ - SOP: 📜 系統操作流程導引
+ - SETS: 🛠 數據同步與原始碼下載
+
+[分頁 B: 專家諮詢 (ConsultC.html)]
+ - APPLY: 選擇服務類型 2-3 / 提交預約
+ - HISTORY: 查看正式建議 2-4 / 諮詢紀錄
+
+[分頁 C: 公司後台 (AdminC.html)]
+ - STATS: 數據統計 H1 (動態動畫)
+ - LOGS: 會員/諮詢/購物紀錄 H2 (交叉查詢)
+ - PRODUCTS: 📦 商品目錄管理 (CRUD)
+ - MATCH: 💻 57筆脂肪酸食物配對庫
+
+----------------------------------------------------------------
+【第 4 頁：Sale2 功能移植清單】
+----------------------------------------------------------------
+1. [已移植] Mermaid 側邊欄：全站右下角浮動按鈕，即時查看業務架構。
+2. [已移植] 動態數據動畫：數值加載時具備滾動效果。
+3. [已移植] 自動同步引擎：啟動時檢查 JSON 完整性，自動補齊 57+7 筆資料。
+4. [已修正] 預約時間顯示：加入 Fallback 邏輯，徹底解決 Undefined 顯示問題。
+
+================================================================
+報告結束 - 本文件為 Sale3 系統開發之唯一事實來源 (Source of Truth)
+================================================================
