@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🔐 身分驗證 - Sale3 V3.2</title>
+    
+    <!-- Dynamic Pathing -->
+    <script id="path-helper-loader">
+        (function() {
+            const paths = ['/01js/path_helper.js', '../../../01js/path_helper.js', '../../01js/path_helper.js', '../01js/path_helper.js'];
+            let index = 0;
+            function tryNext() {
+                if (index >= paths.length) return;
+                const script = document.createElement('script');
+                script.src = paths[index];
+                script.async = false;
+                script.onerror = function() {
+                    if (script.parentNode) document.head.removeChild(script);
+                    index++;
+                    tryNext();
+                };
+                script.onload = function() { console.log('Path Helper active: ' + paths[index]); };
+                document.head.appendChild(script);
+            }
+            tryNext();
+        })();
+    </script>
+
+    <!-- 1. CSS Layer -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    <style>
+        .auth-card { max-width: 400px; margin: 20px auto; padding: 15px; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; margin-bottom: 4px; font-weight: bold; font-size: 12px; }
+        .link-btn { font-size: 11px; color: var(--accent-dark); cursor: pointer; text-decoration: underline; margin-top: 10px; display: inline-block; }
+    </style>
+
+    <!-- 2. Fixed Data Layer -->
+    <script>
+        const AUTH_CONFIG = {
+            KEYS: { USERS: 'sale3_users', CURRENT: 'currentUser' }
+        };
+    </script>
+
+    <!-- 3. Script Layer -->
+    <script>
+        async function checkDataInit() {
+            if (!localStorage.getItem(AUTH_CONFIG.KEYS.USERS)) {
+                const d = await fetch('../../Sale2/data/users.json').then(r => r.json()).catch(() => []);
+                APP_CORE.saveLocal(AUTH_CONFIG.KEYS.USERS, d);
+            }
+        }
+
+        function handleLogin() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            const users = APP_CORE.getLocal(AUTH_CONFIG.KEYS.USERS);
+            const user = users.find(x => x.username === u && x.password === p);
+            
+            if (user) {
+                APP_CORE.saveLocal(AUTH_CONFIG.KEYS.CURRENT, user);
+                APP_CORE.showToast('登入成功，正在導向...');
+                setTimeout(() => location.href = '../indexA.html', 800);
+            } else {
+                APP_CORE.showToast('帳號或密碼錯誤');
+            }
+        }
+
+        function handleRegister() {
+            const name = document.getElementById('reg-name').value;
+            const u = document.getElementById('reg-username').value;
+            const p = document.getElementById('reg-password').value;
+            const role = document.getElementById('reg-role').value;
+
+            if(!u || !p || !name) return APP_CORE.showToast('請填寫完整資訊');
+            const users = APP_CORE.getLocal(AUTH_CONFIG.KEYS.USERS);
+            if(users.find(x => x.username === u)) return APP_CORE.showToast('帳號已存在');
+
+            users.push({ id: 'U' + Date.now(), username: u, password: p, name, role });
+            APP_CORE.saveLocal(AUTH_CONFIG.KEYS.USERS, users);
+            APP_CORE.showToast('註冊成功，請登入');
+            switchTab('loginTab');
+        }
+
+        function submitForgot() {
+            const u = document.getElementById('forgot-username').value;
+            if(!u) return APP_CORE.showToast('請輸入帳號');
+            APP_CORE.showToast('重置連結已發送 (模擬)');
+            switchTab('loginTab');
+        }
+
+        window.addEventListener('coreReady', () => { checkDataInit(); });
+    </script>
+</head>
+<body>
+    <div class="tabs-container">
+        <button class="tab-btn active" onclick="switchTab('loginTab')"><i class="fas fa-sign-in-alt"></i> 會員登入</button>
+        <button class="tab-btn" onclick="switchTab('registerTab')"><i class="fas fa-user-plus"></i> 帳號註冊</button>
+        <button class="tab-btn" onclick="location.href='../indexA.html'"><i class="fas fa-arrow-left"></i> 返回</button>
+    </div>
+
+    <!-- Login Tab -->
+    <div id="loginTab" class="content-section active">
+        <div class="card auth-card">
+            <h2>🔐 會員登入</h2>
+            <div class="form-group"><label>帳號</label><input type="text" id="username" class="input-gold" value="user1"></div>
+            <div class="form-group"><label>密碼</label><input type="password" id="password" class="input-gold" value="password"></div>
+            <button class="btn-gold" style="width: 100%" onclick="handleLogin()">登入</button>
+            <div style="font-size:10px; color:#888; margin-top:15px; text-align:center; border-top:1px solid #eee; padding-top:10px;">
+                測試會員：user1 / password <br>
+                測試營養師：rd1 / password
+            </div>
+            <span class="link-btn" onclick="switchTab('forgotTab')">忘記密碼 C1a</span>
+        </div>
+    </div>
+
+    <!-- Register Tab -->
+    <div id="registerTab" class="content-section">
+        <div class="card auth-card">
+            <h2>🔐 帳號註冊</h2>
+            <div class="form-group"><label>真實姓名</label><input type="text" id="reg-name" class="input-gold"></div>
+            <div class="form-group"><label>登入帳號</label><input type="text" id="reg-username" class="input-gold"></div>
+            <div class="form-group"><label>設定密碼</label><input type="password" id="reg-password" class="input-gold"></div>
+            <div class="form-group">
+                <label>角色選擇</label>
+                <select id="reg-role" class="input-gold" style="height:40px;">
+                    <option value="user">一般使用者</option>
+                    <option value="admin">公司管理員</option>
+                </select>
+            </div>
+            <button class="btn-gold" style="width: 100%" onclick="handleRegister()">完成註冊</button>
+        </div>
+    </div>
+
+    <!-- Forgot Tab -->
+    <div id="forgotTab" class="content-section">
+        <div class="card auth-card">
+            <h2>🔐 忘記密碼 C1a</h2>
+            <div class="form-group">
+                <label>請輸入註冊帳號</label>
+                <input type="text" id="forgot-username" class="input-gold" placeholder="Username">
+            </div>
+            <button class="btn-gold" style="width: 100%" onclick="submitForgot()">發送重置信</button>
+            <span class="link-btn" onclick="switchTab('loginTab')">返回登入</span>
+        </div>
+    </div>
+</body>
+</html>
