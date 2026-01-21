@@ -1,0 +1,51 @@
+flowchart LR
+    %% 系統入口
+    Start[系統主站 indexA.html] --> Auth[身分驗證 AuthA.html]
+    Start --> Test[檢測分析 TestA.html]
+    Start --> Shop[改善商城 ShopA.html]
+    Start --> Consult[專家諮詢 ConsultA.html]
+    Start --> Admin[公司後台 AdminA.html]
+
+    %% 身分驗證模組
+    subgraph Auth_Flow [身分驗證流程 C1]
+        Auth --> Login[會員登入]
+        Auth --> Register[帳號註冊]
+        Login --> Forgot[忘記密碼 C1a]
+    end
+
+    %% 檢測分析模組
+    subgraph Test_Flow [檢測分析流程 C2]
+        Test --> Serial[輸入檢測單號 C211]
+        Serial --> API[API 同步數據 C211a]
+        API --> Analysis[雷達圖分析 C22]
+        Analysis --> Result[查看結果 C221]
+    end
+
+    %% 電商功能模組
+    subgraph Shop_Flow [電商改善流程 I]
+        Shop --> Browse[挑選商品 D1]
+        Browse --> Cart[加入購物車 D1a]
+        Cart --> Pay[結帳付款 D1b]
+        Pay --> Finish[訂單完成 F2]
+    end
+
+    %% 專家諮詢模組
+    subgraph Consult_Flow [專業諮詢流程 E]
+        Consult --> Service[選擇服務類型 E1]
+        Service --> Submit[提交諮詢請求]
+        Submit --> Wait[等待師回覆 E2]
+        Wait --> Advice[客服師回覆建議 E3]
+        Advice --> Mail[站內信通知 E4/E5]
+    end
+
+    %% 管理者功能模組
+    subgraph Admin_Flow [管理者功能 B2]
+        Admin --> Stats[所有功能數據統計 H1]
+        Admin --> Member[會員紀錄 / 購物紀錄 H2]
+        Admin --> Reply[整理並撰寫回覆 G2/G3]
+    end
+
+    %% 跨模組連結
+    Result --> Browse
+    Result --> Service
+    Finish --> Member
