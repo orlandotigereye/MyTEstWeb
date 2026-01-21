@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>💻 公司後台 - Sale4 V4.0</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    <style>
+/* Global Theme: Royal Gold Universal v2 */
+:root {
+    --primary-color: #2c3e50;
+    --accent-color: #FFD700;
+    --accent-dark: #B8860B;
+    --accent-light: #FFFACD;
+    --bg-gradient: radial-gradient(circle, #fdf5e6 0%, #ffd700 100%);        
+    --card-bg: rgba(255, 255, 255, 0.95);
+    --text-color: #5d4037;
+    --muted-color: #7f8c8d;
+    --success-color: #27ae60;
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 12px;
+    --space-lg: 20px;
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+    --base-font-size: 13px;
+    --main-font: 'Segoe UI', 'Noto Sans TC', system-ui, sans-serif;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }      
+body {
+    font-family: var(--main-font);
+    font-size: var(--base-font-size);
+    background: var(--bg-gradient);
+    background-attachment: fixed;
+    color: var(--text-color);
+    margin: 0; padding: 0;
+    overflow-x: hidden;
+    line-height: 1.5;
+}
+.tabs-container {
+    display: flex; background: var(--accent-dark);
+    position: sticky; top: 0; z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+.tab-btn {
+    flex: 1; padding: var(--space-md); border: none; background: transparent;
+    color: rgba(255,255,255,0.8); font-size: 11px; font-weight: bold;        
+    cursor: pointer; transition: 0.3s; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;    
+}
+.tab-btn.active {
+    color: #fff; background: rgba(255,255,255,0.15);
+    border-bottom: 3px solid #fff;
+}
+.content-section { display: none; padding: var(--space-md); animation: fadeIn 0.4s ease; }
+.content-section.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+.card {
+    background: var(--card-bg);
+    border: 2px solid var(--accent-dark);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    box-shadow: 0 4px 15px rgba(184, 134, 11, 0.2);
+    margin-bottom: var(--space-md);
+}
+.card h2 {
+    margin-top: 0; font-size: 15px; color: var(--accent-dark);
+    border-bottom: 1px solid var(--accent-dark);
+    padding-bottom: var(--space-xs); margin-bottom: var(--space-md);
+}
+.btn-gold {
+    background: linear-gradient(to bottom, var(--accent-color), var(--accent-dark));
+    color: #fff; border: 1px solid #8b4513;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-sm);
+    font-size: 11px; font-weight: bold; cursor: pointer;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-gold:active { transform: scale(0.95); opacity: 0.9; }
+textarea, input {
+    width: 100%; padding: var(--space-sm); border: 1px solid #ddd;
+    border-radius: var(--radius-sm); font-size: 14px; background: #fffdf0;   
+}
+.toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);   
+    background: rgba(44, 62, 80, 0.95); color: white; padding: 10px 20px;    
+    border-radius: 25px; z-index: 3000; font-size: 12px; display: none;      
+}
+.spinner-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255,255,255,0.7); display: none;
+    flex-direction: column; align-items: center; justify-content: center; z-index: 4000;
+}
+.loader {
+    border: 4px solid #f3f3f3; border-top: 4px solid var(--accent-dark);     
+    border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* Page Specific Styles */
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+.stat-card { background: #fff; border: 1px solid #ddd; padding: 12px; border-radius: 8px; text-align: center; }
+.stat-num { font-size: 20px; font-weight: bold; color: var(--accent-dark); }
+.item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; font-size: 11px; }
+.p-thumb { width: 40px; height: 40px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-size: 18px; color: var(--accent-dark); }
+#arch-sidebar { position: fixed; top: 0; right: -300px; width: 300px; height: 100%; background: white; box-shadow: -5px 0 15px rgba(0,0,0,0.1); z-index: 5000; transition: 0.3s; overflow-y: auto; padding: 15px; border-left: 4px solid var(--accent-dark); }
+#arch-sidebar.open { right: 0; }
+.arch-toggle { position: fixed; bottom: 80px; right: 20px; width: 45px; height: 45px; background: var(--accent-dark); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 5001; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: 2px solid white; }
+.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 6000; justify-content: center; align-items: center; padding: 20px; }
+.modal-content { background: white; width: 100%; max-width: 400px; padding: 20px; border-radius: 12px; }
+.food-item { padding: 10px; border-bottom: 1px dashed #ddd; display: flex; justify-content: space-between; font-size: 11px; background: #fff; }
+.log-card { background: #fff; border: 1px solid #eee; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+    </style>
+    <script>
+const APP_CORE = {
+    version: "2.1.2",
+    firebaseConfig: {
+        apiKey: "AIzaSyBGKIhWjOlx4xyQttT4e3PUc9SeUU7atQo",
+        authDomain: "inventory-y.firebaseapp.com",
+        databaseURL: "https://inventory-y-default-rtdb.firebaseio.com",      
+        projectId: "inventory-y"
+    },
+    db: null,
+    _initialized: false,
+    init() {
+        if (this._initialized) return;
+        this.setupTabs();
+        this._initialized = true;
+        window.dispatchEvent(new CustomEvent('coreReady', { detail: { core: this } }));
+    },
+    showToast(msg, duration = 3000) {
+        let t = document.getElementById('toast');
+        if (!t) {
+            t = document.createElement('div');
+            t.id = 'toast';
+            t.className = 'toast';
+            document.body.appendChild(t);
+        }
+        t.textContent = msg;
+        t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', duration);
+    },
+    toggleSpinner(show) {
+        let s = document.getElementById('spinner');
+        if (!s) {
+            s = document.createElement('div');
+            s.id = 'spinner';
+            s.className = 'spinner-overlay';
+            s.innerHTML = '<div class="loader"></div><p id="spinner-text" style="margin-top:10px; font-weight:bold; color:var(--accent-dark);">Processing...</p>';
+            document.body.appendChild(s);
+        }
+        if(typeof show === 'string') document.getElementById('spinner-text').textContent = show;
+        s.style.display = show ? 'flex' : 'none';
+    },
+    setupTabs() {
+        window.switchTab = (tabId) => {
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            const targetContent = document.getElementById(tabId);
+            const targetBtn = document.querySelector(`[onclick*="${tabId}"]`);
+            if (targetContent) targetContent.classList.add('active');        
+            if (targetBtn) targetBtn.classList.add('active');
+            window.dispatchEvent(new CustomEvent('tabChanged', { detail: { tabId } }));
+        };
+    },
+    getLocal(key) { return JSON.parse(localStorage.getItem(key) || '[]'); }, 
+    saveLocal(key, data) { localStorage.setItem(key, JSON.stringify(data)); },
+    async syncToFirebase(path, data) { return true; }
+};
+window.APP_CORE = APP_CORE;
+if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => APP_CORE.init()); } else { APP_CORE.init(); }
+
+const ADMIN_CONFIG = {
+    KEYS: { USERS: 'sale3_users', TESTS: 'sale3_tests', CONSULTS: 'sale3_consults', ORDERS: 'sale3_orders', PRODUCTS: 'sale3_products', FOODS: 'sale3_foods', IDEAL: 'sale3_ideal' },
+    DATA_SOURCES: [
+        { key: 'USERS', path: '../data/users.json' }, { key: 'TESTS', path: '../data/tests.json' }, { key: 'CONSULTS', path: '../data/consults.json' }, { key: 'PRODUCTS', path: '../data/products.json' }, { key: 'ORDERS', path: '../data/orders.json' }, { key: 'FOODS', path: '../data/food_match.json' }, { key: 'IDEAL', path: '../data/ideal_fatty_acid_list.json' }
+    ]
+};
+
+async function initDatabase() {
+    APP_CORE.toggleSpinner('正在檢查同步...');
+    const users = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.USERS);
+    if (users.length < 1) {
+        for (const source of ADMIN_CONFIG.DATA_SOURCES) {
+            try {
+                const data = await fetch(source.path).then(r => r.json());
+                APP_CORE.saveLocal(ADMIN_CONFIG.KEYS[source.key], data);
+            } catch(e) {}
+        }
+    }
+    loadStats(); renderProducts(); renderCases(); renderLogs(); showIdealList();
+    APP_CORE.toggleSpinner(false);
+}
+
+function toggleSidebar() { document.getElementById('arch-sidebar').classList.toggle('open'); }
+
+function loadStats() {
+    document.getElementById('cnt-u').innerText = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.USERS).length;
+    document.getElementById('cnt-t').innerText = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.TESTS).length;
+    document.getElementById('cnt-o').innerText = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.ORDERS).length;
+}
+
+function renderLogs() {
+    const users = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.USERS);
+    const orders = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.ORDERS);
+    const consults = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.CONSULTS);
+    const list = document.getElementById('member-list-h2');
+    list.innerHTML = users.map(u => {
+        const uOrders = orders.filter(o => o.userId === u.id);
+        const uConsults = consults.filter(c => c.userId === u.id);
+        return `<div class="log-card"><div style="font-weight:bold; border-bottom:1px solid #f0f0f0; padding-bottom:5px; margin-bottom:5px;">${u.name} <span style="font-weight:normal; font-size:10px; color:#999;">(${u.role})</span></div><div style="font-size:11px; color:#666;"><i class="fas fa-shopping-cart"></i> 購物紀錄：${uOrders.length} 筆<br/><i class="fas fa-user-md"></i> 諮詢紀錄：${uConsults.length} 筆</div></div>`;
+    }).join('') || '<p style="text-align:center; color:#999;">無會員資料</p>';
+}
+
+function renderProducts() {
+    const products = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.PRODUCTS);
+    document.getElementById('product-list-admin').innerHTML = products.map(p => `
+        <div class="item-row"><div style="display:flex; align-items:center;"><div class="p-thumb"><i class="fas fa-box"></i></div><div><b>${p.name}</b><br/><span style="color:var(--accent-dark)">$${p.price}</span></div></div><div><i class="fas fa-edit" style="color:#1890ff; cursor:pointer; margin-right:12px;" onclick="openEditProduct('${p.id}')"></i><i class="fas fa-trash-alt" style="color:#ff4d4f; cursor:pointer;" onclick="deleteProduct('${p.id}')"></i></div></div>
+    `).join('') || '<p style="text-align:center; padding:20px;">尚無商品資料</p>';
+}
+
+function openAddProduct() {
+    document.getElementById('modal-title').innerText = "新增商品";
+    document.getElementById('p-id').value = ""; document.getElementById('p-name').value = ""; document.getElementById('p-price').value = ""; document.getElementById('p-tags').value = "";
+    document.getElementById('productModal').style.display = "flex";
+}
+
+function openEditProduct(id) {
+    const p = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.PRODUCTS).find(x => x.id === id);
+    document.getElementById('modal-title').innerText = "編輯商品";
+    document.getElementById('p-id').value = p.id; document.getElementById('p-name').value = p.name; document.getElementById('p-price').value = p.price; document.getElementById('p-tags').value = (p.tags || []).join(',');
+    document.getElementById('productModal').style.display = "flex";
+}
+
+function saveProduct() {
+    const id = document.getElementById('p-id').value; const name = document.getElementById('p-name').value; const price = parseInt(document.getElementById('p-price').value);
+    if(!name || isNaN(price)) return APP_CORE.showToast('請填寫完整資訊');
+    const products = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.PRODUCTS);
+    const newP = { id: id || 'P' + Date.now(), name, price, tags: document.getElementById('p-tags').value.split(',').map(t => t.trim()), desc: "管理者維護" };
+    if (id) { const idx = products.findIndex(x => x.id === id); products[idx] = newP; } else { products.push(newP); }
+    APP_CORE.saveLocal(ADMIN_CONFIG.KEYS.PRODUCTS, products); document.getElementById('productModal').style.display = "none"; renderProducts(); APP_CORE.showToast('同步成功');
+}
+
+function deleteProduct(id) { if(confirm('刪除？')) { const products = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.PRODUCTS).filter(x => x.id !== id); APP_CORE.saveLocal(ADMIN_CONFIG.KEYS.PRODUCTS, products); renderProducts(); } }
+
+function showIdealList() {
+    const cat = document.getElementById('ideal-category').value;
+    const all = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.IDEAL);
+    const filtered = cat === 'ALL' ? all : all.filter(f => f.type === cat);
+    document.getElementById('ideal-list-container').innerHTML = filtered.map(f => `
+        <div style="padding:6px; border-bottom:1px solid #e6f7ff; font-size:11px; display:flex; justify-content:space-between;">
+            <span><b>${f.name}</b> <span style="color:#1890ff;">[${f.major}]</span></span>
+            <span style="color:#666;">${f.ratio}</span>
+        </div>
+    `).join('') || '<p style="text-align:center;">無資料</p>';
+}
+
+function runFoodMatch() {
+    const target = document.getElementById('match-acid').value;
+    const allFoods = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.FOODS);
+    let filtered = (target === 'SFA') ? allFoods.filter(f => f.major === '低脂' || f.major === '機能') : allFoods.filter(f => f.major === target);
+    document.getElementById('food-list-container').innerHTML = filtered.map(f => `
+        <div class="food-item"><span><b>${f.name}</b> (${f.type})</span><span style="color:#B8860B; font-weight:bold;">${f.value}</span></div>
+    `).join('') || '<p style="text-align:center; padding:20px;">無配對結果</p>';
+    APP_CORE.showToast(`已配對 ${filtered.length} 項建議`);
+}
+
+function renderCases() {
+    const all = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.CONSULTS);
+    const pending = all.filter(c => c.status === 'pending');
+    document.getElementById('case-list').innerHTML = pending.map(c => `
+        <div class="item-row"><div><b>客戶：${c.userId}</b><br/><span style="font-size:10px; color:#888;">${c.userQuery}</span></div><button class="btn-gold" style="padding:2px 10px; font-size:10px;" onclick="acceptCase('${c.id}')">營養師接單</button></div>
+    `).join('') || '<p style="text-align:center; padding:10px;">無待接案件</p>';
+    const accepted = all.filter(c => c.status === 'accepted');
+    document.getElementById('work-list').innerHTML = accepted.map(c => `
+        <div style="padding:10px; border-bottom:1px solid #eee; background:#fff; margin-bottom:10px; border-radius:8px;"><b>進行中：${c.userId}</b><br/><div style="font-size:11px; background:#f9f9f9; padding:5px; margin:5px 0;">提問：${c.userQuery}</div><textarea id="reply-${c.id}" class="input-gold" style="height:60px; font-size:11px; margin-top:5px;" placeholder="撰寫建議..."></textarea><button class="btn-gold" style="width:100%; margin-top:5px; font-size:10px;" onclick="finishCase('${c.id}')">提交建議</button></div>
+    `).join('') || '<p style="text-align:center; padding:10px;">無進行中案件</p>';
+}
+
+function acceptCase(id) { const all = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.CONSULTS); const c = all.find(x => x.id === id); c.status = 'accepted'; c.rdName = '林營養師'; APP_CORE.saveLocal(ADMIN_CONFIG.KEYS.CONSULTS, all); APP_CORE.showToast('已接單'); renderCases(); }
+function finishCase(id) { const advice = document.getElementById(`reply-${id}`).value; if(!advice) return APP_CORE.showToast('請輸入建議'); const all = APP_CORE.getLocal(ADMIN_CONFIG.KEYS.CONSULTS); const c = all.find(x => x.id === id); c.status = 'replied'; c.rdAdvice = advice; APP_CORE.saveLocal(ADMIN_CONFIG.KEYS.CONSULTS, all); APP_CORE.showToast('回覆已發送'); renderCases(); renderLogs(); }
+
+window.addEventListener('coreReady', async () => {
+    await initDatabase();
+});
+    </script>
+</head>
+<body>
+    <div class="tabs-container">
+        <button class="tab-btn active" onclick="switchTab('statTab')"><i class="fas fa-chart-line"></i> 統計</button>
+        <button class="tab-btn" onclick="switchTab('logTab')"><i class="fas fa-history"></i> 紀錄</button>
+        <button class="tab-btn" onclick="switchTab('prodTab')"><i class="fas fa-boxes"></i> 商品</button>
+        <button class="tab-btn" onclick="switchTab('matchTab')"><i class="fas fa-database"></i> 配對庫</button>
+        <button class="tab-btn" onclick="switchTab('replyTab')"><i class="fas fa-edit"></i> 回覆</button>
+        <button class="tab-btn" onclick="location.href='../indexC.html'"><i class="fas fa-home"></i> 返回</button>
+    </div>
+
+    <div id="statTab" class="content-section active"><div class="card"><h2>💻 數據統計</h2><div class="stat-grid"><div class="stat-card"><div class="stat-num" id="cnt-u">0</div><div>總會員</div></div><div class="stat-card"><div class="stat-num" id="cnt-t">0</div><div>總檢測</div></div><div class="stat-card" style="grid-column: span 2;"><div class="stat-num" id="cnt-o">0</div><div>總訂單</div></div></div></div></div>
+    <div id="logTab" class="content-section"><div class="card"><h2>💻 業務紀錄</h2><div id="member-list-h2" style="background:#fafafa; border-radius:8px; border:1px solid #eee; padding:10px;"></div></div></div>
+    <div id="prodTab" class="content-section"><div class="card"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><h2 style="margin:0;"><i class="fas fa-list"></i> 商品管理</h2><button class="btn-gold" style="padding:4px 8px; font-size:10px;" onclick="openAddProduct()">新增</button></div><div id="product-list-admin" style="background:#fafafa; border-radius:8px; border:1px solid #eee;"></div></div></div>
+    <div id="matchTab" class="content-section"><div class="card"><h2>💻 數據配對庫</h2><select id="ideal-category" class="input-gold" style="height:35px; margin-bottom:10px;" onchange="showIdealList()"><option value="ALL">全部理想清單</option><option value="魚類">魚類</option><option value="油脂">油脂</option></select><div id="ideal-list-container" style="max-height:150px; overflow-y:auto; background:#f0f5ff; padding:10px; margin-bottom:15px;"></div><div style="display:flex; gap:10px;"><select id="match-acid" class="input-gold" style="flex:1;"><option value="Omega-3">Omega-3</option></select><button class="btn-gold" onclick="runFoodMatch()">配對</button></div><div id="food-list-container" style="margin-top:10px;"></div></div></div>
+    <div id="replyTab" class="content-section"><div class="card"><h2>💻 回覆管理</h2><div id="case-list"></div><hr><h3>進行中</h3><div id="work-list"></div></div></div>
+    <div id="productModal" class="modal"><div class="modal-content card"><h2 id="modal-title">商品編輯</h2><input type="hidden" id="p-id"><div style="margin-bottom:10px;"><label>名稱</label><input type="text" id="p-name" class="input-gold"></div><div style="margin-bottom:10px;"><label>價格</label><input type="number" id="p-price" class="input-gold"></div><div style="margin-bottom:10px;"><label>標籤</label><input type="text" id="p-tags" class="input-gold"></div><div style="display:flex; gap:10px; margin-top:20px;"><button class="btn-gold" style="flex:1;" onclick="saveProduct()">儲存</button><button class="btn-gold" style="flex:1; background:#999;" onclick="document.getElementById('productModal').style.display='none'">取消</button></div></div></div>
+</body>
+</html>
