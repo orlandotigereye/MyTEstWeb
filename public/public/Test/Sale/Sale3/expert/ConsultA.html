@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>👩‍⚕️ 專家諮詢 - Sale3 V3.2</title>
+    
+    <!-- Dynamic Pathing -->
+    <script id="path-helper-loader">
+        (function() {
+            const paths = ['/01js/path_helper.js', '../../../01js/path_helper.js', '../../01js/path_helper.js', '../01js/path_helper.js'];
+            let index = 0;
+            function tryNext() {
+                if (index >= paths.length) return;
+                const script = document.createElement('script');
+                script.src = paths[index];
+                script.async = false;
+                script.onerror = function() {
+                    if (script.parentNode) document.head.removeChild(script);
+                    index++;
+                    tryNext();
+                };
+                script.onload = function() { console.log('Path Helper active: ' + paths[index]); };
+                document.head.appendChild(script);
+            }
+            tryNext();
+        })();
+    </script>
+
+    <!-- 1. CSS Layer -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    <style>
+        .consult-item { border: 1px solid #eee; padding: 12px; margin-bottom: 12px; border-radius: 8px; background: #fff; position: relative; }
+        .status-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; color: white; background: #999; }
+        .status-rd { background: #1890ff; }
+        .status-advice { background: #52c41a; }
+        .advice-content { background: #f6ffed; border: 1px solid #b7eb8f; padding: 10px; margin-top: 10px; font-size: 12px; }
+    </style>
+
+    <!-- 2. Fixed Data Layer -->
+    <script>
+        const CONSULT_CONFIG = {
+            KEYS: { CONSULTS: 'sale3_consults', CURRENT: 'currentUser' }
+        };
+    </script>
+
+    <!-- 3. Script Layer -->
+    <script>
+        let user = null;
+
+        function applyConsult() {
+            const type = document.getElementById('service-type').value;
+            const time = document.getElementById('apply-time').value;
+            if(!time) return APP_CORE.showToast('請選擇預約時間');
+
+            const all = APP_CORE.getLocal(CONSULT_CONFIG.KEYS.CONSULTS);
+            const newCase = {
+                id: 'C' + Date.now(),
+                userId: user.id,
+                type: type,
+                time: time,
+                status: 'pending', // 選擇服務類型 2-3
+                rdName: null,
+                advice: null,
+                createdAt: new Date().toISOString()
+            };
+            all.push(newCase);
+            APP_CORE.saveLocal(CONSULT_CONFIG.KEYS.CONSULTS, all);
+            APP_CORE.showToast('預約已送出，等待營養師接單');
+            renderCases();
+            switchTab('historyTab');
+        }
+
+        function renderCases() {
+            const all = APP_CORE.getLocal(CONSULT_CONFIG.KEYS.CONSULTS);
+            const myCases = all.filter(c => c.userId === user.id).reverse();
+            const list = document.getElementById('case-list');
+
+            list.innerHTML = myCases.map(c => `
+                <div class="consult-item">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                        <b style="font-size:12px;">類別：${c.type}</b>
+                        <span class="status-badge ${c.status === 'accepted' ? 'status-rd' : (c.status === 'replied' ? 'status-advice' : '')}">
+                            ${c.status === 'accepted' ? '營養師接單/回覆時間' : (c.status === 'replied' ? '查看諮詢內容 2-4' : '等待接單')}
+                        </span>
+                    </div>
+                    <div style="font-size:11px; color:#666;">預約時間：${c.time}</div>
+                    ${c.status === 'accepted' ? `
+                        <div class="advice-content" style="background:#e6f7ff; border-color:#91d5ff;">
+                            <b>溝通並填寫諮詢內容：</b><br/>營養師 ${c.rdName} 已與您聯繫，將於 2 天內上傳正式建議。
+                        </div>
+                    ` : ''}
+                    ${c.status === 'replied' ? `
+                        <div class="advice-content">
+                            <b>查看諮詢內容 2-4：</b><br/>${c.advice}
+                            <hr style="border:none; border-top:1px dashed #b7eb8f; margin:8px 0;">
+                            <button class="btn-gold" style="width:100%; font-size:10px; height:28px;" onclick="location.href='../ecommerce/ShopA.html?suggested=true'">訂購建議商品/營養師服務</button>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('') || '<p style="text-align:center; padding:20px;">尚無諮詢紀錄</p>';
+        }
+
+        window.addEventListener('coreReady', () => {
+            user = APP_CORE.getLocal(CONSULT_CONFIG.KEYS.CURRENT);
+            renderCases();
+        });
+    </script>
+</head>
+<body>
+    <div class="tabs-container">
+        <button class="tab-btn active" onclick="switchTab('applyTab')"><i class="fas fa-calendar-plus"></i> 預約諮詢 2-3</button>
+        <button class="tab-btn" onclick="switchTab('historyTab')"><i class="fas fa-clipboard-list"></i> 諮詢內容 2-4</button>
+        <button class="tab-btn" onclick="location.href='../indexA.html'"><i class="fas fa-home"></i> 返回</button>
+    </div>
+
+    <div id="applyTab" class="content-section active">
+        <div class="card">
+            <h2>👩‍⚕️ 選擇服務類型 2-3</h2>
+            <div style="margin-bottom:12px;">
+                <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">服務類型：</label>
+                <select id="service-type" class="input-gold" style="height:40px;">
+                    <option value="脂肪酸改善諮詢">脂肪酸改善諮詢</option>
+                    <option value="備孕營養諮詢">備孕營養諮詢</option>
+                    <option value="日常膳食規劃">日常膳食規劃</option>
+                </select>
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">選擇時間/營養師：</label>
+                <input type="datetime-local" id="apply-time" class="input-gold">
+            </div>
+            <button class="btn-gold" style="width:100%; padding:12px;" onclick="applyConsult()">提交預約</button>
+        </div>
+    </div>
+
+    <div id="historyTab" class="content-section">
+        <div class="card">
+            <h2>👩‍⚕️ 查看諮詢內容 2-4</h2>
+            <div id="case-list"></div>
+        </div>
+    </div>
+</body>
+</html>
