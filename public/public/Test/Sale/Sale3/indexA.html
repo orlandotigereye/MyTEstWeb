@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Shizuku Bio-Sync System V3.2 - 👑 系統主站 A</title>
+    
+    <!-- Dynamic Pathing -->
+    <script id="path-helper-loader">
+        (function() {
+            const paths = ['/01js/path_helper.js', '../01js/path_helper.js', '../../01js/path_helper.js', '../../../01js/path_helper.js'];
+            let index = 0;
+            function tryNext() {
+                if (index >= paths.length) return;
+                const script = document.createElement('script');
+                script.src = paths[index];
+                script.async = false;
+                script.onerror = function() {
+                    if (script.parentNode) document.head.removeChild(script);
+                    index++;
+                    tryNext();
+                };
+                script.onload = function() { console.log('Path Helper active: ' + paths[index]); };
+                document.head.appendChild(script);
+            }
+            tryNext();
+        })();
+    </script>
+
+    <!-- 1. CSS Layer (Handled by path_helper.js) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    <style>
+        .module-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-top: 15px; }
+        .module-card {
+            background: white; border: 2px solid var(--accent-dark); border-radius: var(--radius-md);
+            padding: 15px; text-align: center; cursor: pointer; transition: 0.3s;
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+        }
+        .module-card:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(184, 134, 11, 0.2); background: var(--accent-light); }
+        .module-card i { font-size: 28px; color: var(--accent-dark); transition: 0.5s; }
+        .user-info { background: var(--accent-dark); color: white; padding: 8px 12px; border-radius: var(--radius-sm); margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+        .stat-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+        .stat-box { text-align: center; padding: 10px; border-radius: var(--radius-sm); border: 1px solid #eee; background: #fff; }
+        .stat-val { font-size: 20px; font-weight: bold; color: var(--accent-dark); }
+        .stat-label { font-size: 10px; color: var(--muted-color); }
+        .sop-list { background: #fdfdfd; padding: 12px; border-radius: var(--radius-sm); border: 1px dashed var(--accent-dark); }
+        .sop-step { font-size: 11px; margin-bottom: 8px; border-left: 3px solid var(--accent-dark); padding-left: 10px; }
+        .sop-step a { color: var(--primary-color); text-decoration: none; font-weight: bold; }
+    </style>
+
+    <!-- 2. Fixed Data Layer -->
+    <script>
+        const APP_CONFIG = {
+            KEYS: { USERS: 'sale3_users', TESTS: 'sale3_tests', CONSULTS: 'sale3_consults', NOTIFICATIONS: 'sale3_notifications', PRODUCTS: 'sale3_products', COMPANIES: 'sale3_companies', CURRENT_USER: 'currentUser' },
+            DATA_SOURCES: [
+                { key: 'USERS', path: 'data/users.json' },
+                { key: 'TESTS', path: 'data/tests.json' },
+                { key: 'CONSULTS', path: 'data/consults.json' },
+                { key: 'PRODUCTS', path: 'data/products.json' },
+                { key: 'ORDERS', path: 'data/orders.json' },
+                { key: 'FOODS', path: 'data/food_match.json' },
+                { key: 'IDEAL', path: 'data/ideal_fatty_acid_list.json' }
+            ]
+        };
+    </script>
+
+    <!-- 3. Script Layer -->
+    <script>
+        async function initDatabase() {
+            APP_CORE.toggleSpinner('正在檢查數據完整性...');
+            
+            const currentFoods = APP_CORE.getLocal('sale3_foods');
+            const currentProds = APP_CORE.getLocal(APP_CONFIG.KEYS.PRODUCTS);
+            const currentIdeal = APP_CORE.getLocal('sale3_ideal');
+
+            // 自動載入機制：若資料筆數不足，直接從實體 JSON 補足
+            if (currentFoods.length < 57 || currentProds.length < 7 || currentIdeal.length < 57) {
+                console.log("Syncing all data sources including ideal list...");
+                for (const source of APP_CONFIG.DATA_SOURCES) {
+                    try {
+                        const data = await fetch(source.path).then(r => r.json());
+                        let storageKey = '';
+                        if (source.key === 'ORDERS') storageKey = 'sale3_orders';
+                        else if (source.key === 'FOODS') storageKey = 'sale3_foods';
+                        else if (source.key === 'IDEAL') storageKey = 'sale3_ideal';
+                        else storageKey = APP_CONFIG.KEYS[source.key];
+                        
+                        // 強制覆寫核心範本資料
+                        if (['FOODS', 'PRODUCTS', 'IDEAL'].includes(source.key) || !localStorage.getItem(storageKey)) {
+                            APP_CORE.saveLocal(storageKey, data);
+                        }
+                    } catch (e) { console.warn(`Silent sync failed for ${source.key}`, e); }
+                }
+            }
+            
+            updateStats();
+            APP_CORE.toggleSpinner(false);
+        }
+
+        function updateStats() {
+            document.getElementById('stat-u').innerText = APP_CORE.getLocal(APP_CONFIG.KEYS.USERS).length;
+            document.getElementById('stat-t').innerText = APP_CORE.getLocal(APP_CONFIG.KEYS.TESTS).length;
+            document.getElementById('stat-c').innerText = APP_CORE.getLocal(APP_CONFIG.KEYS.CONSULTS).length;
+        }
+
+        function checkAuth(url) {
+            const user = APP_CORE.getLocal(APP_CONFIG.KEYS.CURRENT_USER);
+            if (!user.id) { APP_CORE.showToast('🔐 請先身分驗證'); setTimeout(() => location.href = 'auth/AuthA.html', 800); return; }
+            location.href = url;
+        }
+
+        window.addEventListener('coreReady', async () => {
+            await initDatabase();
+            const user = APP_CORE.getLocal(APP_CONFIG.KEYS.CURRENT_USER);
+            if (user.id) {
+                document.getElementById('auth-status').innerHTML = `<span><i class="fas fa-user-check"></i> ${user.name}</span><button class="btn-gold" onclick="localStorage.removeItem('currentUser'); location.reload();" style="padding: 2px 10px;">登出</button>`;
+            } else {
+                document.getElementById('auth-status').innerHTML = `<span><i class="fas fa-user-circle"></i> 訪客</span><button class="btn-gold" onclick="location.href='auth/AuthA.html'" style="padding: 2px 10px;">登入</button>`;
+            }
+        });
+    </script>
+</head>
+<body>
+    <div class="tabs-container">
+        <button class="tab-btn active" onclick="switchTab('mainTab')"><i class="fas fa-home"></i> 👑 系統主站</button>
+        <button class="tab-btn" onclick="switchTab('sopTab')"><i class="fas fa-route"></i> 操作指引</button>
+        <button class="tab-btn" onclick="switchTab('setsTab')"><i class="fas fa-cog"></i> 設定</button>
+    </div>
+
+    <div id="mainTab" class="content-section active">
+        <div class="card">
+            <h2>🧬 生理同步中控台</h2>
+            <div id="auth-status" class="user-info"></div>
+            <div class="stat-container">
+                <div class="stat-box"><div class="stat-val" id="stat-u">0</div><div class="stat-label">註冊會員</div></div>
+                <div class="stat-box"><div class="stat-val" id="stat-t">0</div><div class="stat-label">檢測報告</div></div>
+                <div class="stat-box"><div class="stat-val" id="stat-c">0</div><div class="stat-label">諮詢案件</div></div>
+            </div>
+            <div class="module-grid">
+                <div class="module-card" onclick="checkAuth('test/TestA.html')"><i class="fas fa-dna"></i><span>🧬 檢測分析</span></div>
+                <div class="module-card" onclick="checkAuth('ecommerce/ShopA.html')"><i class="fas fa-shopping-cart"></i><span>🛒 改善商城</span></div>
+                <div class="module-card" onclick="checkAuth('expert/ConsultA.html')"><i class="fas fa-user-md"></i><span>👩‍⚕️ 專家諮詢</span></div>
+                <div class="module-card" onclick="checkAuth('admin/AdminA.html')"><i class="fas fa-laptop-code"></i><span>💻 公司後台</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="sopTab" class="content-section">
+        <div class="card">
+            <h2>📜 系統操作流程</h2>
+            <div class="sop-list">
+                <div class="sop-step"><b>1.</b> <a href="auth/AuthA.html">🔐 身分驗證流程 C1</a> - 註冊與登入</div>
+                <div class="sop-step"><b>2.</b> <a href="test/TestA.html">🧬 檢測分析流程 C2</a> - API 獲取檢測報告</div>
+                <div class="sop-step"><b>3.</b> <a href="expert/ConsultA.html">👩‍⚕️ 專業諮詢流程 E</a> - 選擇服務/營養師接單</div>
+                <div class="sop-step"><b>4.</b> <a href="ecommerce/ShopA.html">🛒 電商改善流程 I</a> - 加入購物車與結帳</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="setsTab" class="content-section">
+        <div class="card">
+            <h2>🛠 系統管理</h2>
+            <button class="btn-gold" style="width:100%" onclick="if(confirm('重置將從實體 JSON 重新載入範本數據？')){localStorage.clear();location.reload();}">重置系統數據 (Force Reload)</button>
+            <hr>
+            <button class="btn-gold" style="width:100%" onclick="APP_CORE.downloadSelf('indexA.html')">下載主站源碼</button>
+        </div>
+    </div>
+</body>
+</html>
