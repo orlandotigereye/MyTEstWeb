@@ -1,0 +1,5 @@
+[
+    { "id": "U001", "username": "user1", "password": "password", "name": "王小明", "role": "user" },
+    { "id": "U002", "username": "user2", "password": "password", "name": "李美惠", "role": "user" },
+    { "id": "RD001", "username": "rd1", "password": "password", "name": "林營養師", "role": "admin" }
+]
