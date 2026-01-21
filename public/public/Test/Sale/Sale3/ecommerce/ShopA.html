@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🛒 改善商城 - Sale3 V3.2</title>
+    
+    <!-- Dynamic Pathing -->
+    <script id="path-helper-loader">
+        (function() {
+            const paths = ['/01js/path_helper.js', '../../../01js/path_helper.js', '../../01js/path_helper.js', '../01js/path_helper.js'];
+            let index = 0;
+            function tryNext() {
+                if (index >= paths.length) return;
+                const script = document.createElement('script');
+                script.src = paths[index];
+                script.async = false;
+                script.onerror = function() {
+                    if (script.parentNode) document.head.removeChild(script);
+                    index++;
+                    tryNext();
+                };
+                script.onload = function() { console.log('Path Helper active: ' + paths[index]); };
+                document.head.appendChild(script);
+            }
+            tryNext();
+        })();
+    </script>
+
+    <!-- 1. CSS Layer -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    <style>
+        .product-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .product-card { background: white; border: 1px solid #eee; border-radius: var(--radius-md); overflow: hidden; padding: 10px; position: relative; }
+        .p-price { color: var(--accent-dark); font-weight: bold; margin: 5px 0; }
+        .suggested-tag { position: absolute; top: 5px; left: 5px; background: #ff4d4f; color: white; font-size: 8px; padding: 1px 4px; border-radius: 3px; font-weight: bold; }
+    </style>
+
+    <!-- 2. Fixed Data Layer -->
+    <script>
+        const SHOP_CONFIG = {
+            KEYS: { PRODUCTS: 'sale3_products', ORDERS: 'sale3_orders', CURRENT: 'currentUser' }
+        };
+    </script>
+
+    <!-- 3. Script Layer -->
+    <script>
+        let cart = [];
+
+        function renderShop() {
+            const products = APP_CORE.getLocal(SHOP_CONFIG.KEYS.PRODUCTS);
+            const isSuggested = new URLSearchParams(window.location.search).get('suggested');
+            const list = document.getElementById('product-list');
+            
+            if(isSuggested) {
+                document.getElementById('shop-title').innerText = "🛒 訂購建議商品/營養師服務";
+            }
+
+            list.innerHTML = products.map((p, idx) => `
+                <div class="product-card">
+                    ${(isSuggested && idx < 2) ? '<span class="suggested-tag">營養師推薦</span>' : ''}
+                    <div style="font-weight:bold; font-size:12px;">${p.name}</div>
+                    <div class="p-price">$${p.price}</div>
+                    <button class="btn-gold" style="width:100%; font-size:10px; height:28px;" onclick="addToCart('${p.id}')">加入購物車 D1a</button>
+                </div>
+            `).join('');
+        }
+
+        function addToCart(id) {
+            const p = APP_CORE.getLocal(SHOP_CONFIG.KEYS.PRODUCTS).find(x => x.id === id);
+            cart.push(p);
+            document.getElementById('cart-count').innerText = cart.length;
+            APP_CORE.showToast('已加入購物車');
+        }
+
+        function handlePay() {
+            if(cart.length === 0) return;
+            APP_CORE.toggleSpinner('正在 結帳付款 D1b...');
+            setTimeout(() => {
+                const user = APP_CORE.getLocal(SHOP_CONFIG.KEYS.CURRENT);
+                const orders = APP_CORE.getLocal(SHOP_CONFIG.KEYS.ORDERS);
+                orders.push({ id: 'ORD' + Date.now(), userId: user.id, total: cart.reduce((s,i)=>s+i.price,0), date: new Date().toISOString() });
+                APP_CORE.saveLocal(SHOP_CONFIG.KEYS.ORDERS, orders);
+                APP_CORE.toggleSpinner(false);
+                APP_CORE.showToast('訂單完成 F2');
+                cart = [];
+                document.getElementById('cart-count').innerText = 0;
+                renderOrders();
+                switchTab('orderTab');
+            }, 1000);
+        }
+
+        function renderOrders() {
+            const user = APP_CORE.getLocal(SHOP_CONFIG.KEYS.CURRENT);
+            const orders = APP_CORE.getLocal(SHOP_CONFIG.KEYS.ORDERS).filter(o => o.userId === user.id).reverse();
+            document.getElementById('order-list').innerHTML = orders.map(o => `
+                <div class="card" style="font-size:11px; margin-bottom:10px;">
+                    <div style="display:flex; justify-content:space-between"><b>${o.id}</b> <span style="color:var(--success-color)">訂單完成 F2</span></div>
+                    <div>總計：$${o.total}</div>
+                    <div style="color:#888;">日期：${o.date.split('T')[0]}</div>
+                </div>
+            `).join('') || '<p>尚無購買紀錄</p>';
+        }
+
+        window.addEventListener('coreReady', () => { renderShop(); renderOrders(); });
+    </script>
+</head>
+<body>
+    <div class="tabs-container">
+        <button class="tab-btn active" onclick="switchTab('shopTab')"><i class="fas fa-shopping-bag"></i> 挑選商品 D1</button>
+        <button class="tab-btn" onclick="switchTab('cartTab')"><i class="fas fa-shopping-cart"></i> 結帳付款 (<span id="cart-count">0</span>)</button>
+        <button class="tab-btn" onclick="switchTab('orderTab')"><i class="fas fa-history"></i> 訂單完成 F2</button>
+        <button class="tab-btn" onclick="location.href='../indexA.html'"><i class="fas fa-home"></i> 返回</button>
+    </div>
+
+    <div id="shopTab" class="content-section active">
+        <div class="card">
+            <h2 id="shop-title">🛒 挑選商品 D1</h2>
+            <div id="product-list" class="product-grid"></div>
+        </div>
+    </div>
+
+    <div id="cartTab" class="content-section">
+        <div class="card">
+            <h2>🛒 結帳付款 D1b</h2>
+            <button class="btn-gold" style="width:100%; padding:12px;" onclick="handlePay()">確認結帳</button>
+        </div>
+    </div>
+
+    <div id="orderTab" class="content-section">
+        <div class="card">
+            <h2>🛒 訂單紀錄 F2</h2>
+            <div id="order-list"></div>
+        </div>
+    </div>
+</body>
+</html>
