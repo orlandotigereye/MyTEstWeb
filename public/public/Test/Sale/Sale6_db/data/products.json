@@ -1,0 +1,9 @@
+[
+    { "id": "P001", "name": "極純深海魚油 (Omega-3 90%)", "price": 1280, "tags": ["omega3", "heart"], "desc": "高純度 IFOS 五星認證，有效調整脂肪酸平衡。" },
+    { "id": "P002", "name": "冷壓特級亞麻仁油", "price": 450, "tags": ["omega3", "vegan"], "desc": "素食者的 Omega-3 最佳來源，低溫冷壓保留活性。" },
+    { "id": "P003", "name": "專業營養師 1對1 在線諮詢", "price": 2500, "tags": ["service", "expert"], "desc": "針對您的脂肪酸報告提供量身定做的飲食計畫。" },
+    { "id": "P004", "name": "精準脂肪酸居家檢測套組", "price": 3600, "tags": ["test", "data"], "desc": "指尖採血即可檢測 24 種脂肪酸，包含 Omega-3 指數。" },
+    { "id": "P005", "name": "南極磷蝦油 (含蝦青素)", "price": 1580, "tags": ["omega3", "brain"], "desc": "磷脂質型態更好吸收，兼顧大腦健康與抗氧化。" },
+    { "id": "P006", "name": "維生素 D3+K2 強化膠囊", "price": 880, "tags": ["synergy", "immune"], "desc": "協同脂肪酸吸收，增強免疫力與骨骼健康。" },
+    { "id": "P007", "name": "個人化專屬營養週計畫 (數位版)", "price": 990, "tags": ["service", "plan"], "desc": "根據檢測結果自動生成的七天精準飲食清單。" }
+]
