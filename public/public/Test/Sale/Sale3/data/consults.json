@@ -1,0 +1,35 @@
+[
+    {
+        "id": "C001",
+        "userId": "U001",
+        "type": "脂肪酸改善諮詢 2-3",
+        "status": "replied",
+        "userQuery": "我的 Omega-3 指標偏低，平常不愛吃魚，有什麼其他建議嗎？",
+        "rdName": "林營養師",
+        "rdAcceptedAt": "2026-01-10T14:00:00Z",
+        "rdAdvice": "查看諮詢內容 2-4：建議改用亞麻仁油拌麵，並每日補充高純度魚油膠囊。2天內請紀錄您的飲食並上傳。",
+        "createdAt": "2026-01-06T12:00:00Z"
+    },
+    {
+        "id": "C002",
+        "userId": "U001",
+        "type": "備孕營養諮詢 2-3",
+        "status": "accepted",
+        "userQuery": "正在準備懷孕，想針對脂肪酸平衡做調整。",
+        "rdName": "林營養師",
+        "rdAcceptedAt": "2026-01-20T15:30:00Z",
+        "rdAdvice": null,
+        "createdAt": "2026-01-20T15:00:00Z"
+    },
+    {
+        "id": "C003",
+        "userId": "U002",
+        "type": "日常膳食規劃 2-3",
+        "status": "pending",
+        "userQuery": "希望能幫我配對適合我的脂肪酸比例的食物清單。",
+        "rdName": null,
+        "rdAcceptedAt": null,
+        "rdAdvice": null,
+        "createdAt": "2026-01-19T08:00:00Z"
+    }
+]
