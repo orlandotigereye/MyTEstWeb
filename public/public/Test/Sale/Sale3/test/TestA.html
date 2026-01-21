@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🧬 檢測分析 - Sale3 V3.2</title>
+    
+    <!-- Dynamic Pathing -->
+    <script id="path-helper-loader">
+        (function() {
+            const paths = ['/01js/path_helper.js', '../../../01js/path_helper.js', '../../01js/path_helper.js', '../01js/path_helper.js'];
+            let index = 0;
+            function tryNext() {
+                if (index >= paths.length) return;
+                const script = document.createElement('script');
+                script.src = paths[index];
+                script.async = false;
+                script.onerror = function() {
+                    if (script.parentNode) document.head.removeChild(script);
+                    index++;
+                    tryNext();
+                };
+                script.onload = function() { console.log('Path Helper active: ' + paths[index]); };
+                document.head.appendChild(script);
+            }
+            tryNext();
+        })();
+    </script>
+
+    <!-- 1. CSS Layer -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    <style>
+        .chart-box { width: 100%; max-width: 320px; margin: 10px auto; background: #fff; padding: 15px; border-radius: 12px; border: 2px solid var(--accent-light); }
+        .record-card { border-bottom: 1px solid #eee; padding: 12px 0; }
+        .tag { font-size: 10px; background: var(--accent-dark); color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+    </style>
+
+    <!-- 2. Fixed Data Layer -->
+    <script>
+        const TEST_CONFIG = {
+            KEYS: { TESTS: 'sale3_tests', CURRENT: 'currentUser' }
+        };
+    </script>
+
+    <!-- 3. Script Layer -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let healthChart = null;
+
+        function fetchAPIReport() {
+            const serial = document.getElementById('serial-id').value;
+            if(!serial) return APP_CORE.showToast('請輸入檢測單號 2-1');
+            
+            APP_CORE.toggleSpinner('正在從 API 獲取檢測報告 2-1...');
+            setTimeout(() => {
+                const user = APP_CORE.getLocal(TEST_CONFIG.KEYS.CURRENT);
+                const report = {
+                    id: 'T' + Date.now(),
+                    userId: user.id,
+                    serial: serial,
+                    date: new Date().toISOString(),
+                    type: '脂肪酸數據分析 2-2',
+                    results: [75, 82, 68, 90, 85], // 脂肪酸指標模擬
+                    summary: '脂肪酸平衡度良好，建議補充 Omega-3。'
+                };
+                const tests = APP_CORE.getLocal(TEST_CONFIG.KEYS.TESTS);
+                tests.push(report);
+                APP_CORE.saveLocal(TEST_CONFIG.KEYS.TESTS, tests);
+                APP_CORE.toggleSpinner(false);
+                APP_CORE.showToast('報告獲取成功');
+                renderHistory();
+                switchTab('historyTab');
+            }, 1500);
+        }
+
+        function renderHistory() {
+            const user = APP_CORE.getLocal(TEST_CONFIG.KEYS.CURRENT);
+            const tests = APP_CORE.getLocal(TEST_CONFIG.KEYS.TESTS).filter(t => t.userId === user.id).reverse();
+            const list = document.getElementById('record-list');
+            
+            if (tests.length > 0) renderRadar(tests[0]);
+            
+            list.innerHTML = tests.map(t => `
+                <div class="record-card">
+                    <div style="display:flex; justify-content:space-between"><b>單號：${t.serial}</b> <span class="tag">查看結果/雷達圖 2-2</span></div>
+                    <div style="font-size:11px; color:#666; margin-top:5px;">類別：${t.type}<br/>結論：${t.summary}</div>
+                    <button class="btn-gold" style="width:100%; margin-top:8px; font-size:10px;" onclick="location.href='../ecommerce/ShopA.html'">我要改善</button>
+                    <button class="btn-gold" style="width:100%; margin-top:5px; font-size:10px;" onclick="location.href='../expert/ConsultA.html'">我要諮詢</button>
+                </div>
+            `).join('') || '<p style="text-align:center; padding:20px;">尚無檢測資料</p>';
+        }
+
+        function renderRadar(t) {
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            if (healthChart) healthChart.destroy();
+            healthChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['飽和脂肪', '單元不飽和', '多元不飽和', 'Omega-3', 'Omega-6'],
+                    datasets: [{ data: t.results, backgroundColor: 'rgba(184, 134, 11, 0.2)', borderColor: '#B8860B' }]
+                },
+                options: { plugins: { legend: { display: false } }, scales: { r: { min: 0, max: 100, ticks: { display: false } } } }
+            });
+        }
+
+        window.addEventListener('coreReady', () => { renderHistory(); });
+    </script>
+</head>
+<body>
+    <div class="tabs-container">
+        <button class="tab-btn active" onclick="switchTab('historyTab')"><i class="fas fa-chart-area"></i> 查看分析 2-2</button>
+        <button class="tab-btn" onclick="switchTab('apiTab')"><i class="fas fa-file-import"></i> 獲取報告 2-1</button>
+        <button class="tab-btn" onclick="location.href='../indexA.html'"><i class="fas fa-home"></i> 返回</button>
+    </div>
+
+    <div id="historyTab" class="content-section active">
+        <div class="card">
+            <h2>🧬 脂肪酸數據分析 2-2</h2>
+            <div class="chart-box"><canvas id="radarChart"></canvas></div>
+            <div id="record-list"></div>
+        </div>
+    </div>
+
+    <div id="apiTab" class="content-section">
+        <div class="card">
+            <h2>🧬 輸入檢測單號 2-1</h2>
+            <div style="margin-bottom:15px">
+                <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">請輸入檢測流水號：</label>
+                <input type="text" id="serial-id" class="input-gold" placeholder="例如：FA-2026-X">
+            </div>
+            <button class="btn-gold" style="width:100%; padding:12px;" onclick="fetchAPIReport()">API 獲取檢測報告 2-1</button>
+        </div>
+    </div>
+</body>
+</html>
