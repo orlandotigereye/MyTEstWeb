@@ -1,320 +1,153 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase 金色管理終端 - 獨立運行版</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        :root { --base-font: 0.5rem; }
-        body {
-            font-size: var(--base-font);
-            background: linear-gradient(135deg, #ffd700 0%, #fff176 40%, #ffffff 50%, #fff176 60%, #daa520 100%);
-            background-size: 400% 400%;
-            animation: goldFlow 15s ease infinite;
-            min-height: 100vh;
-            margin: 0;
-            font-family: sans-serif;
-            overflow-x: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        @keyframes goldFlow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .modal-enter { animation: modalIn 0.3s ease-out forwards; }
-        @keyframes modalIn { from { opacity: 0; transform: scale(0.9) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-        pre, textarea, input, button, span, div, p, li { font-size: var(--base-font) !important; line-height: 1.2; }
-        .gold-shadow { box-shadow: 0 10px 30px rgba(184, 134, 11, 0.4); }
-        input, textarea { border-radius: 0.5rem; }
-        .card-item { transition: all 0.2s ease; border-radius: 0.75rem; }
-        .card-item:hover { transform: translateY(-2px); border-color: #b8860b; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Firebase RTDB 管理終端｜FULL VERSION</title>
+
+<!-- Firebase v8 SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<style>
+:root{
+  --gold:#b8860b;
+  --bg:#fff8dc;
+  --ok:#065f46;
+  --err:#9b1c1c;
+}
+body{
+  margin:0;
+  padding:14px;
+  font-family:system-ui,"Noto Sans TC",sans-serif;
+  background:var(--bg);
+}
+h1{font-size:18px;margin-bottom:6px}
+.card{
+  background:#fff;
+  border:2px solid var(--gold);
+  border-radius:10px;
+  padding:12px;
+  margin-bottom:12px;
+}
+.status{
+  padding:8px;
+  border-radius:6px;
+  font-size:13px;
+  margin-bottom:6px;
+}
+.ok{background:#e6fffa;color:var(--ok)}
+.err{background:#fff5f5;color:var(--err)}
+button{
+  width:100%;
+  margin-top:6px;
+  padding:10px;
+  border-radius:8px;
+  border:none;
+  background:linear-gradient(#ffd700,#b8860b);
+  color:#fff;
+  font-weight:700;
+  cursor:pointer;
+}
+button.danger{
+  background:linear-gradient(#ef4444,#7f1d1d);
+}
+pre{
+  background:#111;
+  color:#0f0;
+  padding:10px;
+  border-radius:8px;
+  font-size:11px;
+  max-height:200px;
+  overflow:auto;
+}
+</style>
 </head>
-<body class="p-2 w-full">
 
-    <!-- 頂部導航 -->
-    <div class="w-full max-w-md bg-white/80 backdrop-blur-xl border border-yellow-500/40 rounded-t-2xl p-2 flex justify-between items-center gold-shadow">
-        <div class="flex items-center gap-1 font-black text-yellow-900">
-            <i data-lucide="shield-check" class="w-3 h-3 text-yellow-700"></i> GOLD DB PORTABLE
-        </div>
-        <button id="downloadBtn" class="bg-yellow-800 text-white px-2 py-1 rounded-lg flex items-center gap-1 active:scale-95 transition-transform hover:bg-yellow-900">
-            <i data-lucide="download" class="w-2.5 h-2.5"></i> 下載本頁
-        </button>
-    </div>
+<body>
 
-    <!-- 操控面板 -->
-    <div class="w-full max-w-md bg-white/60 p-2 border-x border-yellow-200 shadow-sm">
-        <div class="flex flex-col gap-2">
-            <div class="flex justify-between font-bold text-yellow-900 px-1">
-                <span class="truncate">路徑: /public/data/<span id="pathDisplay" class="underline">items</span></span>
-                <span id="authStatus" class="text-blue-700 shrink-0 ml-2 flex items-center gap-1">
-                    <span class="status-dot bg-blue-500 animate-pulse"></span> 偵測中
-                </span>
-            </div>
-            <div class="flex items-center gap-2 bg-white/95 rounded-xl px-2 py-1.5 border-2 border-yellow-400 shadow-inner">
-                <i data-lucide="folder-search" class="w-3 h-3 text-yellow-600"></i>
-                <input id="colInput" type="text" class="flex-1 bg-transparent outline-none font-black text-yellow-900 h-5" placeholder="輸入 Collection ID...">
-                <button id="seedBtn" class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded-lg font-bold flex items-center gap-1 transition-all shadow-md active:scale-90">
-                    <i data-lucide="database-backup" class="w-2.5 h-2.5"></i> 快速注入
-                </button>
-            </div>
-        </div>
-    </div>
+<h1>🛠 Firebase Realtime Database 管理終端</h1>
 
-    <!-- 狀態回饋列 -->
-    <div id="statusMsg" class="w-full max-w-md bg-yellow-900/10 p-1 text-center font-bold text-yellow-800 border-x border-b border-yellow-200 flex justify-center items-center gap-1 min-h-[1.2rem]">
-        系統初始化...
-    </div>
+<div class="card">
+  <div id="authStatus" class="status">Auth：初始化中…</div>
+  <div id="dbStatus" class="status">DB：初始化中…</div>
+</div>
 
-    <!-- 資料動態列表 -->
-    <div id="dataList" class="w-full max-w-md flex-1 overflow-y-auto space-y-2 py-3 px-1 min-h-[350px] no-scrollbar">
-        <!-- 列表由腳本生成 -->
-    </div>
+<div class="card">
+  <button onclick="writeTest()">✍️ 寫入測試資料</button>
+  <button class="danger" onclick="resetDB()">♻️ 清空整個 RTDB</button>
+</div>
 
-    <!-- 分頁導航器 -->
-    <div class="w-full max-w-md bg-white/50 border border-yellow-500/20 rounded-b-2xl p-2 flex justify-center items-center gap-10 shadow-inner">
-        <button id="prevPage" class="text-yellow-900 disabled:opacity-20"><i data-lucide="arrow-left-circle" class="w-5 h-5"></i></button>
-        <div class="flex flex-col items-center">
-            <span id="pageInfo" class="font-black text-yellow-900 tracking-widest leading-none">1 / 1</span>
-            <span id="totalInfo" class="text-yellow-700/60 font-bold mt-1 uppercase">DATA ROWS: 0</span>
-        </div>
-        <button id="nextPage" class="text-yellow-900 disabled:opacity-20"><i data-lucide="arrow-right-circle" class="w-5 h-5"></i></button>
-    </div>
+<div class="card">
+  <h3>📦 即時資料預覽</h3>
+  <pre id="dataView">{}</pre>
+</div>
 
-    <!-- 編輯彈出視窗 -->
-    <div id="editModal" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 hidden items-center justify-center p-4">
-        <div class="w-full max-w-xs bg-white rounded-3xl shadow-2xl border-4 border-yellow-600 overflow-hidden flex flex-col modal-enter">
-            <div class="bg-gradient-to-r from-yellow-600 to-yellow-500 text-white p-3 font-bold flex justify-between items-center">
-                <span class="flex items-center gap-1"><i data-lucide="edit-3" class="w-3 h-3"></i> 編輯數據資源</span>
-                <button id="closeModal" class="bg-white/20 p-1 rounded-full"><i data-lucide="x" class="w-3 h-3"></i></button>
-            </div>
-            <div class="p-2 bg-yellow-50 text-yellow-800 font-bold border-b border-yellow-200">
-                目標 ID: <span id="editingIdDisplay" class="font-mono"></span>
-            </div>
-            <textarea id="editArea" class="w-full h-72 p-3 font-mono outline-none bg-gray-50 text-gray-800 border-b leading-relaxed resize-none" spellcheck="false" style="font-size: 0.5rem !important;"></textarea>
-            <div class="p-3 flex gap-2 bg-white">
-                <button id="saveBtn" class="flex-1 bg-green-700 text-white py-2 rounded-xl flex justify-center items-center gap-1 font-bold shadow-lg active:scale-95 transition-all">
-                    <i data-lucide="upload-cloud" class="w-3 h-3"></i> 更新同步
-                </button>
-                <button id="cancelBtn" class="flex-1 bg-gray-100 text-gray-600 py-2 rounded-xl font-bold border border-gray-300 active:scale-95">取消</button>
-            </div>
-        </div>
-    </div>
+<script>
+/* ================= Firebase 設定 ================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyCWym1iE7Rq2UAiFKhQMNuvHm_sHoCBbbw",
+  authDomain: "keepsound-firebase-1c386.firebaseapp.com",
+  databaseURL: "https://keepsound-firebase-1c386-default-rtdb.firebaseio.com",
+  projectId: "keepsound-firebase-1c386"
+};
 
-    <!-- 底部資訊 -->
-    <div class="mt-4 text-center opacity-40 font-black text-yellow-900 flex flex-col items-center gap-1 mb-6">
-        <div class="flex items-center gap-1">
-            <i data-lucide="database" class="w-2 h-2"></i> 24K DATA TERMINAL v3.0 (STABLE)
-        </div>
-    </div>
+/* ================= 初始化 ================= */
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.database();
 
-    <!-- Firebase SDK & 邏輯 -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+const authStatus = document.getElementById("authStatus");
+const dbStatus   = document.getElementById("dbStatus");
+const dataView   = document.getElementById("dataView");
 
-        // --- 修復關鍵：自動檢測並嵌入配置 ---
-        let finalConfig = {};
-        try {
-            finalConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-                // 如果您是手動將此檔案帶走，這裡會使用預設嵌入的配置（確保下載時已取代）
-                apiKey: "", 
-                authDomain: "",
-                projectId: "",
-                storageBucket: "",
-                messagingSenderId: "",
-                appId: ""
-            };
-        } catch(e) { console.error("Config missing"); }
+/* ================= Auth（必要） ================= */
+auth.signInAnonymously()
+.then(res=>{
+  authStatus.className="status ok";
+  authStatus.innerText="Auth OK（匿名） UID: "+res.user.uid.substring(0,8);
+})
+.catch(err=>{
+  authStatus.className="status err";
+  authStatus.innerText="Auth Error: "+err.message;
+});
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const app = initializeApp(finalConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+/* ================= DB 連線狀態 ================= */
+db.ref(".info/connected").on("value",snap=>{
+  if(snap.val()){
+    dbStatus.className="status ok";
+    dbStatus.innerText="Realtime Database 已連線";
+  }else{
+    dbStatus.className="status err";
+    dbStatus.innerText="Realtime Database 斷線";
+  }
+});
 
-        // 應用狀態
-        let currentUser = null;
-        let allData = [];
-        let currentPage = 1;
-        const itemsPerPage = 5;
-        let currentCollection = localStorage.getItem('gold_last_col') || 'items';
-        let unsubscribe = null;
-        let activeEditId = null;
+/* ================= 即時資料監聽 ================= */
+db.ref().on("value",snap=>{
+  dataView.textContent = JSON.stringify(snap.val() || {}, null, 2);
+});
 
-        // UI 引用
-        const colInput = document.getElementById('colInput');
-        const pathDisplay = document.getElementById('pathDisplay');
-        const dataList = document.getElementById('dataList');
-        const statusMsg = document.getElementById('statusMsg');
-        const authStatus = document.getElementById('authStatus');
-        const editingIdDisplay = document.getElementById('editingIdDisplay');
-        
-        colInput.value = currentCollection;
-        pathDisplay.innerText = currentCollection;
+/* ================= 寫入測試 ================= */
+function writeTest(){
+  db.ref("tests").push({
+    time: new Date().toISOString(),
+    message: "Hello Firebase RTDB",
+    uid: auth.currentUser?.uid || "unknown"
+  })
+  .then(()=>alert("✅ 寫入成功"))
+  .catch(e=>alert("❌ 寫入失敗："+e.message));
+}
 
-        function setStatus(msg, isError = false) {
-            statusMsg.innerText = msg;
-            statusMsg.className = `w-full max-w-md p-1 text-center font-bold border-x border-b border-yellow-200 flex justify-center items-center gap-1 transition-all ${isError ? 'bg-red-100 text-red-700' : 'bg-yellow-900/10 text-yellow-800'}`;
-        }
+/* ================= 清空 DB ================= */
+function resetDB(){
+  if(!confirm("⚠️ 確定要清空整個 Realtime Database？")) return;
+  db.ref().remove()
+  .then(()=>alert("✅ RTDB 已清空"))
+  .catch(e=>alert("❌ 清空失敗："+e.message));
+}
+</script>
 
-        // 1. 認證 (包含自定義 Token 處理)
-        async function initAuth() {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (err) {
-                setStatus('連線異常: ' + err.message, true);
-            }
-        }
-
-        onAuthStateChanged(auth, (user) => {
-            currentUser = user;
-            if (user) {
-                authStatus.innerHTML = `<span class="status-dot bg-green-500"></span> 在線: ${user.uid.substring(0,6)}`;
-                startSync();
-            } else {
-                authStatus.innerHTML = `<span class="status-dot bg-red-500"></span> 離線`;
-            }
-        });
-
-        // 2. 雲端同步 (Rule 1 & 2)
-        function startSync() {
-            if (!currentUser) return;
-            if (unsubscribe) unsubscribe();
-
-            const colRef = collection(db, 'artifacts', appId, 'public', 'data', currentCollection);
-            localStorage.setItem('gold_last_col', currentCollection);
-            pathDisplay.innerText = currentCollection;
-
-            dataList.innerHTML = '<div class="text-center py-20 animate-pulse text-yellow-800">正在接入雲端金庫...</div>';
-
-            unsubscribe = onSnapshot(colRef, (snapshot) => {
-                allData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                allData.sort((a, b) => (b.updated_at?.seconds || 0) - (a.updated_at?.seconds || 0));
-                renderData();
-                setStatus(allData.length > 0 ? `雲端同步完畢` : `集合 [${currentCollection}] 尚無資料`);
-            }, (err) => {
-                setStatus('存取被拒 (權限錯誤): ' + err.message, true);
-                allData = [];
-                renderData();
-            });
-        }
-
-        // 3. 渲染
-        function renderData() {
-            dataList.innerHTML = "";
-            const totalPages = Math.ceil(allData.length / itemsPerPage) || 1;
-            if (currentPage > totalPages) currentPage = totalPages;
-
-            const start = (currentPage - 1) * itemsPerPage;
-            const pageData = allData.slice(start, start + itemsPerPage);
-
-            if (pageData.length === 0) {
-                dataList.innerHTML = '<div class="text-center py-20 opacity-20 font-black">EMPTY VAULT</div>';
-            } else {
-                pageData.forEach(item => {
-                    const card = document.createElement('div');
-                    card.className = "card-item bg-white/95 border border-yellow-300 p-2 shadow-sm mb-2";
-                    card.innerHTML = `
-                        <div class="flex justify-between items-start mb-1">
-                            <div class="truncate flex-1">
-                                <div class="font-black text-yellow-950">${item.title || item.name || 'UNNAMED DOC'}</div>
-                                <div class="text-gray-400 font-mono tracking-tighter" style="font-size: 0.5rem !important">ID: ${item.id}</div>
-                            </div>
-                            <div class="flex gap-1 shrink-0">
-                                <button class="edit-btn p-1 bg-blue-50 text-blue-700 rounded border border-blue-200" data-id="${item.id}"><i data-lucide="edit" class="w-3 h-3"></i></button>
-                                <button class="del-btn p-1 bg-red-50 text-red-700 rounded border border-red-200" data-id="${item.id}"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
-                            </div>
-                        </div>
-                        <div class="bg-yellow-50/50 p-2 rounded-lg font-mono text-gray-700 overflow-x-auto text-[0.5rem] leading-tight border border-yellow-100 no-scrollbar">
-                            <pre>${JSON.stringify(item, null, 1)}</pre>
-                        </div>
-                    `;
-                    dataList.appendChild(card);
-                });
-            }
-
-            document.getElementById('pageInfo').innerText = `${currentPage} / ${totalPages}`;
-            document.getElementById('totalInfo').innerText = `DATA ROWS: ${allData.length}`;
-            document.getElementById('prevPage').disabled = currentPage === 1;
-            document.getElementById('nextPage').disabled = currentPage === totalPages;
-            lucide.createIcons();
-
-            document.querySelectorAll('.del-btn').forEach(btn => btn.onclick = () => deleteAction(btn.dataset.id));
-            document.querySelectorAll('.edit-btn').forEach(btn => btn.onclick = () => openEditModal(btn.dataset.id));
-        }
-
-        // 4. CRUD 實體更新
-        async function deleteAction(id) {
-            if (!confirm('永久刪除此數據？')) return;
-            try {
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', currentCollection, id));
-                setStatus('數據已移除');
-            } catch (err) { setStatus('刪除失敗', true); }
-        }
-
-        function openEditModal(id) {
-            const item = allData.find(d => d.id === id);
-            activeEditId = id;
-            editingIdDisplay.innerText = id;
-            const buffer = { ...item };
-            delete buffer.id;
-            document.getElementById('editArea').value = JSON.stringify(buffer, null, 2);
-            document.getElementById('editModal').classList.replace('hidden', 'flex');
-        }
-
-        async function saveEdit() {
-            try {
-                const updated = JSON.parse(document.getElementById('editArea').value);
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', currentCollection, activeEditId);
-                await updateDoc(docRef, { ...updated, updated_at: serverTimestamp() });
-                document.getElementById('editModal').classList.replace('flex', 'hidden');
-                setStatus('雲端數據已更新');
-            } catch (err) { setStatus('格式錯誤或連線逾時', true); }
-        }
-
-        async function seedData() {
-            try {
-                const colRef = collection(db, 'artifacts', appId, 'public', 'data', currentCollection);
-                await addDoc(colRef, { title: "新數據 " + Date.now(), status: "Sync", updated_at: serverTimestamp() });
-                setStatus('測試數據已注入');
-            } catch (err) { setStatus('注入失敗', true); }
-        }
-
-        // 5. 事件與下載
-        colInput.onchange = (e) => { currentCollection = e.target.value.trim() || 'items'; currentPage = 1; startSync(); };
-        document.getElementById('seedBtn').onclick = seedData;
-        document.getElementById('prevPage').onclick = () => { if (currentPage > 1) { currentPage--; renderData(); } };
-        document.getElementById('nextPage').onclick = () => { if (currentPage < Math.ceil(allData.length / itemsPerPage)) { currentPage++; renderData(); } };
-        document.getElementById('saveBtn').onclick = saveEdit;
-        document.getElementById('closeModal').onclick = () => document.getElementById('editModal').classList.replace('flex', 'hidden');
-        document.getElementById('cancelBtn').onclick = () => document.getElementById('editModal').classList.replace('flex', 'hidden');
-
-        document.getElementById('downloadBtn').onclick = () => {
-            // 在下載時，自動將目前的 Firebase 配置字串注入到檔案中
-            let html = document.documentElement.outerHTML;
-            const currentConfStr = JSON.stringify(finalConfig);
-            // 取代原本的變數讀取，直接硬編碼配置
-            html = html.replace('typeof __firebase_config !== \'undefined\' ? JSON.parse(__firebase_config) : {', `true ? ${currentConfStr} : {`);
-            
-            const blob = new Blob([html], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `gold_terminal_standalone.html`;
-            a.click();
-        };
-
-        initAuth();
-        lucide.createIcons();
-    </script>
 </body>
 </html>
-
