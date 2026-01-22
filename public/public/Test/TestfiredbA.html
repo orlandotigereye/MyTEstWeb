@@ -1,329 +1,296 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { initializeApp } from 'firebase/app';
-import { 
-  getFirestore, 
-  collection, 
-  onSnapshot,
-  doc,
-  addDoc, 
-  updateDoc,
-  deleteDoc,
-  serverTimestamp 
-} from 'firebase/firestore';
-import { 
-  getAuth, 
-  signInAnonymously, 
-  signInWithCustomToken, 
-  onAuthStateChanged 
-} from 'firebase/auth';
-import { 
-  Database, 
-  Play, 
-  CheckCircle, 
-  AlertCircle, 
-  Loader2, 
-  Coins, 
-  Download,
-  Info,
-  ShieldCheck,
-  Package,
-  FileText,
-  Trash2,
-  Edit3,
-  ChevronLeft,
-  ChevronRight,
-  Save,
-  X,
-  Search,
-  RefreshCw
-} from 'lucide-react';
-
-// 初始化 Firebase 配置
-const firebaseConfig = JSON.parse(__firebase_config);
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-const App = () => {
-  const [user, setUser] = useState(null);
-  const [status, setStatus] = useState('系統就緒');
-  const [isSeeding, setIsSeeding] = useState(false);
-  // 從 localStorage 讀取上次的 Collection ID，防止重整消失
-  const [targetCollection, setTargetCollection] = useState(() => {
-    return localStorage.getItem('last_col_id') || 'items';
-  });
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [editingDoc, setEditingDoc] = useState(null);
-  const [editBuffer, setEditBuffer] = useState("");
-
-  const itemsPerPage = 5;
-  const baseStyle = { fontSize: '0.5rem' };
-
-  // 監控 Collection 變化並存入本地存儲
-  useEffect(() => {
-    localStorage.setItem('last_col_id', targetCollection);
-  }, [targetCollection]);
-
-  // 1. 執行身份驗證 (Rule 3: Auth Before Queries)
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        setStatus('驗證身份中...');
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase 金色管理終端</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root { --base-font: 0.5rem; }
+        body {
+            font-size: var(--base-font);
+            background: linear-gradient(135deg, #ffd700 0%, #fff176 40%, #ffffff 50%, #fff176 60%, #daa520 100%);
+            background-size: 400% 400%;
+            animation: goldFlow 15s ease infinite;
+            min-height: 100vh;
+            margin: 0;
+            font-family: sans-serif;
         }
-      } catch (err) {
-        setStatus('驗證失敗: ' + err.message);
-      }
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      if (u) setStatus(`已登入: ${u.uid.substring(0,8)}...`);
-    });
-    return () => unsubscribe();
-  }, []);
+        @keyframes goldFlow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        .text-xs-custom { font-size: var(--base-font) !important; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .modal-enter { animation: modalIn 0.3s ease-out forwards; }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.9) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        pre, textarea, input, button, span, div { font-size: var(--base-font) !important; }
+        .gold-shadow { box-shadow: 0 10px 30px rgba(184, 134, 11, 0.3); }
+    </style>
+</head>
+<body class="p-2 flex flex-col items-center">
 
-  // 2. 即時監聽資料 (Rule 1 & 2)
-  useEffect(() => {
-    if (!user) return;
-    setLoading(true);
-    setStatus(`正在同步 [${targetCollection}]...`);
-
-    // 嚴格路徑：/artifacts/{appId}/public/data/{targetCollection}
-    const colRef = collection(db, 'artifacts', appId, 'public', 'data', targetCollection);
-    
-    const unsubscribe = onSnapshot(colRef, 
-      (snapshot) => {
-        const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        setData(docs);
-        setLoading(false);
-        setStatus(docs.length > 0 ? `同步完成，共 ${docs.length} 筆` : `[${targetCollection}] 目前無資料`);
-      },
-      (err) => {
-        setStatus('讀取錯誤 (請檢查 Firestore Rules): ' + err.message);
-        setLoading(false);
-        setData([]);
-      }
-    );
-    return () => unsubscribe();
-  }, [user, targetCollection]);
-
-  // 預設注入測試集
-  const testSeeds = [
-    { type: 'USER', data: { name: '王小明', email: 'ming@gold.com', role: 'admin', balance: 999999 } },
-    { type: 'PRODUCT', data: { title: '金條 1kg', price: 2500000, stock: 10, category: '投資' } },
-    { type: 'LOG', data: { event: 'SYS_CHECK', msg: '金庫安全檢查完成', status: 'secure' } }
-  ];
-
-  const runSeeder = async () => {
-    if (!user) return;
-    setIsSeeding(true);
-    setStatus('正在注入數據...');
-    try {
-      const colRef = collection(db, 'artifacts', appId, 'public', 'data', targetCollection);
-      for (const item of testSeeds) {
-        await addDoc(colRef, { 
-          ...item.data, 
-          test_type: item.type, 
-          created_at: serverTimestamp(),
-          app_source: appId
-        });
-      }
-      setStatus('批量注入完成');
-    } catch (err) {
-      setStatus('注入失敗: ' + err.message);
-    } finally {
-      setIsSeeding(false);
-    }
-  };
-
-  const deleteRecord = async (id) => {
-    try {
-      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', targetCollection, id));
-      setStatus('資料已移除');
-    } catch (err) {
-      setStatus('刪除失敗: ' + err.message);
-    }
-  };
-
-  const startEdit = (item) => {
-    setEditingDoc(item);
-    setEditBuffer(JSON.stringify(item, null, 2));
-  };
-
-  const saveEdit = async () => {
-    if (!editingDoc) return;
-    try {
-      const updatedData = JSON.parse(editBuffer);
-      delete updatedData.id; 
-      const docRef = doc(db, 'artifacts', appId, 'public', 'data', targetCollection, editingDoc.id);
-      await updateDoc(docRef, { ...updatedData, updated_at: serverTimestamp() });
-      setEditingDoc(null);
-      setStatus('修改成功');
-    } catch (err) {
-      setStatus('JSON 格式錯誤');
-    }
-  };
-
-  const totalPages = Math.ceil(data.length / itemsPerPage) || 1;
-  const pageData = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return data.slice(start, start + itemsPerPage);
-  }, [data, currentPage]);
-
-  const handleDownload = () => {
-    const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `gold_db_manager_${targetCollection}.html`;
-    a.click();
-  };
-
-  return (
-    <div className="min-h-screen w-full flex flex-col items-center p-2" 
-         style={{ 
-           background: 'linear-gradient(135deg, #fffde7 0%, #fff59d 50%, #fbc02d 100%)',
-           ...baseStyle 
-         }}>
-      
-      {/* 頂部導航 */}
-      <div className="w-full max-w-md bg-white/60 backdrop-blur-md border-b border-yellow-500/30 p-2 flex justify-between items-center rounded-t-2xl shadow-lg">
-        <div className="flex items-center gap-1 font-black text-yellow-900">
-          <Database size={12} className="text-yellow-700 animate-pulse" /> GOLD DB ADMIN
+    <!-- 頂部導航 -->
+    <div class="w-full max-w-md bg-white/70 backdrop-blur-lg border border-yellow-500/30 rounded-t-2xl p-2 flex justify-between items-center gold-shadow">
+        <div class="flex items-center gap-1 font-black text-yellow-900">
+            <i data-lucide="database" class="w-3 h-3 text-yellow-700"></i> GOLD DATABASE TERMINAL
         </div>
-        <button onClick={handleDownload} className="bg-yellow-800 text-white px-2 py-1 rounded-lg flex items-center gap-1">
-          <Download size={10} /> 下載代碼
+        <button id="downloadBtn" class="bg-yellow-800 text-white px-2 py-1 rounded-lg flex items-center gap-1 active:scale-95">
+            <i data-lucide="download" class="w-2.5 h-2.5"></i> 下載程式碼
         </button>
-      </div>
-
-      {/* 設定區 */}
-      <div className="w-full max-w-md bg-white/40 p-2 border-b border-yellow-200">
-        <div className="text-yellow-900 font-bold mb-1 flex justify-between">
-          <span>當前集合 (Collection):</span>
-          <span className="text-blue-700">AppID: {appId}</span>
-        </div>
-        <div className="flex items-center gap-2 bg-white/80 rounded-lg px-2 py-1 border border-yellow-400">
-          <Search size={10} className="text-yellow-600" />
-          <input 
-            className="flex-1 bg-transparent outline-none font-bold text-yellow-900"
-            value={targetCollection}
-            onChange={(e) => { setTargetCollection(e.target.value); setCurrentPage(1); }}
-            placeholder="輸入集合名稱 (例如 items)..."
-          />
-          <button onClick={runSeeder} disabled={isSeeding} className="bg-yellow-600 text-white px-2 py-0.5 rounded-md active:scale-95 flex items-center gap-1">
-            {isSeeding ? <RefreshCw size={8} className="animate-spin"/> : <Play size={8}/>} 注入
-          </button>
-        </div>
-      </div>
-
-      {/* 狀態列 */}
-      <div className="w-full max-w-md bg-yellow-900/5 p-1 text-center font-bold text-yellow-800 border-b border-yellow-200 flex justify-center items-center gap-1">
-        {status.includes('失敗') || status.includes('錯誤') ? <AlertCircle size={10} className="text-red-500"/> : <CheckCircle size={10} className="text-green-600"/>}
-        {status}
-      </div>
-
-      {/* 資料清單 */}
-      <div className="w-full max-w-md flex-1 overflow-y-auto space-y-2 py-2 px-1">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-10 text-yellow-800 animate-pulse">
-            <Loader2 size={24} className="animate-spin mb-2"/>
-            <div>正在讀取雲端金庫...</div>
-          </div>
-        ) : pageData.length > 0 ? (
-          pageData.map(item => (
-            <div key={item.id} className="bg-white/90 border border-yellow-200 rounded-xl p-2 shadow-sm animate-fadeIn relative group">
-              <div className="flex justify-between items-start mb-1">
-                <div className="truncate flex-1">
-                  <div className="font-black text-yellow-900">{item.title || item.name || item.event || '未命名文件'}</div>
-                  <div className="text-gray-400 font-mono" style={{ fontSize: '0.45rem' }}>DOC_ID: {item.id}</div>
-                </div>
-                <div className="flex gap-1">
-                  <button onClick={() => startEdit(item)} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 border border-blue-200 transition-colors"><Edit3 size={10}/></button>
-                  <button onClick={() => deleteRecord(item.id)} className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 border border-red-200 transition-colors"><Trash2 size={10}/></button>
-                </div>
-              </div>
-              <div className="bg-yellow-50/50 p-2 rounded-lg font-mono text-gray-600 overflow-x-auto text-[0.45rem] leading-tight border border-yellow-100">
-                {JSON.stringify(item, null, 1)}
-              </div>
-            </div>
-          ))
-        ) : (
-          <div className="text-center py-16 text-yellow-800/40 italic font-bold flex flex-col items-center gap-2">
-            <Database size={32} className="opacity-10"/>
-            <div>[ {targetCollection} ] 尚無資料，請點擊「注入」按鈕</div>
-          </div>
-        )}
-      </div>
-
-      {/* 編輯彈窗 */}
-      {editingDoc && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-xs bg-white rounded-3xl shadow-2xl border-4 border-yellow-500 overflow-hidden flex flex-col animate-fadeIn">
-            <div className="bg-yellow-500 text-white p-3 font-bold flex justify-between items-center">
-              <span className="flex items-center gap-1"><Edit3 size={12}/> 編輯內容</span>
-              <button onClick={() => setEditingDoc(null)} className="bg-white/20 p-1 rounded-full"><X size={12}/></button>
-            </div>
-            <textarea 
-              className="w-full h-56 p-3 font-mono outline-none bg-gray-50 text-gray-800 border-b"
-              style={{ fontSize: '0.5rem' }}
-              value={editBuffer}
-              onChange={(e) => setEditBuffer(e.target.value)}
-            />
-            <div className="p-3 flex gap-2 bg-yellow-50">
-              <button onClick={saveEdit} className="flex-1 bg-green-600 text-white py-2 rounded-xl flex justify-center items-center gap-1 font-bold shadow-lg active:scale-95 transition-all">
-                <Save size={12}/> 儲存變更
-              </button>
-              <button onClick={() => setEditingDoc(null)} className="flex-1 bg-white text-gray-600 py-2 rounded-xl font-bold border border-gray-300 active:scale-95 transition-all">
-                取消
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 分頁器 */}
-      <div className="w-full max-w-md bg-white/30 rounded-b-2xl p-3 flex justify-center items-center gap-10 border-t border-yellow-500/20 shadow-inner">
-        <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="text-yellow-900 disabled:opacity-20 hover:scale-110 transition-transform"><ChevronLeft size={24}/></button>
-        <div className="flex flex-col items-center">
-            <span className="font-black text-yellow-900 tracking-widest leading-none">{currentPage} / {totalPages}</span>
-            <span className="text-[0.4rem] text-yellow-700/60 font-bold mt-1">TOTAL: {data.length}</span>
-        </div>
-        <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="text-yellow-900 disabled:opacity-20 hover:scale-110 transition-transform"><ChevronRight size={24}/></button>
-      </div>
-
-      {/* 底部說明 */}
-      <div className="mt-2 w-full max-w-md p-3 bg-white/20 rounded-2xl border border-yellow-600/10 backdrop-blur-sm">
-        <div className="flex items-start gap-1 text-yellow-900/60 leading-relaxed font-bold">
-          <Info size={10} className="mt-0.5 shrink-0" />
-          <div>
-            1. 已自動記憶 Collection ID，重整後不會遺失。<br/>
-            2. 請確認 Firestore Rules 允許讀取 /artifacts/{appId}/...<br/>
-            3. 文字大小嚴格執行 0.5rem。
-          </div>
-        </div>
-        <div className="mt-2 text-center flex justify-center items-center gap-1 opacity-40 font-black">
-          <Coins size={10}/> GOLD SYSTEM STABLE
-        </div>
-      </div>
-
-      <style>{`
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(218, 165, 32, 0.3); border-radius: 10px; }
-        input, textarea { font-size: 0.5rem !important; }
-      `}</style>
     </div>
-  );
-};
 
-export default App;
+    <!-- 操控面板 -->
+    <div class="w-full max-w-md bg-white/50 p-2 border-x border-yellow-200">
+        <div class="flex flex-col gap-2">
+            <div class="flex justify-between font-bold text-yellow-900 px-1">
+                <span>當前路徑: /public/data/<span id="pathDisplay">items</span></span>
+                <span id="authStatus" class="text-blue-700">驗證中...</span>
+            </div>
+            <div class="flex items-center gap-2 bg-white/90 rounded-xl px-2 py-1.5 border-2 border-yellow-400 shadow-inner">
+                <i data-lucide="search" class="w-3 h-3 text-yellow-600"></i>
+                <input id="colInput" type="text" class="flex-1 bg-transparent outline-none font-black text-yellow-900" placeholder="輸入 Collection ID...">
+                <button id="seedBtn" class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded-lg font-bold flex items-center gap-1 transition-all">
+                    <i data-lucide="play" class="w-2.5 h-2.5"></i> 注入測試
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 狀態列 -->
+    <div id="statusMsg" class="w-full max-w-md bg-yellow-900/10 p-1 text-center font-bold text-yellow-800 border-x border-b border-yellow-200 flex justify-center items-center gap-1">
+        正在初始化系統環境...
+    </div>
+
+    <!-- 資料清單區 -->
+    <div id="dataList" class="w-full max-w-md flex-1 overflow-y-auto space-y-2 py-3 px-1 min-h-[300px]">
+        <!-- 資料將由 JS 動態注入 -->
+    </div>
+
+    <!-- 分頁器 -->
+    <div class="w-full max-w-md bg-white/40 border border-yellow-500/20 rounded-b-2xl p-2 flex justify-center items-center gap-8 shadow-inner">
+        <button id="prevPage" class="text-yellow-900 disabled:opacity-20"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
+        <div class="flex flex-col items-center">
+            <span id="pageInfo" class="font-black text-yellow-900 tracking-widest">1 / 1</span>
+            <span id="totalInfo" class="text-yellow-700/60 font-bold" style="font-size: 0.35rem !important;">TOTAL: 0</span>
+        </div>
+        <button id="nextPage" class="text-yellow-900 disabled:opacity-20"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
+    </div>
+
+    <!-- 編輯 Modal -->
+    <div id="editModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="w-full max-w-xs bg-white rounded-3xl shadow-2xl border-4 border-yellow-500 overflow-hidden flex flex-col modal-enter">
+            <div class="bg-yellow-500 text-white p-3 font-bold flex justify-between items-center">
+                <span class="flex items-center gap-1"><i data-lucide="edit-3" class="w-3 h-3"></i> 編輯內容</span>
+                <button id="closeModal" class="bg-white/20 p-1 rounded-full"><i data-lucide="x" class="w-3 h-3"></i></button>
+            </div>
+            <textarea id="editArea" class="w-full h-64 p-3 font-mono outline-none bg-gray-50 text-gray-800 border-b leading-tight" spellcheck="false"></textarea>
+            <div class="p-3 flex gap-2 bg-yellow-50">
+                <button id="saveBtn" class="flex-1 bg-green-600 text-white py-2 rounded-xl flex justify-center items-center gap-1 font-bold shadow-lg active:scale-95">
+                    <i data-lucide="save" class="w-3 h-3"></i> 儲存變更
+                </button>
+                <button id="cancelBtn" class="flex-1 bg-white text-gray-600 py-2 rounded-xl font-bold border border-gray-300">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 腳注 -->
+    <div class="mt-4 text-center opacity-40 font-black text-yellow-900 flex items-center gap-1">
+        <i data-lucide="coins" class="w-3 h-3"></i> 24K PURE DATA ACCESS
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // 環境參數
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // 狀態變數
+        let currentUser = null;
+        let allData = [];
+        let currentPage = 1;
+        const itemsPerPage = 5;
+        let currentCollection = localStorage.getItem('gold_last_col') || 'items';
+        let unsubscribe = null;
+        let activeEditId = null;
+
+        // 初始化 UI
+        const colInput = document.getElementById('colInput');
+        const pathDisplay = document.getElementById('pathDisplay');
+        const dataList = document.getElementById('dataList');
+        const statusMsg = document.getElementById('statusMsg');
+        const authStatus = document.getElementById('authStatus');
+        
+        colInput.value = currentCollection;
+        pathDisplay.innerText = currentCollection;
+
+        // 更新狀態文字
+        function setStatus(msg, isError = false) {
+            statusMsg.innerText = msg;
+            statusMsg.className = `w-full max-w-md p-1 text-center font-bold border-x border-b border-yellow-200 flex justify-center items-center gap-1 ${isError ? 'bg-red-50 text-red-600' : 'bg-yellow-900/10 text-yellow-800'}`;
+        }
+
+        // 1. 身份驗證 (Rule 3)
+        async function initAuth() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                setStatus('驗證失敗: ' + err.message, true);
+            }
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                authStatus.innerText = `UID: ${user.uid.substring(0,6)}...`;
+                startSync();
+            }
+        });
+
+        // 2. 資料同步 (Rule 1 & 2)
+        function startSync() {
+            if (!currentUser) return;
+            if (unsubscribe) unsubscribe();
+
+            const colRef = collection(db, 'artifacts', appId, 'public', 'data', currentCollection);
+            localStorage.setItem('gold_last_col', currentCollection);
+            pathDisplay.innerText = currentCollection;
+
+            dataList.innerHTML = '<div class="text-center py-10 animate-pulse">正在開啟金庫...</div>';
+
+            unsubscribe = onSnapshot(colRef, (snapshot) => {
+                allData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderData();
+                setStatus(allData.length > 0 ? `同步完成 (共 ${allData.length} 筆)` : `[${currentCollection}] 為空`);
+            }, (err) => {
+                setStatus('存取被拒 (檢查 Rules): ' + err.message, true);
+                allData = [];
+                renderData();
+            });
+        }
+
+        // 3. 渲染列表
+        function renderData() {
+            dataList.innerHTML = "";
+            const totalPages = Math.ceil(allData.length / itemsPerPage) || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+
+            const start = (currentPage - 1) * itemsPerPage;
+            const pageData = allData.slice(start, start + itemsPerPage);
+
+            if (pageData.length === 0) {
+                dataList.innerHTML = '<div class="text-center py-16 opacity-30 italic font-bold">目前無資料</div>';
+            } else {
+                pageData.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = "bg-white/90 border border-yellow-200 rounded-xl p-2 shadow-sm relative group mb-2";
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-1">
+                            <div class="truncate flex-1">
+                                <div class="font-black text-yellow-900">${item.title || item.name || item.event || '未命名文件'}</div>
+                                <div class="text-gray-400 font-mono" style="font-size: 0.4rem !important">DOC_ID: ${item.id}</div>
+                            </div>
+                            <div class="flex gap-1">
+                                <button class="edit-btn p-1.5 bg-blue-50 text-blue-600 rounded-lg border border-blue-200" data-id="${item.id}"><i data-lucide="edit-3" class="w-2.5 h-2.5"></i></button>
+                                <button class="del-btn p-1.5 bg-red-50 text-red-600 rounded-lg border border-red-200" data-id="${item.id}"><i data-lucide="trash-2" class="w-2.5 h-2.5"></i></button>
+                            </div>
+                        </div>
+                        <div class="bg-yellow-50/50 p-2 rounded-lg font-mono text-gray-600 overflow-x-auto text-[0.45rem] leading-tight border border-yellow-100">
+                            ${JSON.stringify(item, null, 1)}
+                        </div>
+                    `;
+                    dataList.appendChild(card);
+                });
+            }
+
+            document.getElementById('pageInfo').innerText = `${currentPage} / ${totalPages}`;
+            document.getElementById('totalInfo').innerText = `TOTAL: ${allData.length}`;
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage === totalPages;
+            lucide.createIcons();
+
+            // 綁定事件
+            document.querySelectorAll('.del-btn').forEach(btn => btn.onclick = () => deleteDocAction(btn.dataset.id));
+            document.querySelectorAll('.edit-btn').forEach(btn => btn.onclick = () => openEditModal(btn.dataset.id));
+        }
+
+        // 4. 操作功能
+        async function deleteDocAction(id) {
+            if (!confirm('確定要刪除這筆黃金資料嗎？')) return;
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', currentCollection, id));
+                setStatus('刪除成功');
+            } catch (err) { setStatus('刪除失敗: ' + err.message, true); }
+        }
+
+        function openEditModal(id) {
+            const item = allData.find(d => d.id === id);
+            activeEditId = id;
+            const buffer = { ...item };
+            delete buffer.id;
+            document.getElementById('editArea').value = JSON.stringify(buffer, null, 2);
+            document.getElementById('editModal').classList.replace('hidden', 'flex');
+        }
+
+        async function saveEdit() {
+            try {
+                const updated = JSON.parse(document.getElementById('editArea').value);
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', currentCollection, activeEditId);
+                await updateDoc(docRef, { ...updated, updated_at: serverTimestamp() });
+                document.getElementById('editModal').classList.replace('flex', 'hidden');
+                setStatus('修改已儲存');
+            } catch (err) { setStatus('JSON 格式錯誤或連線失敗', true); }
+        }
+
+        async function runSeed() {
+            setStatus('注入中...');
+            try {
+                const colRef = collection(db, 'artifacts', appId, 'public', 'data', currentCollection);
+                const seeds = [
+                    { title: "金條 999", weight: "1kg", type: "Asset", value: 2500000 },
+                    { name: "管理員", level: "God", balance: 8888888, status: "VVIP" }
+                ];
+                for (let s of seeds) await addDoc(colRef, { ...s, created_at: serverTimestamp() });
+                setStatus('批量注入完成');
+            } catch (err) { setStatus('注入失敗: ' + err.message, true); }
+        }
+
+        // 5. 事件監聽
+        colInput.onchange = (e) => {
+            currentCollection = e.target.value || 'items';
+            currentPage = 1;
+            startSync();
+        };
+
+        document.getElementById('seedBtn').onclick = runSeed;
+        document.getElementById('prevPage').onclick = () => { if (currentPage > 1) { currentPage--; renderData(); } };
+        document.getElementById('nextPage').onclick = () => { if (currentPage < Math.ceil(allData.length / itemsPerPage)) { currentPage++; renderData(); } };
+        document.getElementById('saveBtn').onclick = saveEdit;
+        document.getElementById('closeModal').onclick = () => document.getElementById('editModal').classList.replace('flex', 'hidden');
+        document.getElementById('cancelBtn').onclick = () => document.getElementById('editModal').classList.replace('flex', 'hidden');
+        
+        document.getElementById('downloadBtn').onclick = () => {
+            const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `gold_db_terminal_${currentCollection}.html`;
+            a.click();
+        };
+
+        // 啟動
+        initAuth();
+        lucide.createIcons();
+    </script>
+</body>
+</html>
 
