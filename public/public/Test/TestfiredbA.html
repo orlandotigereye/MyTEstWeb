@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Firebase RTDB 管理終端｜FULL VERSION</title>
+<title>Firebase Email 授權管理終端</title>
 
 <!-- Firebase v8 SDK -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -11,81 +11,55 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <style>
-:root{
-  --gold:#b8860b;
-  --bg:#fff8dc;
-  --ok:#065f46;
-  --err:#9b1c1c;
-}
-body{
-  margin:0;
-  padding:14px;
-  font-family:system-ui,"Noto Sans TC",sans-serif;
-  background:var(--bg);
-}
-h1{font-size:18px;margin-bottom:6px}
-.card{
-  background:#fff;
-  border:2px solid var(--gold);
-  border-radius:10px;
-  padding:12px;
-  margin-bottom:12px;
-}
-.status{
-  padding:8px;
-  border-radius:6px;
-  font-size:13px;
-  margin-bottom:6px;
-}
-.ok{background:#e6fffa;color:var(--ok)}
-.err{background:#fff5f5;color:var(--err)}
-button{
-  width:100%;
-  margin-top:6px;
-  padding:10px;
-  border-radius:8px;
-  border:none;
-  background:linear-gradient(#ffd700,#b8860b);
-  color:#fff;
-  font-weight:700;
-  cursor:pointer;
-}
-button.danger{
-  background:linear-gradient(#ef4444,#7f1d1d);
-}
-pre{
-  background:#111;
-  color:#0f0;
-  padding:10px;
-  border-radius:8px;
-  font-size:11px;
-  max-height:200px;
-  overflow:auto;
-}
+body{font-family:system-ui,"Noto Sans TC",sans-serif;background:#fff8dc;padding:14px}
+.card{background:#fff;border:2px solid #b8860b;border-radius:10px;padding:12px;margin-bottom:12px}
+input,button{width:100%;padding:10px;margin-top:6px;border-radius:6px;border:1px solid #ccc}
+button{background:#b8860b;color:#fff;font-weight:bold;border:none}
+button.danger{background:#7f1d1d}
+.status{padding:8px;border-radius:6px;font-size:13px;margin-top:6px}
+.ok{background:#e6fffa;color:#065f46}
+.err{background:#fff5f5;color:#9b1c1c}
+.hidden{display:none}
+pre{background:#111;color:#0f0;padding:10px;border-radius:8px;font-size:11px;max-height:200px;overflow:auto}
 </style>
 </head>
 
 <body>
 
-<h1>🛠 Firebase Realtime Database 管理終端</h1>
+<h2>🔐 Firebase 郵件驗證管理終端</h2>
 
-<div class="card">
-  <div id="authStatus" class="status">Auth：初始化中…</div>
-  <div id="dbStatus" class="status">DB：初始化中…</div>
+<!-- 登入卡 -->
+<div class="card" id="loginCard">
+  <input id="email" type="email" placeholder="Email" value="orlandotigereye@gmail.com">
+  <input id="password" type="password" placeholder="Password">
+  <button onclick="login()">登入 / 註冊</button>
+  <div id="loginMsg" class="status"></div>
 </div>
 
-<div class="card">
+<!-- 驗證提示 -->
+<div class="card hidden" id="verifyCard">
+  <div class="status err">
+    ⚠️ 尚未完成 Email 驗證<br>
+    請至信箱點擊驗證連結
+  </div>
+  <button onclick="sendVerify()">📧 重新寄送驗證信</button>
+  <button onclick="logout()">登出</button>
+</div>
+
+<!-- 管理端 -->
+<div class="card hidden" id="adminCard">
+  <div id="authStatus" class="status ok"></div>
   <button onclick="writeTest()">✍️ 寫入測試資料</button>
-  <button class="danger" onclick="resetDB()">♻️ 清空整個 RTDB</button>
+  <button class="danger" onclick="resetDB()">♻️ 清空 RTDB</button>
 </div>
 
-<div class="card">
-  <h3>📦 即時資料預覽</h3>
+<div class="card hidden" id="dataCard">
+  <h4>📦 即時資料</h4>
   <pre id="dataView">{}</pre>
 </div>
 
 <script>
-/* ================= Firebase 設定 ================= */
+/* ===== Firebase 設定 ===== */
 const firebaseConfig = {
   apiKey: "AIzaSyCWym1iE7Rq2UAiFKhQMNuvHm_sHoCBbbw",
   authDomain: "keepsound-firebase-1c386.firebaseapp.com",
@@ -93,59 +67,96 @@ const firebaseConfig = {
   projectId: "keepsound-firebase-1c386"
 };
 
-/* ================= 初始化 ================= */
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
-const db   = firebase.database();
+const db = firebase.database();
 
+/* ===== UI refs ===== */
+const loginCard = document.getElementById("loginCard");
+const verifyCard = document.getElementById("verifyCard");
+const adminCard = document.getElementById("adminCard");
+const dataCard = document.getElementById("dataCard");
 const authStatus = document.getElementById("authStatus");
-const dbStatus   = document.getElementById("dbStatus");
-const dataView   = document.getElementById("dataView");
+const dataView = document.getElementById("dataView");
+const loginMsg = document.getElementById("loginMsg");
 
-/* ================= Auth（必要） ================= */
-auth.signInAnonymously()
-.then(res=>{
-  authStatus.className="status ok";
-  authStatus.innerText="Auth OK（匿名） UID: "+res.user.uid.substring(0,8);
-})
-.catch(err=>{
-  authStatus.className="status err";
-  authStatus.innerText="Auth Error: "+err.message;
-});
+/* ===== 登入 / 註冊 ===== */
+function login(){
+  const email = emailInput.value = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
 
-/* ================= DB 連線狀態 ================= */
-db.ref(".info/connected").on("value",snap=>{
-  if(snap.val()){
-    dbStatus.className="status ok";
-    dbStatus.innerText="Realtime Database 已連線";
-  }else{
-    dbStatus.className="status err";
-    dbStatus.innerText="Realtime Database 斷線";
-  }
-});
-
-/* ================= 即時資料監聽 ================= */
-db.ref().on("value",snap=>{
-  dataView.textContent = JSON.stringify(snap.val() || {}, null, 2);
-});
-
-/* ================= 寫入測試 ================= */
-function writeTest(){
-  db.ref("tests").push({
-    time: new Date().toISOString(),
-    message: "Hello Firebase RTDB",
-    uid: auth.currentUser?.uid || "unknown"
+  auth.signInWithEmailAndPassword(email, password)
+  .catch(err=>{
+    if(err.code === "auth/user-not-found"){
+      return auth.createUserWithEmailAndPassword(email, password);
+    }
+    throw err;
   })
-  .then(()=>alert("✅ 寫入成功"))
-  .catch(e=>alert("❌ 寫入失敗："+e.message));
+  .catch(e=>{
+    loginMsg.className="status err";
+    loginMsg.innerText=e.message;
+  });
 }
 
-/* ================= 清空 DB ================= */
+/* ===== Auth 狀態監聽 ===== */
+auth.onAuthStateChanged(user=>{
+  if(!user){
+    loginCard.classList.remove("hidden");
+    verifyCard.classList.add("hidden");
+    adminCard.classList.add("hidden");
+    dataCard.classList.add("hidden");
+    return;
+  }
+
+  if(!user.emailVerified){
+    loginCard.classList.add("hidden");
+    verifyCard.classList.remove("hidden");
+    adminCard.classList.add("hidden");
+    dataCard.classList.add("hidden");
+    return;
+  }
+
+  // ✅ 已驗證
+  loginCard.classList.add("hidden");
+  verifyCard.classList.add("hidden");
+  adminCard.classList.remove("hidden");
+  dataCard.classList.remove("hidden");
+
+  authStatus.innerText="登入成功：" + user.email;
+
+  // 即時資料
+  db.ref().on("value",snap=>{
+    dataView.textContent = JSON.stringify(snap.val()||{},null,2);
+  });
+});
+
+/* ===== 寄送驗證信 ===== */
+function sendVerify(){
+  auth.currentUser.sendEmailVerification()
+  .then(()=>alert("📧 驗證信已寄出"));
+}
+
+/* ===== 寫入 ===== */
+function writeTest(){
+  db.ref("secureTests").push({
+    time:new Date().toISOString(),
+    by:auth.currentUser.email
+  })
+  .then(()=>alert("✅ 寫入成功"))
+  .catch(e=>alert("❌ "+e.message));
+}
+
+/* ===== 清空 ===== */
 function resetDB(){
-  if(!confirm("⚠️ 確定要清空整個 Realtime Database？")) return;
+  if(!confirm("確定清空？"))return;
   db.ref().remove()
-  .then(()=>alert("✅ RTDB 已清空"))
-  .catch(e=>alert("❌ 清空失敗："+e.message));
+  .then(()=>alert("✅ 已清空"))
+  .catch(e=>alert("❌ "+e.message));
+}
+
+/* ===== 登出 ===== */
+function logout(){
+  auth.signOut();
 }
 </script>
 
