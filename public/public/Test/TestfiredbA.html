@@ -16,101 +16,111 @@
             min-height: 100vh;
             margin: 0;
             font-family: sans-serif;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         @keyframes goldFlow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         .text-xs-custom { font-size: var(--base-font) !important; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .modal-enter { animation: modalIn 0.3s ease-out forwards; }
         @keyframes modalIn { from { opacity: 0; transform: scale(0.9) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-        pre, textarea, input, button, span, div { font-size: var(--base-font) !important; }
-        .gold-shadow { box-shadow: 0 10px 30px rgba(184, 134, 11, 0.3); }
+        pre, textarea, input, button, span, div, p, li { font-size: var(--base-font) !important; line-height: 1.2; }
+        .gold-shadow { box-shadow: 0 10px 30px rgba(184, 134, 11, 0.4); }
+        input, textarea { border-radius: 0.5rem; }
+        .card-item { transition: all 0.2s ease; }
+        .card-item:hover { transform: translateY(-2px); border-color: #b8860b; }
     </style>
 </head>
-<body class="p-2 flex flex-col items-center">
+<body class="p-2 w-full">
 
     <!-- 頂部導航 -->
-    <div class="w-full max-w-md bg-white/70 backdrop-blur-lg border border-yellow-500/30 rounded-t-2xl p-2 flex justify-between items-center gold-shadow">
+    <div class="w-full max-w-md bg-white/80 backdrop-blur-xl border border-yellow-500/40 rounded-t-2xl p-2 flex justify-between items-center gold-shadow">
         <div class="flex items-center gap-1 font-black text-yellow-900">
-            <i data-lucide="database" class="w-3 h-3 text-yellow-700"></i> GOLD DATABASE TERMINAL
+            <i data-lucide="database" class="w-3 h-3 text-yellow-700"></i> GOLD DB CLOUD UPDATE
         </div>
-        <button id="downloadBtn" class="bg-yellow-800 text-white px-2 py-1 rounded-lg flex items-center gap-1 active:scale-95">
+        <button id="downloadBtn" class="bg-yellow-800 text-white px-2 py-1 rounded-lg flex items-center gap-1 active:scale-95 transition-transform hover:bg-yellow-900">
             <i data-lucide="download" class="w-2.5 h-2.5"></i> 下載程式碼
         </button>
     </div>
 
     <!-- 操控面板 -->
-    <div class="w-full max-w-md bg-white/50 p-2 border-x border-yellow-200">
+    <div class="w-full max-w-md bg-white/60 p-2 border-x border-yellow-200 shadow-sm">
         <div class="flex flex-col gap-2">
             <div class="flex justify-between font-bold text-yellow-900 px-1">
-                <span>當前路徑: /public/data/<span id="pathDisplay">items</span></span>
-                <span id="authStatus" class="text-blue-700">驗證中...</span>
+                <span class="truncate">實體路徑: /public/data/<span id="pathDisplay" class="underline">items</span></span>
+                <span id="authStatus" class="text-blue-700 shrink-0 ml-2 italic">環境檢查中...</span>
             </div>
-            <div class="flex items-center gap-2 bg-white/90 rounded-xl px-2 py-1.5 border-2 border-yellow-400 shadow-inner">
+            <div class="flex items-center gap-2 bg-white/95 rounded-xl px-2 py-1.5 border-2 border-yellow-400 shadow-inner">
                 <i data-lucide="search" class="w-3 h-3 text-yellow-600"></i>
-                <input id="colInput" type="text" class="flex-1 bg-transparent outline-none font-black text-yellow-900" placeholder="輸入 Collection ID...">
-                <button id="seedBtn" class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded-lg font-bold flex items-center gap-1 transition-all">
-                    <i data-lucide="play" class="w-2.5 h-2.5"></i> 注入測試
+                <input id="colInput" type="text" class="flex-1 bg-transparent outline-none font-black text-yellow-900 h-5" placeholder="輸入集合名稱 (例如 users)...">
+                <button id="seedBtn" class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded-lg font-bold flex items-center gap-1 transition-all shadow-md active:scale-90">
+                    <i data-lucide="zap" class="w-2.5 h-2.5"></i> 快速注入
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- 狀態列 -->
-    <div id="statusMsg" class="w-full max-w-md bg-yellow-900/10 p-1 text-center font-bold text-yellow-800 border-x border-b border-yellow-200 flex justify-center items-center gap-1">
-        正在初始化系統環境...
+    <!-- 狀態回饋列 -->
+    <div id="statusMsg" class="w-full max-w-md bg-yellow-900/10 p-1 text-center font-bold text-yellow-800 border-x border-b border-yellow-200 flex justify-center items-center gap-1 min-h-[1.2rem]">
+        系統初始化完成
     </div>
 
-    <!-- 資料清單區 -->
-    <div id="dataList" class="w-full max-w-md flex-1 overflow-y-auto space-y-2 py-3 px-1 min-h-[300px]">
-        <!-- 資料將由 JS 動態注入 -->
+    <!-- 資料動態列表 -->
+    <div id="dataList" class="w-full max-w-md flex-1 overflow-y-auto space-y-2 py-3 px-1 min-h-[350px] no-scrollbar">
+        <!-- JS 動態生成區域 -->
     </div>
 
-    <!-- 分頁器 -->
-    <div class="w-full max-w-md bg-white/40 border border-yellow-500/20 rounded-b-2xl p-2 flex justify-center items-center gap-8 shadow-inner">
-        <button id="prevPage" class="text-yellow-900 disabled:opacity-20"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
+    <!-- 分頁導航器 -->
+    <div class="w-full max-w-md bg-white/50 border border-yellow-500/20 rounded-b-2xl p-2 flex justify-center items-center gap-10 shadow-inner">
+        <button id="prevPage" class="text-yellow-900 disabled:opacity-20 transition-opacity"><i data-lucide="arrow-left-circle" class="w-5 h-5"></i></button>
         <div class="flex flex-col items-center">
-            <span id="pageInfo" class="font-black text-yellow-900 tracking-widest">1 / 1</span>
-            <span id="totalInfo" class="text-yellow-700/60 font-bold" style="font-size: 0.35rem !important;">TOTAL: 0</span>
+            <span id="pageInfo" class="font-black text-yellow-900 tracking-widest leading-none">1 / 1</span>
+            <span id="totalInfo" class="text-yellow-700/60 font-bold mt-1 uppercase">Rows: 0</span>
         </div>
-        <button id="nextPage" class="text-yellow-900 disabled:opacity-20"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
+        <button id="nextPage" class="text-yellow-900 disabled:opacity-20 transition-opacity"><i data-lucide="arrow-right-circle" class="w-5 h-5"></i></button>
     </div>
 
-    <!-- 編輯 Modal -->
-    <div id="editModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-        <div class="w-full max-w-xs bg-white rounded-3xl shadow-2xl border-4 border-yellow-500 overflow-hidden flex flex-col modal-enter">
-            <div class="bg-yellow-500 text-white p-3 font-bold flex justify-between items-center">
-                <span class="flex items-center gap-1"><i data-lucide="edit-3" class="w-3 h-3"></i> 編輯內容</span>
-                <button id="closeModal" class="bg-white/20 p-1 rounded-full"><i data-lucide="x" class="w-3 h-3"></i></button>
+    <!-- 編輯彈出視窗 (更新 DB 核心) -->
+    <div id="editModal" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+        <div class="w-full max-w-xs bg-white rounded-3xl shadow-2xl border-4 border-yellow-600 overflow-hidden flex flex-col modal-enter">
+            <div class="bg-gradient-to-r from-yellow-600 to-yellow-500 text-white p-3 font-bold flex justify-between items-center">
+                <span class="flex items-center gap-1"><i data-lucide="file-edit" class="w-3 h-3"></i> 更新雲端數據</span>
+                <button id="closeModal" class="bg-white/20 p-1 rounded-full hover:bg-white/40"><i data-lucide="x" class="w-3 h-3"></i></button>
             </div>
-            <textarea id="editArea" class="w-full h-64 p-3 font-mono outline-none bg-gray-50 text-gray-800 border-b leading-tight" spellcheck="false"></textarea>
-            <div class="p-3 flex gap-2 bg-yellow-50">
-                <button id="saveBtn" class="flex-1 bg-green-600 text-white py-2 rounded-xl flex justify-center items-center gap-1 font-bold shadow-lg active:scale-95">
-                    <i data-lucide="save" class="w-3 h-3"></i> 儲存變更
+            <div class="p-2 bg-yellow-50 text-yellow-800 font-bold border-b border-yellow-200">
+                編輯中 ID: <span id="editingIdDisplay" class="font-mono"></span>
+            </div>
+            <textarea id="editArea" class="w-full h-72 p-3 font-mono outline-none bg-gray-50 text-gray-800 border-b leading-relaxed resize-none" spellcheck="false" placeholder="請輸入有效的 JSON 內容..."></textarea>
+            <div class="p-3 flex gap-2 bg-white">
+                <button id="saveBtn" class="flex-1 bg-green-700 text-white py-2 rounded-xl flex justify-center items-center gap-1 font-bold shadow-lg active:scale-95 hover:bg-green-800 transition-colors">
+                    <i data-lucide="upload-cloud" class="w-3 h-3"></i> 確定更新
                 </button>
-                <button id="cancelBtn" class="flex-1 bg-white text-gray-600 py-2 rounded-xl font-bold border border-gray-300">取消</button>
+                <button id="cancelBtn" class="flex-1 bg-gray-100 text-gray-600 py-2 rounded-xl font-bold border border-gray-300 active:scale-95 hover:bg-gray-200">取消</button>
             </div>
         </div>
     </div>
 
-    <!-- 腳注 -->
-    <div class="mt-4 text-center opacity-40 font-black text-yellow-900 flex items-center gap-1">
-        <i data-lucide="coins" class="w-3 h-3"></i> 24K PURE DATA ACCESS
+    <!-- 底部版權 -->
+    <div class="mt-4 text-center opacity-50 font-black text-yellow-900 flex items-center gap-1 mb-6">
+        <i data-lucide="crown" class="w-3 h-3 text-yellow-600"></i> GOLD DATABASE SYSTEM ENGINE v2.5
     </div>
 
-    <!-- Firebase SDKs -->
+    <!-- Firebase SDK 模組啟動 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // 環境參數
+        // 從環境讀取配置 (確保在任何地方執行時能自動載入正確的 DB)
         const firebaseConfig = JSON.parse(__firebase_config);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // 狀態變數
+        // 應用程式狀態管理
         let currentUser = null;
         let allData = [];
         let currentPage = 1;
@@ -119,66 +129,79 @@
         let unsubscribe = null;
         let activeEditId = null;
 
-        // 初始化 UI
         const colInput = document.getElementById('colInput');
         const pathDisplay = document.getElementById('pathDisplay');
         const dataList = document.getElementById('dataList');
         const statusMsg = document.getElementById('statusMsg');
         const authStatus = document.getElementById('authStatus');
+        const editingIdDisplay = document.getElementById('editingIdDisplay');
         
         colInput.value = currentCollection;
         pathDisplay.innerText = currentCollection;
 
-        // 更新狀態文字
+        // 狀態更新函式 (不彈窗，顯示於下方)
         function setStatus(msg, isError = false) {
             statusMsg.innerText = msg;
-            statusMsg.className = `w-full max-w-md p-1 text-center font-bold border-x border-b border-yellow-200 flex justify-center items-center gap-1 ${isError ? 'bg-red-50 text-red-600' : 'bg-yellow-900/10 text-yellow-800'}`;
+            statusMsg.className = `w-full max-w-md p-1 text-center font-bold border-x border-b border-yellow-200 flex justify-center items-center gap-1 transition-all ${isError ? 'bg-red-100 text-red-700' : 'bg-yellow-900/10 text-yellow-800'}`;
         }
 
-        // 1. 身份驗證 (Rule 3)
+        // 1. 身份認證流程 (Rule 3)
         async function initAuth() {
             try {
+                setStatus('安全認證中...');
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
                     await signInAnonymously(auth);
                 }
             } catch (err) {
-                setStatus('驗證失敗: ' + err.message, true);
+                setStatus('認證失敗: ' + err.message, true);
             }
         }
 
         onAuthStateChanged(auth, (user) => {
             currentUser = user;
             if (user) {
-                authStatus.innerText = `UID: ${user.uid.substring(0,6)}...`;
+                authStatus.innerText = `已登入: ${user.uid.substring(0,6)}...`;
                 startSync();
+            } else {
+                authStatus.innerText = '等待驗證...';
             }
         });
 
-        // 2. 資料同步 (Rule 1 & 2)
+        // 2. 雲端同步核心 (Rule 1 & 2)
         function startSync() {
             if (!currentUser) return;
             if (unsubscribe) unsubscribe();
 
             const colRef = collection(db, 'artifacts', appId, 'public', 'data', currentCollection);
+            
+            // 記憶目前路徑，重整不遺失
             localStorage.setItem('gold_last_col', currentCollection);
             pathDisplay.innerText = currentCollection;
 
-            dataList.innerHTML = '<div class="text-center py-10 animate-pulse">正在開啟金庫...</div>';
+            dataList.innerHTML = '<div class="text-center py-20 animate-pulse font-black text-yellow-700 italic">正在從雲端抓取黃金數據...</div>';
 
             unsubscribe = onSnapshot(colRef, (snapshot) => {
                 allData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                
+                // 排序邏輯：若有 serverTimestamp 則降序
+                allData.sort((a, b) => {
+                    const tA = a.created_at?.seconds || a.updated_at?.seconds || 0;
+                    const tB = b.created_at?.seconds || b.updated_at?.seconds || 0;
+                    return tB - tA;
+                });
+
                 renderData();
-                setStatus(allData.length > 0 ? `同步完成 (共 ${allData.length} 筆)` : `[${currentCollection}] 為空`);
+                setStatus(allData.length > 0 ? `雲端同步成功 (共 ${allData.length} 筆)` : `路徑 [${currentCollection}] 尚無任何文件`);
             }, (err) => {
-                setStatus('存取被拒 (檢查 Rules): ' + err.message, true);
+                setStatus('同步錯誤 (請檢查 Firestore 權限規則): ' + err.message, true);
                 allData = [];
                 renderData();
             });
         }
 
-        // 3. 渲染列表
+        // 3. 畫面渲染與字體控制
         function renderData() {
             dataList.innerHTML = "";
             const totalPages = Math.ceil(allData.length / itemsPerPage) || 1;
@@ -188,24 +211,28 @@
             const pageData = allData.slice(start, start + itemsPerPage);
 
             if (pageData.length === 0) {
-                dataList.innerHTML = '<div class="text-center py-16 opacity-30 italic font-bold">目前無資料</div>';
+                dataList.innerHTML = '<div class="text-center py-20 opacity-30 italic font-black text-yellow-900">NO DATA FOUND</div>';
             } else {
                 pageData.forEach(item => {
                     const card = document.createElement('div');
-                    card.className = "bg-white/90 border border-yellow-200 rounded-xl p-2 shadow-sm relative group mb-2";
+                    card.className = "card-item bg-white/95 border border-yellow-300 rounded-xl p-2 shadow-sm relative group";
                     card.innerHTML = `
                         <div class="flex justify-between items-start mb-1">
-                            <div class="truncate flex-1">
-                                <div class="font-black text-yellow-900">${item.title || item.name || item.event || '未命名文件'}</div>
-                                <div class="text-gray-400 font-mono" style="font-size: 0.4rem !important">DOC_ID: ${item.id}</div>
+                            <div class="truncate flex-1 pr-2">
+                                <div class="font-black text-yellow-950">${item.title || item.name || item.event || '黃金文件'}</div>
+                                <div class="text-gray-400 font-mono tracking-tighter" style="font-size: 0.5rem !important">HASH: ${item.id}</div>
                             </div>
-                            <div class="flex gap-1">
-                                <button class="edit-btn p-1.5 bg-blue-50 text-blue-600 rounded-lg border border-blue-200" data-id="${item.id}"><i data-lucide="edit-3" class="w-2.5 h-2.5"></i></button>
-                                <button class="del-btn p-1.5 bg-red-50 text-red-600 rounded-lg border border-red-200" data-id="${item.id}"><i data-lucide="trash-2" class="w-2.5 h-2.5"></i></button>
+                            <div class="flex gap-1 shrink-0">
+                                <button class="edit-btn p-1.5 bg-blue-100 text-blue-700 rounded-lg border border-blue-200 hover:bg-blue-200 transition-colors" data-id="${item.id}" title="編輯資料">
+                                    <i data-lucide="edit" class="w-3 h-3"></i>
+                                </button>
+                                <button class="del-btn p-1.5 bg-red-100 text-red-700 rounded-lg border border-red-200 hover:bg-red-200 transition-colors" data-id="${item.id}" title="刪除資料">
+                                    <i data-lucide="trash" class="w-3 h-3"></i>
+                                </button>
                             </div>
                         </div>
-                        <div class="bg-yellow-50/50 p-2 rounded-lg font-mono text-gray-600 overflow-x-auto text-[0.45rem] leading-tight border border-yellow-100">
-                            ${JSON.stringify(item, null, 1)}
+                        <div class="bg-yellow-50/70 p-2 rounded-lg font-mono text-gray-700 overflow-x-auto text-[0.5rem] leading-tight border border-yellow-200 no-scrollbar">
+                            <pre>${JSON.stringify(item, null, 1)}</pre>
                         </div>
                     `;
                     dataList.appendChild(card);
@@ -213,65 +240,82 @@
             }
 
             document.getElementById('pageInfo').innerText = `${currentPage} / ${totalPages}`;
-            document.getElementById('totalInfo').innerText = `TOTAL: ${allData.length}`;
+            document.getElementById('totalInfo').innerText = `ROWS: ${allData.length}`;
             document.getElementById('prevPage').disabled = currentPage === 1;
             document.getElementById('nextPage').disabled = currentPage === totalPages;
             lucide.createIcons();
 
-            // 綁定事件
+            // 重新綁定 CRUD 操作
             document.querySelectorAll('.del-btn').forEach(btn => btn.onclick = () => deleteDocAction(btn.dataset.id));
             document.querySelectorAll('.edit-btn').forEach(btn => btn.onclick = () => openEditModal(btn.dataset.id));
         }
 
-        // 4. 操作功能
+        // 4. 更新 DB 核心邏輯
+        async function saveEdit() {
+            if (!activeEditId) return;
+            setStatus('正在寫入雲端數據庫...');
+            try {
+                // 解析 TextArea 中的 JSON 內容
+                const jsonContent = document.getElementById('editArea').value;
+                const updatedData = JSON.parse(jsonContent);
+                
+                // 移除不可更新的 ID 欄位 (由 Firestore 維持)
+                if (updatedData.id) delete updatedData.id;
+
+                // 執行實際更新 (updateDoc)
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', currentCollection, activeEditId);
+                await updateDoc(docRef, { 
+                    ...updatedData, 
+                    updated_at: serverTimestamp() 
+                });
+
+                document.getElementById('editModal').classList.replace('flex', 'hidden');
+                setStatus('雲端更新成功');
+            } catch (err) { 
+                setStatus('更新失敗: ' + (err.name === 'SyntaxError' ? 'JSON 格式錯誤' : err.message), true); 
+            }
+        }
+
         async function deleteDocAction(id) {
-            if (!confirm('確定要刪除這筆黃金資料嗎？')) return;
+            if (!confirm('確認要將此數據從金庫中移除嗎？')) return;
             try {
                 await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', currentCollection, id));
-                setStatus('刪除成功');
+                setStatus('文件已永久刪除');
             } catch (err) { setStatus('刪除失敗: ' + err.message, true); }
         }
 
         function openEditModal(id) {
             const item = allData.find(d => d.id === id);
             activeEditId = id;
+            editingIdDisplay.innerText = id;
             const buffer = { ...item };
-            delete buffer.id;
+            delete buffer.id; // 不讓用戶直接編輯 ID
             document.getElementById('editArea').value = JSON.stringify(buffer, null, 2);
             document.getElementById('editModal').classList.replace('hidden', 'flex');
         }
 
-        async function saveEdit() {
-            try {
-                const updated = JSON.parse(document.getElementById('editArea').value);
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', currentCollection, activeEditId);
-                await updateDoc(docRef, { ...updated, updated_at: serverTimestamp() });
-                document.getElementById('editModal').classList.replace('flex', 'hidden');
-                setStatus('修改已儲存');
-            } catch (err) { setStatus('JSON 格式錯誤或連線失敗', true); }
-        }
-
-        async function runSeed() {
-            setStatus('注入中...');
+        async function runQuickSeed() {
+            if (!currentUser) return;
+            setStatus('注入初始化測試數據...');
             try {
                 const colRef = collection(db, 'artifacts', appId, 'public', 'data', currentCollection);
                 const seeds = [
-                    { title: "金條 999", weight: "1kg", type: "Asset", value: 2500000 },
-                    { name: "管理員", level: "God", balance: 8888888, status: "VVIP" }
+                    { title: "金色數據 #" + Math.floor(Math.random()*999), type: "Testing", status: "Success", tags: ["auto", "seed"] },
+                    { name: "超級用戶", rank: "VIP", gold_balance: 1000000, last_active: new Date().toISOString() }
                 ];
                 for (let s of seeds) await addDoc(colRef, { ...s, created_at: serverTimestamp() });
-                setStatus('批量注入完成');
+                setStatus('批量數據注入成功');
             } catch (err) { setStatus('注入失敗: ' + err.message, true); }
         }
 
-        // 5. 事件監聽
+        // 5. 使用者互動事件監聽
         colInput.onchange = (e) => {
-            currentCollection = e.target.value || 'items';
+            currentCollection = e.target.value.trim() || 'items';
             currentPage = 1;
             startSync();
         };
 
-        document.getElementById('seedBtn').onclick = runSeed;
+        document.getElementById('seedBtn').onclick = runQuickSeed;
         document.getElementById('prevPage').onclick = () => { if (currentPage > 1) { currentPage--; renderData(); } };
         document.getElementById('nextPage').onclick = () => { if (currentPage < Math.ceil(allData.length / itemsPerPage)) { currentPage++; renderData(); } };
         document.getElementById('saveBtn').onclick = saveEdit;
@@ -285,9 +329,10 @@
             a.href = url;
             a.download = `gold_db_terminal_${currentCollection}.html`;
             a.click();
+            setStatus('檔案已準備下載');
         };
 
-        // 啟動
+        // 系統啟動
         initAuth();
         lucide.createIcons();
     </script>
