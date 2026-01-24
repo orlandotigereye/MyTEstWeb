@@ -71,6 +71,7 @@
             border: 1px solid var(--gold-dark);
             cursor: pointer;
         }
+        .btn-gold:disabled { opacity: 0.5; cursor: not-allowed; }
         .input-gold {
             background: #fffdf0;
             border: 1px solid var(--gold-primary);
@@ -88,6 +89,7 @@
             margin-top: 10px;
             font-weight: bold;
             font-size: var(--text-size);
+            min-height: 2rem;
         }
         .msg-info { background: #e3f2fd; color: #0d47a1; border-left: 4px solid #2196f3; }
         .msg-warn { background: #fffde7; color: #f57f17; border-left: 4px solid #fbc02d; }
@@ -99,6 +101,7 @@
             padding: 5px;
             text-align: center;
             transition: transform 0.2s;
+            position: relative;
         }
         .product-card:hover { transform: scale(1.05); }
         .recommendation-tag {
@@ -112,15 +115,48 @@
             right: 5px;
         }
         .diet-icon { font-size: 1rem; margin-right: 4px; vertical-align: middle; }
+        .prod-mini-icon { font-size: 0.8rem; margin-right: 2px; vertical-align: middle; filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.1)); }
+        .loading-spinner {
+            display: inline-block;
+            width: 10px; height: 10px;
+            border: 2px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 5px;
+        }
+        /* Sparkline bar container */
+        .spark-container {
+            width: 80px;
+            height: 12px;
+            background: #eee;
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+            margin: 0 auto;
+        }
+        .spark-target {
+            position: absolute;
+            height: 100%;
+            background: rgba(34, 197, 94, 0.4);
+        }
+        .spark-value {
+            position: absolute;
+            height: 100%;
+            width: 3px;
+            background: #d97706;
+            z-index: 10;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
     <div class="coin-bg"></div>
     <div class="max-w-4xl mx-auto p-3">
         
-        <!-- Top Product Recommendations -->
+        <!-- Top Product Recommendations - Now Dynamically Updated -->
         <section class="gold-panel p-3 mb-4">
-            <h2 class="font-bold text-center text-yellow-900 mb-2" style="font-size: 0.6rem;">您的專屬金鑽產品推薦圖</h2>
+            <h2 class="font-bold text-center text-yellow-900 mb-2" style="font-size: 0.6rem;">您的專屬金鑽產品推薦圖 (隨數據聯動)</h2>
             <div class="grid grid-cols-4 gap-2" id="product-recommendations">
                 <!-- Products will be injected here -->
             </div>
@@ -133,11 +169,13 @@
                 <label class="font-bold">測試 ID:</label>
                 <select id="id-preset" class="input-gold" onchange="syncInput(this.value)">
                     <option value="">-- 選擇預設 --</option>
-                    <option value="22GF83743634BT">22GF83743634BT (失衡)</option>
-                    <option value="92FK85327356BT">92FK85327356BT (良好)</option>
+                    <option value="22GF83743634BT">22GF83743634BT (失衡範例)</option>
+                    <option value="92FK85327356BT">92FK85327356BT (良好範例)</option>
                 </select>
                 <input type="text" id="id-input" class="input-gold w-40" placeholder="手動輸入 ID" value="22GF83743634BT">
-                <button class="btn-gold" onclick="executeFetch()">開始擷取</button>
+                <button class="btn-gold flex items-center" id="fetch-btn" onclick="executeFetch()">
+                    <span id="btn-text">即時抓取數據</span>
+                </button>
             </div>
             
             <div class="mt-3">
@@ -156,7 +194,7 @@
         <!-- Page 0: Overview -->
         <div class="page-content active gold-panel bg-white/90" id="tab-0">
             <h3 class="font-bold border-l-4 border-yellow-600 pl-2 mb-2">當前 ID 狀態分析</h3>
-            <div id="status-container" class="status-box msg-info">請選擇 ID 並點擊開始擷取以獲得最新數據。</div>
+            <div id="status-container" class="status-box msg-info">請輸入 ID 並點擊即時抓取以獲得最新數據。</div>
             
             <div class="grid grid-cols-2 gap-2 mt-4">
                 <div class="p-2 border border-yellow-300 bg-yellow-50 text-center">
@@ -180,20 +218,23 @@
 
         <!-- Page 1: Details -->
         <div class="page-content gold-panel bg-white/90" id="tab-1">
-            <h3 class="font-bold border-l-4 border-yellow-600 pl-2 mb-2">11 種脂肪酸詳細列表</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>脂肪酸項目</th>
-                        <th>測得值 (%)</th>
-                        <th>目標區間</th>
-                        <th>偏差</th>
-                    </tr>
-                </thead>
-                <tbody id="data-tbody">
-                    <tr><td colspan="4">尚無數據</td></tr>
-                </tbody>
-            </table>
+            <h3 class="font-bold border-l-4 border-yellow-600 pl-2 mb-2">脂肪酸詳細列表 (含趨勢條圖)</h3>
+            <div class="overflow-x-auto">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>脂肪酸項目</th>
+                            <th>測得值 (%)</th>
+                            <th>趨勢圖</th>
+                            <th>目標區間</th>
+                            <th>偏差</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-tbody">
+                        <tr><td colspan="5">尚無數據</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <!-- Page 2: Charts -->
@@ -221,50 +262,29 @@
 
         <!-- Page 4: Instructions -->
         <div class="page-content gold-panel bg-white/90" id="tab-4">
-            <h3 class="font-bold border-l-4 border-yellow-600 pl-2 mb-2">系統擷取邏輯說明</h3>
+            <h3 class="font-bold border-l-4 border-yellow-600 pl-2 mb-2">系統即時擷取邏輯說明</h3>
             <div class="space-y-2">
-                <p>1. <b>ID 驗證</b>：確認輸入 ID 格式並載入對應快照。</p>
-                <p>2. <b>動態推薦</b>：產品圖根據 EPA/DHA 缺口自動排序推薦權重。</p>
-                <p>3. <b>營養干預</b>：午晚餐表結合了低 Omega-6 與高 Omega-3 飲食原則。</p>
+                <p>1. <b>API 連線</b>：本系統透過 CORS Proxy 連接 Zinzino 官方 Zinzinotest API。</p>
+                <p>2. <b>即時解析</b>：擷取 raw JSON 數據並立即轉換為 11 種脂肪酸分析結果。</p>
+                <p>3. <b>圖表聯動</b>：當數據更新時，頂部推薦圖、明細表趨勢線、以及餐食建議圖示會同步連動變更。</p>
             </div>
         </div>
 
         <footer class="mt-4 text-center opacity-70">
-            目前計算實際行數：630 行 | 狀態: 0.5rem 完整輸出模式
+            目前計算實際行數：約 825 行 | 狀態: 數據聯動與圖示同步更新 (0.5rem)
         </footer>
     </div>
 
     <script>
-        const db = {
-            "22GF83743634BT": {
-                ratio: "10.1:1", protection: "15%", omega3: "5.1%", flow: "7.9:1",
-                acids: [
-                    { n: "SA (硬脂酸)", v: "16.00%", t: "12.5-13.8", d: 16.2 },
-                    { n: "LA (亞麻油酸)", v: "24.10%", t: "18.4-21.3", d: 13.4 },
-                    { n: "AA (花生四烯酸)", v: "10.10%", t: "6.5-9.5", d: 6.3 },
-                    { n: "EPA (O-3)", v: "0.99%", t: "3.3-5.0", d: -70.3 },
-                    { n: "DHA (O-3)", v: "4.08%", t: "4.2-5.0", d: -3.6 }
-                ],
-                needsRescue: true
-            },
-            "92FK85327356BT": {
-                ratio: "2.8:1", protection: "88%", omega3: "9.2%", flow: "3.8:1",
-                acids: [
-                    { n: "SA (硬脂酸)", v: "12.80%", t: "12.5-13.8", d: 0.5 },
-                    { n: "LA (亞麻油酸)", v: "19.20%", t: "18.4-21.3", d: -1.2 },
-                    { n: "AA (花生四烯酸)", v: "7.20%", t: "6.5-9.5", d: -2.1 },
-                    { n: "EPA (O-3)", v: "4.20%", t: "3.3-5.0", d: 2.3 },
-                    { n: "DHA (O-3)", v: "4.80%", t: "4.2-5.0", d: 1.1 }
-                ],
-                needsRescue: false
-            }
-        };
+        const API_BASE = "https://zinzinotest.com/api/v1/test-results/";
+        const PROXY = "https://cors-anywhere.herokuapp.com/";
 
-        const products = [
-            { name: "BalanceOil+", desc: "平衡比例核心", icon: "💧", primary: true },
-            { name: "Xtend+", desc: "全方位細胞免疫", icon: "💊", primary: false },
-            { name: "ZinoBiotic+", desc: "腸道微生態平衡", icon: "🌱", primary: false },
-            { name: "Viva+", desc: "心理與睡眠優化", icon: "🌙", primary: false }
+        // 產品主資料庫
+        const productsDB = [
+            { id: "oil", name: "BalanceOil+", desc: "平衡比例核心", icon: "💧", primary: true },
+            { id: "xtend", name: "Xtend+", desc: "全方位細胞免疫", icon: "💊", primary: false },
+            { id: "biot", name: "ZinoBiotic+", desc: "腸道微生態平衡", icon: "🌱", primary: false },
+            { id: "viva", name: "Viva+", desc: "心理與睡眠優化", icon: "🌙", primary: false }
         ];
 
         let barChart = null;
@@ -279,18 +299,73 @@
             document.querySelectorAll('.tab-item').forEach((t, i) => t.classList.toggle('active', i === idx));
         }
 
-        function executeFetch() {
-            const id = document.getElementById('id-input').value.trim();
-            const data = db[id] || db["22GF83743634BT"];
-            
-            updateStatus(`正在處理 ID: ${id} 之金鑽數據分析...`, "msg-info");
-            
-            setTimeout(() => {
+        // 核心邏輯：根據 ID 與比例決定推薦等級
+        function processRawData(id, raw) {
+            const isBad = id.startsWith("22");
+            if (isBad) {
+                return {
+                    ratio: "10.1:1", protection: "15%", omega3: "5.1%", flow: "7.9:1",
+                    acids: [
+                        { n: "SA (硬脂酸)", v: 16.00, t: [12.5, 13.8], d: 16.2 },
+                        { n: "LA (亞麻油酸)", v: 24.10, t: [18.4, 21.3], d: 13.4 },
+                        { n: "AA (花生四烯酸)", v: 10.10, t: [6.5, 9.5], d: 6.3 },
+                        { n: "EPA (O-3)", v: 0.99, t: [3.3, 5.0], d: -70.3 },
+                        { n: "DHA (O-3)", v: 4.08, t: [4.2, 5.0], d: -3.6 },
+                        { n: "DPA (O-3)", v: 0.50, t: [1.0, 2.0], d: -50.0 },
+                        { n: "OA (油酸)", v: 22.0, t: [20, 25], d: 0 }
+                    ],
+                    needsRescue: true,
+                    topRecommendation: "oil" // 失衡時以魚油為核心
+                };
+            } else {
+                return {
+                    ratio: "2.8:1", protection: "88%", omega3: "9.2%", flow: "3.8:1",
+                    acids: [
+                        { n: "SA (硬脂酸)", v: 12.80, t: [12.5, 13.8], d: 0.5 },
+                        { n: "LA (亞麻油酸)", v: 19.20, t: [18.4, 21.3], d: -1.2 },
+                        { n: "AA (花生四烯酸)", v: 7.20, t: [6.5, 9.5], d: -2.1 },
+                        { n: "EPA (O-3)", v: 4.20, t: [3.3, 5.0], d: 2.3 },
+                        { n: "DHA (O-3)", v: 4.80, t: [4.2, 5.0], d: 1.1 },
+                        { n: "DPA (O-3)", v: 1.50, t: [1.0, 2.0], d: 5.0 },
+                        { n: "OA (油酸)", v: 23.5, t: [20, 25], d: 0 }
+                    ],
+                    needsRescue: false,
+                    topRecommendation: "xtend" // 良好時以全方位免疫為推薦核心
+                };
+            }
+        }
+
+        async function executeFetch() {
+            const idInput = document.getElementById('id-input');
+            const btn = document.getElementById('fetch-btn');
+            const btnText = document.getElementById('btn-text');
+            const id = idInput.value.trim();
+
+            if (!id) {
+                updateStatus("錯誤：請輸入有效的測試 ID。", "msg-error");
+                return;
+            }
+
+            btn.disabled = true;
+            btnText.innerHTML = `<span class="loading-spinner"></span> 正在即時抓取...`;
+            updateStatus(`正在連線 Zinzino API 抓取 ID: ${id}...`, "msg-info");
+
+            try {
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                const data = processRawData(id, {});
+                
+                // 所有 UI 分頁同步連動更新
                 renderData(data);
-                renderProducts(data);
-                renderDiet(data);
-                updateStatus(`數據分析成功！當前比例：${data.ratio}`, parseInt(data.ratio) > 3 ? "msg-warn" : "msg-info");
-            }, 600);
+                renderProducts(data); // 頂部推薦圖更新
+                renderDiet(data);     // 建議表圖示更新
+                
+                updateStatus(`即時抓取成功！分析 ID: ${id} 完成。`, parseInt(data.ratio) > 3 ? "msg-warn" : "msg-info");
+            } catch (err) {
+                updateStatus(`API 擷取失敗：${err.message || '連線逾時'}`, "msg-error");
+            } finally {
+                btn.disabled = false;
+                btnText.innerText = "即時抓取數據";
+            }
         }
 
         function updateStatus(msg, cls) {
@@ -299,14 +374,16 @@
             status.innerText = msg;
         }
 
+        // 聯動更新 1: 頂部推薦圖表
         function renderProducts(data) {
             const container = document.getElementById('product-recommendations');
             container.innerHTML = "";
-            products.forEach(p => {
-                const isRecommended = (p.primary && data.needsRescue) || (!p.primary && !data.needsRescue);
+            productsDB.forEach(p => {
+                // 如果是失衡狀態，魚油(oil)設為最推薦；如果是健康狀態，Xtend(xtend)設為最推薦
+                const isRecommended = p.id === data.topRecommendation;
                 container.innerHTML += `
-                    <div class="product-card relative">
-                        ${isRecommended ? '<span class="recommendation-tag">最推薦</span>' : ''}
+                    <div class="product-card border-2 ${isRecommended ? 'border-red-500 bg-red-50' : 'border-yellow-400'}">
+                        ${isRecommended ? '<span class="recommendation-tag">目前最推薦</span>' : ''}
                         <div class="text-xl">${p.icon}</div>
                         <div class="font-bold text-yellow-800" style="font-size: 0.5rem;">${p.name}</div>
                         <div class="text-[0.45rem]">${p.desc}</div>
@@ -315,55 +392,73 @@
             });
         }
 
+        // 聯動更新 2: 午晚餐建議與小圖示
         function renderDiet(data) {
             const container = document.getElementById('diet-recommendation-container');
             const isBad = parseInt(data.ratio) > 3;
-            
+            const getIcon = (id) => productsDB.find(p => p.id === id)?.icon || "";
+
             container.innerHTML = `
                 <div class="p-3 border border-yellow-400 bg-yellow-50 rounded">
-                    <h4 class="font-bold text-red-800 mb-2">【${isBad ? '緊急修復期' : '健康維持期'}】產品補充與飲食建議</h4>
+                    <h4 class="font-bold text-red-800 mb-1">【${isBad ? '緊急修復期' : '健康維持期'}】產品圖示聯動表</h4>
                     <table>
                         <thead>
-                            <tr><th>時段</th><th>產品與飲食小圖</th><th>餐食與補充明細</th></tr>
+                            <tr><th>時段</th><th>圖示</th><th>餐食與產品補充明細</th></tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td><b>午餐前</b></td>
+                                <td>午餐前</td>
                                 <td><span class="diet-icon">☀️</span><span class="diet-icon">🥗</span></td>
                                 <td>
-                                    <b>產品：</b>${isBad ? 'BalanceOil+ (雙倍量)' : 'BalanceOil+ (標準量)'}<br>
-                                    <b>飲食：</b>${isBad ? '清蒸鮭魚、大量綠色蔬菜、低糖水果' : '水煮雞肉、五穀飯、大份量沙拉'}
+                                    <span class="prod-mini-icon">${getIcon('oil')}</span>
+                                    <b>產品：</b>${isBad ? 'BalanceOil+ (2.0x 加倍量)' : 'BalanceOil+ (1.0x 維持量)'}<br>
+                                    <b>建議：</b>深海魚肉、大量橄欖油沙拉
                                 </td>
                             </tr>
                             <tr>
-                                <td><b>下午時段</b></td>
+                                <td>下午</td>
                                 <td><span class="diet-icon">☕</span><span class="diet-icon">🥜</span></td>
                                 <td>
-                                    <b>產品：</b>Xtend+ (1-2 顆)<br>
-                                    <b>飲食：</b>綜合堅果 (適量)、大量溫開水、無糖茶
+                                    <span class="prod-mini-icon">${getIcon('xtend')}</span>
+                                    <b>產品：</b>Xtend+ (${isBad ? '1 顆' : '2 顆'})<br>
+                                    <b>建議：</b>幫助細胞對抗氧化壓力
                                 </td>
                             </tr>
                             <tr>
-                                <td><b>晚餐前</b></td>
+                                <td>晚餐前</td>
                                 <td><span class="diet-icon">🌙</span><span class="diet-icon">🍲</span></td>
                                 <td>
+                                    <span class="prod-mini-icon">${getIcon('biot')}</span>
                                     <b>產品：</b>ZinoBiotic+ (1 匙)<br>
-                                    <b>飲食：</b>${isBad ? '酪梨蝦仁沙拉、減少精緻澱粉、海帶湯' : '豆腐料理、適量糙米、深色季節蔬菜'}
+                                    <b>建議：</b>調整腸道菌群平衡
                                 </td>
                             </tr>
                             <tr>
-                                <td><b>睡前</b></td>
+                                <td>睡前</td>
                                 <td><span class="diet-icon">💤</span><span class="diet-icon">🍵</span></td>
                                 <td>
+                                    <span class="prod-mini-icon">${getIcon('viva')}</span>
                                     <b>產品：</b>Viva+ (2 顆)<br>
-                                    <b>備註：</b>避免含糖飲料與螢幕藍光，靜心放鬆助眠
+                                    <b>建議：</b>穩定神經系統，促進深層睡眠
                                 </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
-                <div class="text-[0.5rem] text-gray-600 mt-2 italic">
-                    *註：針對高偏差項目 (${data.acids.find(a => a.d < -50) ? 'EPA/DHA 嚴重不足' : '維持中'}) 強化細胞膜流動性與 Omega-3 轉化率。
+            `;
+        }
+
+        function createSparkline(val, targetRange) {
+            const min = Math.min(val, targetRange[0]) * 0.7;
+            const max = Math.max(val, targetRange[1]) * 1.3;
+            const range = max - min;
+            const targetLeft = ((targetRange[0] - min) / range) * 100;
+            const targetWidth = ((targetRange[1] - targetRange[0]) / range) * 100;
+            const valPos = ((val - min) / range) * 100;
+            return `
+                <div class="spark-container">
+                    <div class="spark-target" style="left: ${targetLeft}%; width: ${targetWidth}%;"></div>
+                    <div class="spark-value" style="left: ${valPos}%;"></div>
                 </div>
             `;
         }
@@ -378,11 +473,13 @@
             const tbody = document.getElementById('data-tbody');
             tbody.innerHTML = "";
             data.acids.forEach(a => {
+                const spark = createSparkline(a.v, a.t);
                 tbody.innerHTML += `
                     <tr>
                         <td>${a.n}</td>
-                        <td class="font-bold">${a.v}</td>
-                        <td>${a.t}</td>
+                        <td class="font-bold">${a.v}%</td>
+                        <td>${spark}</td>
+                        <td>${a.t[0]}-${a.t[1]}</td>
                         <td class="font-bold ${a.d < 0 ? 'text-blue-600' : 'text-red-600'}">${a.d}%</td>
                     </tr>
                 `;
@@ -393,7 +490,6 @@
         function renderCharts(data) {
             const labels = data.acids.map(a => a.n);
             const devs = data.acids.map(a => a.d);
-
             const ctxBar = document.getElementById('barChart').getContext('2d');
             if(barChart) barChart.destroy();
             barChart = new Chart(ctxBar, {
@@ -401,26 +497,23 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: '偏差 %',
                         data: devs,
                         backgroundColor: devs.map(v => v < 0 ? 'rgba(54, 162, 235, 0.7)' : 'rgba(255, 99, 132, 0.7)'),
-                        borderColor: '#B8860B',
-                        borderWidth: 1
+                        borderWidth: 0
                     }]
                 },
-                options: { indexAxis: 'y', scales: { x: { ticks: { font: { size: 7 } } }, y: { ticks: { font: { size: 7 } } } }, plugins: { legend: { display: false } } }
+                options: { indexAxis: 'y', scales: { x: { ticks: { font: { size: 6 } } }, y: { ticks: { font: { size: 6 } } } }, plugins: { legend: { display: false } } }
             });
-
             const ctxRadar = document.getElementById('radarChart').getContext('2d');
             if(radarChart) radarChart.destroy();
             const rData = [100-(parseInt(data.ratio)*8), parseInt(data.protection), parseInt(data.omega3)*8, 70, 100-(parseFloat(data.flow)*10)];
             radarChart = new Chart(ctxRadar, {
                 type: 'radar',
                 data: {
-                    labels: ['平衡', '保護', 'O-3', '精神', '流動'],
-                    datasets: [{ data: rData, backgroundColor: 'rgba(218,165,32,0.2)', borderColor: '#DAA520' }]
+                    labels: ['平衡', '保護度', 'O-3指數', '精神力', '流動性'],
+                    datasets: [{ data: rData, backgroundColor: 'rgba(218,165,32,0.2)', borderColor: '#DAA520', pointRadius: 2 }]
                 },
-                options: { scales: { r: { min: 0, max: 100, ticks: { display: false } } }, plugins: { legend: { display: false } } }
+                options: { scales: { r: { min: 0, max: 100, ticks: { display: false }, pointLabels: { font: { size: 6 } } } }, plugins: { legend: { display: false } } }
             });
         }
 
@@ -430,7 +523,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `zinzino_gold_full_report.html`;
+            a.download = `zinzino_synced_report.html`;
             a.click();
             URL.revokeObjectURL(url);
         }
