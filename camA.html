@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Mobile QR Gun</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<style>
+body{margin:0;background:#000;color:#fff;font-family:sans-serif;text-align:center;}
+#reader{width:100vw;height:70vh;}
+#status{padding:12px;background:#111;font-size:15px;}
+.success{color:#00ff99;font-weight:bold;}
+</style>
+</head>
+<body>
+
+<div id="reader"></div>
+<div id="status">初始化中...</div>
+
+<script>
+// ❗ 手機檢查
+if(!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)){
+    document.body.innerHTML="<h2 style='color:white'>請用手機開啟</h2>";
+    throw new Error("Mobile only");
+}
+
+const statusBox=document.getElementById("status");
+let lastScan="",scanningEnabled=true,currentTrack=null;
+
+// 📳 震動
+function vibrateOK(){ navigator.vibrate && navigator.vibrate([70,40,120]); }
+function vibrateReset(){ navigator.vibrate && navigator.vibrate(180); }
+
+// 📋 複製
+async function copy(text){
+    await navigator.clipboard.writeText(text);
+}
+
+// 🔦 手電筒
+async function torchOn(track){
+    const cap=track.getCapabilities();
+    if(cap.torch){
+        await track.applyConstraints({advanced:[{torch:true}]});
+    }
+}
+
+// 🎯 成功掃描
+function onScanSuccess(txt){
+    if(!scanningEnabled || txt===lastScan) return;
+    lastScan=txt;
+    scanningEnabled=false;
+    copy(txt);
+    vibrateOK();
+    statusBox.innerHTML="✅ 已複製: <span class='success'>"+txt+"</span>";
+}
+
+// 🚀 啟動
+async function start(){
+    const html5QrCode=new Html5Qrcode("reader");
+    const cams=await Html5Qrcode.getCameras();
+    const back=cams.find(c=>c.label.toLowerCase().includes("back"))||cams[0];
+
+    await html5QrCode.start(
+        {deviceId:{exact:back.id}},
+        {fps:20,qrbox:{width:280,height:280},
+        experimentalFeatures:{useBarCodeDetectorIfSupported:true}},
+        onScanSuccess,
+        ()=>{}
+    );
+
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
+    currentTrack=stream.getVideoTracks()[0];
+    setTimeout(()=>torchOn(currentTrack),1200);
+
+    statusBox.innerText="對準 QR 掃描";
+}
+start();
+
+
+// 📱 晃動重置
+let lastX=0,lastY=0,lastZ=0,lastTime=0;
+window.addEventListener("devicemotion",e=>{
+    const acc=e.accelerationIncludingGravity;
+    const now=Date.now();
+    if(now-lastTime>120){
+        const speed=Math.abs(acc.x+acc.y+acc.z-lastX-lastY-lastZ)/(now-lastTime)*10000;
+        if(speed>35){
+            scanningEnabled=true;
+            lastScan="";
+            statusBox.innerText="📱 已重置，繼續掃描";
+            vibrateReset();
+        }
+        lastTime=now; lastX=acc.x; lastY=acc.y; lastZ=acc.z;
+    }
+});
+</script>
+
+</body>
+</html>
