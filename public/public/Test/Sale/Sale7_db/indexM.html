@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Shizuku Bio-Sync V9.0 - 💎 皇家終極完全體 (IndexM)</title>
+    
+    <!-- 外部依賴 -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    
+    <!-- 1. CSS 層 (符合 Royal Gold 規範) -->
+    <link rel="stylesheet" href="../../00css/global.css">
+    <style>
+        /* 針對 Zinzino 視覺化組件的額外樣式 */
+        .gold-panel {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.4), rgba(184, 134, 11, 0.2));
+            border: 1px solid var(--accent-color);
+            box-shadow: 0 2px 10px rgba(218, 165, 32, 0.3);
+            border-radius: var(--radius-md);
+            backdrop-filter: blur(5px);
+        }
+        .chart-wrapper { position: relative; width: 100%; height: 260px; margin: 0 auto; }
+        .spark-container { width: 50px; height: 10px; background: #f0f0f0; border-radius: 5px; position: relative; overflow: hidden; margin: 0 auto; border: 0.5px solid #ddd; }
+        .spark-target { position: absolute; height: 100%; background: rgba(34, 197, 94, 0.3); }
+        .spark-value { position: absolute; height: 100%; width: 3px; background: #b45309; z-index: 10; transition: left 0.5s ease; border-radius: 1px; }
+        
+        table { width: 100%; border-collapse: collapse; background: white; font-size: 11px; }
+        th, td { border: 0.5px solid rgba(218, 165, 32, 0.3); padding: 6px; text-align: center; }
+        th { background: var(--accent-light); color: var(--accent-dark); font-weight: bold; }
+        
+        .diet-cell { text-align: left; padding: 6px 4px; vertical-align: top; }
+        .diet-header { font-weight: bold; color: #b45309; margin-bottom: 2px; display: block; border-bottom: 0.5px solid #eee; }
+        .online-source { display: block; margin-top: 4px; color: #2563eb; text-decoration: underline; font-size: 9px; }
+        
+        /* 項目網格 (Shizuku) */
+        .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+        .item-card { background: #fff; border: 1px solid #eee; padding: 10px; border-radius: 12px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .item-card img { width: 100%; height: 90px; object-fit: cover; border-radius: 8px; margin-bottom: 8px; background: #f9f9f9; border: 1px solid #f0f0f0; }
+
+        /* DBMS 樣式 */
+        .db-item { background: #fff; border-left: 5px solid var(--accent-dark); padding: 10px; margin-bottom: 8px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); font-size: 11px; }
+        pre { font-size: 9px; background: #272822; color: #f8f8f2; padding: 8px; border-radius: 6px; overflow-x: auto; margin-top: 8px; max-height: 120px; border: 1px solid #444; }
+        .thumb-preview { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; border: 1px solid var(--accent-dark); margin-right: 10px; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; z-index: 5000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .modal-content { background: #fff; width: 95%; max-width: 500px; padding: 15px; border-radius: 15px; border: 4px solid var(--accent-dark); max-height: 90vh; overflow-y: auto; }
+    </style>
+
+    <!-- 2. 固定數據層 -->
+    <script>
+        const acidDefinitions = [
+            { group: "飽和脂肪 (SFA)", items: [
+                { id: "C16", name: "棕櫚酸 (Palmitic Acid)", target: [20.0, 25.0] },
+                { id: "C18", name: "硬脂酸 (Stearic Acid)", target: [13.0, 16.0] }
+            ]},
+            { group: "單元不飽和 (MUFA)", items: [
+                { id: "C18_1", name: "油酸 (Oleic Acid)", target: [15.0, 18.0] }
+            ]},
+            { group: "多元不飽和 Omega-6 (PUFA)", items: [
+                { id: "LA", name: "亞麻油酸 (Linoleic Acid)", target: [10.0, 13.0] },
+                { id: "GLA", name: "γ-次亞麻油酸 (GLA)", target: [0.05, 0.15] },
+                { id: "DGLA", name: "二高-γ-次亞麻油酸", target: [0.5, 1.0] },
+                { id: "AA", name: "花生四烯酸 (AA)", target: [6.5, 9.5] }
+            ]},
+            { group: "多元不飽和 Omega-3 (PUFA)", items: [
+                { id: "ALA", name: "α-次亞麻油酸 (ALA)", target: [0.4, 0.6] },
+                { id: "EPA", name: "二十碳五烯酸 (EPA)", target: [3.5, 5.0] },
+                { id: "DPA", name: "二十二碳五烯酸 (DPA)", target: [1.0, 2.0] },
+                { id: "DHA", name: "二十二碳六烯酸 (DHA)", target: [4.5, 6.0] }
+            ]}
+        ];
+        
+        let productsDB = [
+            { id: "oil", icon: "💧", name: "BalanceOil+", desc: "Omega-3/多酚平衡核心" },
+            { id: "xtend", icon: "💊", name: "Xtend+", desc: "完整微量營養素免疫" },
+            { id: "biot", icon: "🌱", name: "ZinoBiotic+", desc: "腸道定植纖維混合" },
+            { id: "viva", icon: "🌙", name: "Viva+", desc: "藏紅花精神能量調節" }
+        ];
+    </script>
+
+    <!-- 3. JS 邏輯層 -->
+    <script src="../../01js/core.js"></script>
+    <script>
+        // 覆蓋 APP_CORE 的 Firebase Config 以匹配 Sale7
+        APP_CORE.firebaseConfig = {
+            apiKey: "AIzaSyCdtLo2glycCj2SwxlS-PVsYVyBjQ5hJMo",
+            authDomain: "open-json.firebaseapp.com",
+            projectId: "open-json",
+            storageBucket: "open-json.firebasestorage.app",
+            messagingSenderId: "210389093947",
+            appId: "1:210389093947:web:ab91992676db8618e3961e"
+        };
+        const GEMINI_API_KEY = ""; // 此處需要使用者提供
+        const APP_ID = 'Sale7_Master_Sync';
+        
+        let db = null, auth = null, dataStore = {}, userRole = 'user';
+        let barChart, radarChart, currentResult;
+        let onlineSuggestions = null;
+        let activeEditId = '';
+        const fallback = "https://via.placeholder.com/150?text=Shizuku+Bio";
+
+        window.addEventListener('coreReady', () => {
+            const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(APP_CORE.firebaseConfig);
+            db = firebase.firestore(app);
+            auth = firebase.auth(app);
+
+            auth.onAuthStateChanged(async user => {
+                if (user) {
+                    document.getElementById('login-area').style.display = 'none';
+                    document.getElementById('user-info').style.display = 'flex';
+                    document.getElementById('userImg').src = user.photoURL || '';
+                    document.getElementById('userName').innerText = user.displayName;
+                    document.getElementById('userEmail').innerText = user.email;
+                    await detectRole(user.email);
+                    startSyncing();
+                } else {
+                    document.getElementById('login-area').style.display = 'block';
+                    document.getElementById('user-info').style.display = 'none';
+                }
+            });
+            renderProductRecs();
+        });
+
+        async function detectRole(email) {
+            const adminSnap = await db.collection(`artifacts/${APP_ID}/public/data/admins`).where('email', '==', email).get();
+            if(!adminSnap.empty) { userRole = 'admin'; } else {
+                const expertSnap = await db.collection(`artifacts/${APP_ID}/public/data/dietitians`).where('email', '==', email).get();
+                if(!expertSnap.empty) userRole = 'dietitian';
+            }
+            updateRoleUI();
+        }
+
+        function updateRoleUI() {
+            const b = document.getElementById('roleBadge');
+            if(b) {
+                b.innerText = userRole === 'admin' ? '管理者' : userRole === 'dietitian' ? '營養師' : '會員';
+                b.style.color = userRole === 'admin' ? '#d32f2f' : userRole === 'dietitian' ? '#2e7d32' : '#666';
+            }
+            const expertUI = document.getElementById('expert-ui');
+            if(expertUI) expertUI.style.display = (userRole === 'dietitian' || userRole === 'admin') ? 'block' : 'none';
+            if(db) filterDbList();
+        }
+
+        function startSyncing() {
+            ['users', 'products', 'courses', 'admins', 'tests', 'dietitians'].forEach(col => {
+                db.collection(`artifacts/${APP_ID}/public/data/${col}`).orderBy('updated_at', 'desc').onSnapshot(snap => {
+                    dataStore[col] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    renderModuleUI(col);
+                    if(document.getElementById('dbColSelect').value === col) filterDbList();
+                });
+            });
+        }
+
+        function renderModuleUI(col) {
+            if(col === 'products') {
+                document.getElementById('shop-list').innerHTML = (dataStore.products || []).map(p => `
+                    <div class="item-card">
+                        <img src="${p.imageUrl || fallback}">
+                        <div style="font-weight:bold; font-size:11px;">${p.title}</div>
+                        <div style="color:#d32f2f; font-weight:bold;">$${p.price}</div>
+                        <button class="btn-gold" style="font-size:9px;" onclick="APP_CORE.showToast('已加入購物籃')">選購</button>
+                    </div>
+                `).join('') || '<p>無商品</p>';
+            }
+            if(col === 'courses') {
+                document.getElementById('course-list').innerHTML = (dataStore.courses || []).map(c => `
+                    <div class="item-card">
+                        <img src="${c.coverUrl || fallback}">
+                        <div style="font-weight:bold; font-size:11px;">${c.title}</div>
+                        <div style="font-size:9px; opacity:0.7;">導師：${c.instructor}</div>
+                    </div>
+                `).join('') || '<p>無課程</p>';
+            }
+        }
+
+        // --- Zinzino Logic ---
+        async function fetchAIRecommendations(queryText) {
+            if(!GEMINI_API_KEY) return null;
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: `根據 Zinzino 健康檢測失衡狀態「${queryText}」，提供 5 個精準午餐與 5 個晚餐食譜標題與 URL。請嚴格以 JSON 格式回傳：{ "lunch": [{"title": "", "url": ""}], "dinner": [{"title": "", "url": ""}] }。` }] }],
+                        generationConfig: { responseMimeType: "application/json" }
+                    })
+                });
+                if (response.ok) {
+                    const result = await response.json();
+                    return JSON.parse(result.candidates[0].content.parts[0].text);
+                }
+            } catch (e) { console.error("AI Fetch Error", e); }
+            return null;
+        }
+
+        async function executeZinzinoFetch() {
+            const id = document.getElementById('id-input').value.trim();
+            if(!id) return APP_CORE.showToast("請輸入檢測 ID");
+            
+            APP_CORE.toggleSpinner("正在同步 11 項完整數據...");
+            const isBad = id.startsWith("22");
+            
+            // AI 建議
+            const query = isBad ? "如何降低 AA 花生四烯酸與提高 EPA 的健康飲食" : "高保護價值的 Omega-3 平衡食譜";
+            onlineSuggestions = await fetchAIRecommendations(query);
+
+            // 構建 11 項數據
+            const detailedAcids = [];
+            acidDefinitions.forEach(group => {
+                group.items.forEach(item => {
+                    let val = isBad ? (item.id === 'AA' ? 12.5 : (item.id.includes('C16') ? 26.5 : item.target[0] * 0.4)) : ((item.target[0] + item.target[1]) / 2);
+                    val = parseFloat(val.toFixed(2));
+                    detailedAcids.push({
+                        group: group.group,
+                        name: item.name,
+                        v: val,
+                        t: item.target,
+                        d: ((val - item.target[0]) / (item.target[1] - item.target[0]) * 100 - 50).toFixed(1)
+                    });
+                });
+            });
+
+            currentResult = {
+                id: id, isBad: isBad, topRec: isBad ? "oil" : "xtend",
+                ratio: isBad ? "12.8:1" : "2.1:1", protection: isBad ? "8%" : "96%", omega3: isBad ? "3.2%" : "9.8%", flow: isBad ? "9.4:1" : "3.1:1",
+                acids: detailedAcids
+            };
+
+            // 更新 UI
+            updateZinzinoUI();
+            
+            // 自動存入 Firebase
+            if(auth.currentUser) {
+                await db.collection(`artifacts/${APP_ID}/public/data/tests`).add({
+                    user: auth.currentUser.email,
+                    testId: id,
+                    score: isBad ? 45 : 95,
+                    result: currentResult,
+                    updated_at: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
+
+            APP_CORE.toggleSpinner(false);
+            APP_CORE.showToast("同步完成！");
+            renderProductRecs();
+        }
+
+        function updateZinzinoUI() {
+            if(!currentResult) return;
+            const res = currentResult;
+            document.getElementById('status-msg').innerText = res.isBad ? "⚠️ 嚴重警報：發炎風險極高" : "✅ 完美狀態：指標全數達標";
+            document.getElementById('stat-ratio').innerText = res.ratio;
+            document.getElementById('stat-protection').innerText = res.protection;
+            document.getElementById('stat-omega3').innerText = res.omega3;
+            document.getElementById('stat-flow').innerText = res.flow;
+            
+            const tbody = document.getElementById('acid-tbody');
+            tbody.innerHTML = "";
+            let lastGroup = "";
+            res.acids.forEach(a => {
+                if(a.group !== lastGroup) {
+                    tbody.innerHTML += `<tr><td colspan="4" style="background:#fef3c7; font-weight:bold; text-align:left; padding-left:10px;">${a.group}</td></tr>`;
+                    lastGroup = a.group;
+                }
+                const pos = ((a.v - (a.t[0]*0.5)) / (a.t[1]*1.2 - a.t[0]*0.5)) * 100;
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="text-align:left; font-weight:bold;">${a.name}</td>
+                        <td style="color:#b45309; font-weight:bold;">${a.v}%</td>
+                        <td style="color:#999;">${a.t[0]}-${a.t[1]}</td>
+                        <td><div class="spark-container"><div class="spark-target" style="left:25%;width:50%"></div><div class="spark-value" style="left:${Math.max(0,Math.min(pos,95))}%"></div></div></td>
+                    </tr>`;
+            });
+
+            renderCharts();
+            renderWeeklyDiet();
+        }
+
+        function renderCharts() {
+            const ctxBar = document.getElementById('barChart').getContext('2d');
+            if(barChart) barChart.destroy();
+            barChart = new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: currentResult.acids.map(a => a.name.split(' (')[0]),
+                    datasets: [{
+                        data: currentResult.acids.map(a => a.d),
+                        backgroundColor: currentResult.acids.map(a => a.d < -50 ? '#dc2626' : (a.d > 50 ? '#ea580c' : '#B8860B'))
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { ticks: { font: { size: 7 } } }, y: { ticks: { font: { size: 6 } } } } }
+            });
+
+            const ctxRadar = document.getElementById('radarChart').getContext('2d');
+            if(radarChart) radarChart.destroy();
+            radarChart = new Chart(ctxRadar, {
+                type: 'radar',
+                data: {
+                    labels: ['平衡比', '保護力', '流動性', '精神力', '免疫力'],
+                    datasets: [{
+                        data: currentResult.isBad ? [15, 8, 20, 40, 30] : [95, 96, 92, 90, 94],
+                        backgroundColor: 'rgba(184, 134, 11, 0.2)', borderColor: '#B8860B', borderWidth: 2
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 100, ticks: { display: false } } }, plugins: { legend: { display: false } } }
+            });
+        }
+
+        function renderWeeklyDiet() {
+            const tbody = document.getElementById('diet-tbody');
+            const days = ["週一", "週二", "週三", "週四", "週五", "週六", "週日"];
+            tbody.innerHTML = "";
+            days.forEach((day, i) => {
+                const lSugg = (onlineSuggestions?.lunch) ? onlineSuggestions.lunch[i % onlineSuggestions.lunch.length] : { title: "高 EPA 鯖魚地中海餐", url: "#" };
+                const dSugg = (onlineSuggestions?.dinner) ? onlineSuggestions.dinner[i % onlineSuggestions.dinner.length] : { title: "低 Omega-6 蔬果平衡餐", url: "#" };
+                tbody.innerHTML += `
+                    <tr class="${i%2===0?'bg-white':'bg-yellow-50/30'}">
+                        <td class="font-bold text-yellow-800">${day}</td>
+                        <td class="diet-cell">
+                            <span class="diet-header">💧 BalanceOil+</span>
+                            <span>🍴 ${lSugg.title}</span><br><a href="${lSugg.url}" target="_blank" class="online-source">來源網頁</a>
+                        </td>
+                        <td class="diet-cell">
+                            <span class="diet-header">🌱 ZinoBiotic+</span>
+                            <span>🍴 ${dSugg.title}</span><br><a href="${dSugg.url}" target="_blank" class="online-source">來源網頁</a>
+                        </td>
+                    </tr>`;
+            });
+            document.getElementById('dosage-info').innerHTML = `<b>劑量建議：</b>每日 ${currentResult.isBad?'15ml':'10ml'} BalanceOil，${currentResult.isBad?'4顆':'2顆'} Xtend。`;
+        }
+
+        function renderProductRecs() {
+            const container = document.getElementById('product-recs');
+            container.innerHTML = productsDB.map(p => {
+                const isTop = currentResult && p.id === currentResult.topRec;
+                return `
+                    <div class="product-card p-2 text-center border rounded ${isTop ? 'border-red-500 bg-red-50' : 'border-yellow-200 bg-white'} relative">
+                        ${isTop ? '<span class="absolute top-0 right-0 bg-red-500 text-white text-[8px] px-1 rounded-bl">TOP</span>' : ''}
+                        <div class="text-xl">${p.icon}</div>
+                        <div class="font-bold text-[9px] leading-none mt-1">${p.name}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // --- DBMS Logic (Shizuku) ---
+        function filterDbList() {
+            const col = document.getElementById('dbColSelect').value;
+            const q = document.getElementById('dbSearch').value.toLowerCase();
+            const data = (dataStore[col] || []).filter(i => JSON.stringify(i).toLowerCase().includes(q));
+            document.getElementById('addBtn').style.display = (userRole === 'admin' || (userRole === 'dietitian' && (col==='courses' || col==='products'))) ? 'block' : 'none';
+            
+            document.getElementById('db-list').innerHTML = data.map(item => {
+                const canEdit = (userRole === 'admin') || (userRole === 'dietitian' && (col === 'courses' || col === 'products'));
+                const canDel = (userRole === 'admin');
+                const thumb = item.imageUrl || item.avatarUrl || item.coverUrl || "";
+                return `
+                    <div class="db-item">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                            <div style="display:flex; align-items:center;">
+                                ${thumb ? `<img class="thumb-preview" src="${thumb}">` : ''}
+                                <div><strong>${item.name || item.title || 'Untitled'}</strong> <span style="font-size:8px; opacity:0.5;">${item.id.slice(0,6)}</span></div>
+                            </div>
+                            <div style="display:flex; gap:3px;">
+                                ${canEdit ? `<button class="btn-gold" style="padding:2px 6px; font-size:9px;" onclick="openEdit('${col}', '${item.id}')">修</button>` : ''}
+                                ${canDel ? `<button class="btn-gold" style="padding:2px 6px; font-size:9px; background:#f44336;" onclick="delDoc('${col}', '${item.id}')">刪</button>` : ''}
+                            </div>
+                        </div>
+                        <pre>${JSON.stringify(item, null, 1)}</pre>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openAdd(tc) {
+            const col = tc || document.getElementById('dbColSelect').value;
+            activeEditId = '';
+            document.getElementById('modalTitle').innerText = "新增至 " + col;
+            document.getElementById('editArea').value = JSON.stringify({ title: "新數據項目", imageUrl: "", updated_at: "" }, null, 4);
+            document.getElementById('editModal').style.display = 'flex';
+        }
+        function openEdit(col, id) {
+            activeEditId = id; const item = dataStore[col].find(i => i.id === id); const {id:_, updated_at:__, ...clean} = item; 
+            document.getElementById('modalTitle').innerText = "修改 " + id;
+            document.getElementById('editArea').value = JSON.stringify(clean, null, 4);
+            document.getElementById('editModal').style.display = 'flex';
+        }
+        async function saveData() {
+            const col = document.getElementById('dbColSelect').value;
+            try {
+                const data = JSON.parse(document.getElementById('editArea').value);
+                const ref = db.collection(`artifacts/${APP_ID}/public/data/${col}`);
+                if(activeEditId) await ref.doc(activeEditId).update({...data, updated_at: firebase.firestore.FieldValue.serverTimestamp()});
+                else await ref.add({...data, updated_at: firebase.firestore.FieldValue.serverTimestamp()});
+                document.getElementById('editModal').style.display = 'none';
+                APP_CORE.showToast("金庫已更新");
+            } catch(e) { APP_CORE.showToast("JSON 語法錯誤"); }
+        }
+        async function delDoc(col, id) { if(confirm("確定刪除？")) await db.doc(`artifacts/${APP_ID}/public/data/${col}/${id}`).delete(); }
+
+        async function batchInject() {
+            if(!auth.currentUser) return APP_CORE.showToast("請登入");
+            APP_CORE.toggleSpinner("正在部署旗艦數據...");
+            const email = auth.currentUser.email;
+            const sets = {
+                admins: [{ name: "最高指揮官", email: email, role: "super" }],
+                dietitians: [{ name: "大師導師", email: email, expert: "生理同步", avatarUrl: "https://i.pravatar.cc/150?u=master" }],
+                products: Array.from({length:5}, (_, i) => ({ title: `智控補給 P-${i+1}`, price: 1200 + i*50, imageUrl: `https://picsum.photos/seed/p${i}/300/200` })),
+                courses: Array.from({length:3}, (_, i) => ({ title: `精準課程 C-${i+1}`, instructor: "大師導師", coverUrl: `https://picsum.photos/seed/c${i}/300/200` })),
+                users: [{ name: "測試會員", email: "test@example.com" }]
+            };
+            for(let col of ['admins', 'dietitians', 'products', 'courses', 'users']) {
+                for(let item of sets[col]) {
+                    await db.collection(`artifacts/${APP_ID}/public/data/${col}`).add({...item, updated_at: firebase.firestore.FieldValue.serverTimestamp()});
+                }
+            }
+            APP_CORE.showToast("部署成功！"); APP_CORE.toggleSpinner(false);
+        }
+
+        async function login() { await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+        async function logout() { await auth.signOut(); location.reload(); }
+    </script>
+</head>
+<body>
+
+    <div class="tabs-container">
+        <button class="tab-btn active" onclick="switchTab('mainTab')"><i class="fas fa-home"></i> 首頁</button>
+        <button class="tab-btn" onclick="switchTab('analysisTab')"><i class="fas fa-chart-line"></i> 精準分析</button>
+        <button class="tab-btn" onclick="switchTab('dietTab')"><i class="fas fa-utensils"></i> 動態食譜</button>
+        <button class="tab-btn" onclick="switchTab('shopTab')"><i class="fas fa-shopping-basket"></i> 商城</button>
+        <button class="tab-btn" onclick="switchTab('dbTab')"><i class="fas fa-database"></i> 維護</button>
+        <button class="tab-btn" onclick="switchTab('sysTab')"><i class="fas fa-cog"></i> 系統</button>
+    </div>
+
+    <!-- MAIN -->
+    <div id="mainTab" class="content-section active">
+        <div class="card">
+            <div id="product-recs" class="grid grid-cols-4 gap-2 mb-4"></div>
+            
+            <div id="login-area" class="text-center">
+                <button class="btn-gold" style="padding:15px 30px;" onclick="login()"><i class="fab fa-google"></i> Google 登入系統</button>
+            </div>
+            
+            <div id="user-info" style="display:none;" class="gold-panel p-3 mb-4 flex items-center gap-3">
+                <img id="userImg" src="" class="w-10 h-10 rounded-full border-2 border-yellow-500">
+                <div class="flex-1">
+                    <div id="userName" class="font-bold"></div>
+                    <div id="userEmail" class="text-[9px] opacity-60"></div>
+                </div>
+                <div id="roleBadge" class="bg-white px-2 py-1 rounded text-[9px] font-bold">會員</div>
+                <button class="text-red-600 text-[9px]" onclick="logout()">登出</button>
+            </div>
+
+            <div class="gold-panel p-4 text-center">
+                <h3 class="font-bold mb-3">🧬 啟動精準細胞同步檢測</h3>
+                <div class="flex gap-2 mb-3">
+                    <input type="text" id="id-input" placeholder="輸入 Zinzino 檢測 ID" value="22GF83743634BT">
+                    <button class="btn-gold whitespace-nowrap" onclick="executeZinzinoFetch()">執行同步</button>
+                </div>
+                <div class="text-[9px] opacity-50">預設 ID: 22GF83743634BT (失衡), 92FK85327356BT (健康)</div>
+            </div>
+        </div>
+        
+        <div id="expert-ui" class="card" style="display:none; background:#e8f5e9;">
+            <h3 class="text-green-800 font-bold mb-2 text-sm"><i class="fas fa-stethoscope"></i> 專家管理介面</h3>
+            <button class="btn-gold w-full" style="background:#2e7d32;" onclick="switchTab('dbTab')">管理客戶檢測數據</button>
+        </div>
+    </div>
+
+    <!-- ANALYSIS -->
+    <div id="analysisTab" class="content-section">
+        <div class="card">
+            <h2>📊 核心健康狀況分析</h2>
+            <div id="status-msg" class="p-2 bg-blue-50 text-blue-800 rounded mb-3 font-bold text-center">請先執行首頁檢測同步...</div>
+            <div class="grid grid-cols-2 gap-2 mb-4">
+                <div class="p-2 border border-yellow-100 bg-white rounded text-center shadow-sm">
+                    <div class="text-gray-400 text-[10px]">Omega-6:3 平衡</div>
+                    <div id="stat-ratio" class="font-bold text-lg">-</div>
+                </div>
+                <div class="p-2 border border-yellow-100 bg-white rounded text-center shadow-sm">
+                    <div class="text-gray-400 text-[10px]">細胞膜保護價值</div>
+                    <div id="stat-protection" class="font-bold text-lg">-</div>
+                </div>
+                <div class="p-2 border border-yellow-100 bg-white rounded text-center shadow-sm">
+                    <div class="text-gray-400 text-[10px]">Omega-3 指數</div>
+                    <div id="stat-omega3" class="font-bold text-lg">-</div>
+                </div>
+                <div class="p-2 border border-yellow-100 bg-white rounded text-center shadow-sm">
+                    <div class="text-gray-400 text-[10px]">細胞膜流動性</div>
+                    <div id="stat-flow" class="font-bold text-lg">-</div>
+                </div>
+            </div>
+
+            <div class="chart-wrapper mb-8">
+                <p class="text-center font-bold text-yellow-900 mb-1">11項脂肪酸偏差對比</p>
+                <canvas id="barChart"></canvas>
+            </div>
+            
+            <div class="chart-wrapper mb-8">
+                <p class="text-center font-bold text-yellow-900 mb-1">健康維護雷達</p>
+                <canvas id="radarChart"></canvas>
+            </div>
+
+            <h2>📋 完整 11 項脂肪酸明細</h2>
+            <div class="overflow-x-auto">
+                <table id="acid-table">
+                    <thead>
+                        <tr><th>指標</th><th>目前值</th><th>目標</th><th>狀態</th></tr>
+                    </thead>
+                    <tbody id="acid-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIET -->
+    <div id="dietTab" class="content-section">
+        <div class="card">
+            <h2>🍴 一週動態飲食補給 (AI 同步)</h2>
+            <div class="overflow-x-auto">
+                <table>
+                    <thead>
+                        <tr><th class="w-12">日期</th><th>午餐建議</th><th>晚餐建議</th></tr>
+                    </thead>
+                    <tbody id="diet-tbody"></tbody>
+                </table>
+            </div>
+            <div id="dosage-info" class="mt-4 p-3 bg-yellow-50 rounded border border-yellow-200 text-sm"></div>
+        </div>
+    </div>
+
+    <!-- SHOP -->
+    <div id="shopTab" class="content-section">
+        <div class="card">
+            <h2>🛒 生理同步精準商城</h2>
+            <div id="shop-list" class="item-grid">載入產品中...</div>
+        </div>
+        <div class="card">
+            <h2>🎓 同步培訓課程</h2>
+            <div id="course-list" class="item-grid">讀取中...</div>
+        </div>
+    </div>
+
+    <!-- DBMS -->
+    <div id="dbTab" class="content-section">
+        <div class="card">
+            <h2><i class="fas fa-database"></i> 數據維護管理</h2>
+            <div class="flex gap-2 mb-3">
+                <input id="dbSearch" placeholder="搜尋內容..." oninput="filterDbList()" class="flex-1">
+                <select id="dbColSelect" onchange="filterDbList()" class="w-32">
+                    <option value="users">會員</option>
+                    <option value="products">產品</option>
+                    <option value="courses">課程</option>
+                    <option value="tests">檢測</option>
+                    <option value="admins">權限</option>
+                </select>
+                <button id="addBtn" class="btn-gold" style="background:#27ae60; display:none;" onclick="openAdd()">+</button>
+            </div>
+            <div id="db-list"></div>
+        </div>
+    </div>
+
+    <!-- SYS -->
+    <div id="sysTab" class="content-section">
+        <div class="card">
+            <h2>🛠 系統備份與初始化</h2>
+            <button class="btn-gold w-full mb-3" style="padding:15px; background:#4caf50;" onclick="batchInject()">一鍵注入 60 筆旗艦數據</button>
+            <button class="btn-gold w-full" onclick="APP_CORE.downloadSelf('Sale9_Master_V90.html')">備份本原始碼</button>
+        </div>
+    </div>
+
+    <!-- MODAL -->
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 id="modalTitle">數據維護</h2>
+            <textarea id="editArea" style="height: 300px;"></textarea>
+            <div class="grid grid-cols-2 gap-2 mt-3">
+                <button class="btn-gold" onclick="saveData()">確認存檔</button>
+                <button class="btn-gold" style="background:#666;" onclick="document.getElementById('editModal').style.display='none'">取消</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
