@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Shizuku Bio-Sync V8.0 - 💎 皇家全智能旗艦版 (Sale7)</title>
+    
+    <!-- Firebase SDK (Compat v9) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    
+    <style>
+        :root {
+            --primary-color: #2c3e50; --accent-color: #FFD700; --accent-dark: #B8860B;
+            --accent-light: #FFFACD; --bg-gradient: radial-gradient(circle, #fdf5e6 0%, #ffd700 100%);        
+            --card-bg: rgba(255, 255, 255, 0.98); --text-color: #5d4037; --muted-color: #7f8c8d;
+            --success-color: #27ae60; --space-sm: 8px; --space-md: 12px; --radius-md: 15px;
+            --base-font-size: 13px; --main-font: 'Segoe UI', 'Noto Sans TC', sans-serif;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }      
+        body { font-family: var(--main-font); font-size: var(--base-font-size); background: var(--bg-gradient); background-attachment: fixed; color: var(--text-color); margin: 0; line-height: 1.4; overflow-x: hidden; }
+        
+        .tabs-container { display: flex; background: var(--accent-dark); position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.2); overflow-x: auto; }
+        .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; color: rgba(255,255,255,0.8); font-size: 10px; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 60px; transition: 0.3s; }
+        .tab-btn.active { color: #fff; background: rgba(255,255,255,0.15); border-bottom: 3px solid #fff; }
+        
+        .content-section { display: none; padding: 10px; animation: fadeIn 0.3s ease; }
+        .content-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .card { background: var(--card-bg); border: 2px solid var(--accent-dark); border-radius: var(--radius-md); padding: 15px; margin-bottom: 10px; box-shadow: 0 4px 15px rgba(184, 134, 11, 0.15); }
+        .card h2 { margin-top: 0; font-size: 15px; color: var(--accent-dark); border-bottom: 1px solid var(--accent-dark); padding-bottom: 5px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+        
+        .btn-gold { background: linear-gradient(to bottom, var(--accent-color), var(--accent-dark)); color: #fff; border: 1px solid #8b4513; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn-gold:active { transform: scale(0.95); }
+        
+        .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 10px; }
+        .item-card { background: #fff; border: 1px solid #eee; padding: 10px; border-radius: 12px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .item-card img { width: 100%; height: 100px; object-fit: cover; border-radius: 8px; margin-bottom: 8px; background: #f9f9f9; }
+        
+        .db-item { background: #fff; border-left: 5px solid var(--accent-dark); padding: 10px; margin-bottom: 8px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); font-size: 11px; }
+        pre { font-size: 9px; background: #272822; color: #f8f8f2; padding: 8px; border-radius: 6px; overflow-x: auto; margin-top: 8px; max-height: 120px; }
+        .role-badge { font-size: 9px; padding: 2px 8px; border-radius: 10px; font-weight: bold; background: #fff; border: 1px solid var(--accent-dark); }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; z-index: 5000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .modal-content { background: #fff; width: 95%; max-width: 500px; padding: 15px; border-radius: 15px; border: 4px solid var(--accent-dark); max-height: 90vh; overflow-y: auto; }
+        textarea { width: 100%; height: 250px; font-family: monospace; font-size: 12px; background: #fffdf0; padding: 10px; border-radius: 8px; border: 1px solid #ccc; }
+        
+        .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 10px 20px; border-radius: 25px; z-index: 9999; font-size: 12px; display: none; }
+        .spinner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.7); display: none; justify-content: center; align-items: center; z-index: 9000; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid var(--accent-dark); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+
+    <!-- 2. JS 層 (內嵌核心與 Firebase 配置) -->
+    <script>
+        const APP_CORE = {
+            version: "8.0.0-Sale7-AI-Role",
+            firebaseConfig: {
+                apiKey: "AIzaSyCdtLo2glycCj2SwxlS-PVsYVyBjQ5hJMo",
+                authDomain: "open-json.firebaseapp.com",
+                projectId: "open-json",
+                storageBucket: "open-json.firebasestorage.app",
+                messagingSenderId: "210389093947",
+                appId: "1:210389093947:web:ab91992676db8618e3961e"
+            },
+            init() {
+                this.setupTabs();
+                window.dispatchEvent(new CustomEvent('coreReady'));
+            },
+            showToast(msg) {
+                let t = document.getElementById('toast') || Object.assign(document.createElement('div'), {id:'toast', className:'toast'});
+                if(!t.parentElement) document.body.appendChild(t);
+                t.textContent = msg; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 3000);
+            },
+            toggleSpinner(show) {
+                let s = document.getElementById('spinner') || Object.assign(document.createElement('div'), {id:'spinner', className:'spinner-overlay', innerHTML:'<div class="loader"></div>'});
+                if(!s.parentElement) document.body.appendChild(s);
+                s.style.display = show ? 'flex' : 'none';
+            },
+            setupTabs() {
+                window.switchTab = (id) => {
+                    document.querySelectorAll('.content-section, .tab-btn').forEach(el => el.classList.remove('active'));
+                    const target = document.getElementById(id);
+                    if(target) target.classList.add('active');
+                    const btn = document.querySelector(`[onclick*="${id}"]`);
+                    if(btn) btn.classList.add('active');
+                };
+            },
+            downloadSelf(fn) {
+                const b = new Blob(["<!DOCTYPE html>\n"+document.documentElement.outerHTML], {type:'text/html'});
+                const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = fn; a.click();
+            }
+        };
+        window.APP_CORE = APP_CORE;
+        document.addEventListener('DOMContentLoaded', () => APP_CORE.init());
+    </script>
+</head>
+<body>
+
+    <div class="tabs-container">
+        <button class="tab-btn active" onclick="switchTab('mainTab')"><i class="fas fa-home"></i> 首頁</button>
+        <button class="tab-btn" onclick="switchTab('shopTab')"><i class="fas fa-shopping-basket"></i> 商城</button>
+        <button class="tab-btn" onclick="switchTab('courseTab')"><i class="fas fa-graduation-cap"></i> 課程</button>
+        <button class="tab-btn" onclick="switchTab('dbTab')"><i class="fas fa-database"></i> 維護</button>
+        <button class="tab-btn" onclick="switchTab('sysTab')"><i class="fas fa-cog"></i> 系統</button>
+    </div>
+
+    <!-- MAIN -->
+    <div id="mainTab" class="content-section active">
+        <div class="card" style="text-align:center;">
+            <h2>🧬 生理同步旗艦系統 V8.0</h2>
+            <div id="login-area" style="margin-bottom:15px;">
+                <button id="loginBtn" class="btn-gold" style="padding:10px 20px;" onclick="login()"><i class="fab fa-google"></i> Google 登入</button>
+                <div id="user-info" style="display:none; align-items:center; gap:10px; background:#fff; padding:10px; border-radius:12px; border:2px solid var(--accent-dark); text-align:left;">
+                    <img id="userImg" src="" style="width:35px; border-radius:50%; border:2px solid var(--accent-color);">
+                    <div><div id="userName" style="font-weight:bold; font-size:13px;"></div><div id="userEmail" style="font-size:9px; opacity:0.6;"></div></div>
+                    <div id="roleBadge" class="role-badge">識別中...</div>
+                    <button class="btn-gold" style="margin-left:auto; font-size:9px;" onclick="logout()">登出</button>
+                </div>
+            </div>
+            <div class="card" id="test-card">
+                <h3>🧬 快速生理檢測</h3>
+                <button class="btn-gold" style="width:100%" onclick="runTest()">啟動掃描並存檔</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SHOP -->
+    <div id="shopTab" class="content-section">
+        <div class="card">
+            <h2>🛒 精準改善商城</h2>
+            <div id="shop-list" class="item-grid">正在載入產品圖...</div>
+        </div>
+    </div>
+
+    <!-- COURSE -->
+    <div id="courseTab" class="content-section">
+        <div class="card" id="dietitian-course-box" style="display:none; background:#e8f5e9; border-color:#2e7d32;">
+            <h3 style="color:#2e7d32;"><i class="fas fa-plus-circle"></i> 營養師課程發佈</h3>
+            <button class="btn-gold" style="width:100%; background:#2e7d32;" onclick="openAdd('courses')">新增一門專業課程</button>
+        </div>
+        <div class="card">
+            <h2>🎓 生理同步專業課程</h2>
+            <div id="course-list" class="item-grid">載入中...</div>
+        </div>
+    </div>
+
+    <!-- DBMS -->
+    <div id="dbTab" class="content-section">
+        <div class="card">
+            <h2><i class="fas fa-database"></i> 維護模式</h2>
+            <div style="display:flex; gap:5px; margin-bottom:10px;">
+                <select id="dbColSelect" onchange="syncData(this.value)">
+                    <option value="products">產品管理</option>
+                    <option value="courses">課程管理</option>
+                    <option value="users">會員管理</option>
+                    <option value="admins">管理者名單</option>
+                    <option value="tests">檢測紀錄</option>
+                </select>
+                <button id="addBtn" class="btn-gold" style="background:#27ae60; display:none;" onclick="openAdd()">+</button>
+            </div>
+            <div id="db-list"></div>
+        </div>
+    </div>
+
+    <!-- SYSTEM -->
+    <div id="sysTab" class="content-section">
+        <div class="card">
+            <h2>🛠 核心部署</h2>
+            <button class="btn-gold" style="width:100%; background:#4caf50; padding:15px;" onclick="batchInject()">一鍵注入 50 筆資料 (含當前帳號權限)</button>
+        </div>
+        <button class="btn-gold" style="width:100%;" onclick="APP_CORE.downloadSelf('Sale7_Ultimate_V8.html')">下載系統備份</button>
+    </div>
+
+    <!-- MODAL -->
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 id="modalTitle">資料管理</h2>
+            <textarea id="editArea"></textarea>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
+                <button class="btn-gold" onclick="saveData()">確認存檔</button>
+                <button class="btn-gold" style="background:#666;" onclick="document.getElementById('editModal').style.display='none'">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const APP_ID = 'Sale7_Ultimate_System';
+        let db = null, auth = null, dataStore = {}, currentUser = null, userRole = 'user';
+        const fallback = "https://via.placeholder.com/150?text=Shizuku+Bio";
+
+        window.addEventListener('coreReady', () => {
+            const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(APP_CORE.firebaseConfig);
+            db = firebase.firestore(app);
+            auth = firebase.auth(app);
+
+            auth.onAuthStateChanged(async user => {
+                if (user) {
+                    currentUser = user;
+                    document.getElementById('loginBtn').style.display = 'none';
+                    document.getElementById('user-info').style.display = 'flex';
+                    document.getElementById('userImg').src = user.photoURL || '';
+                    document.getElementById('userName').innerText = user.displayName;
+                    document.getElementById('userEmail').innerText = user.email;
+                    await detectRole(user.email);
+                    startAllSyncs();
+                } else {
+                    document.getElementById('loginBtn').style.display = 'inline-flex';
+                    document.getElementById('user-info').style.display = 'none';
+                }
+            });
+        });
+
+        async function detectRole(email) {
+            const adminSnap = await db.collection(`artifacts/${APP_ID}/public/data/admins`).where('email', '==', email).get();
+            if(!adminSnap.empty) { userRole = 'admin'; return updateRoleUI(); }
+            
+            const expertSnap = await db.collection(`artifacts/${APP_ID}/public/data/dietitians`).where('email', '==', email).get();
+            if(!expertSnap.empty) { userRole = 'dietitian'; return updateRoleUI(); }
+            
+            userRole = 'user';
+            updateRoleUI();
+        }
+
+        function updateRoleUI() {
+            const badge = document.getElementById('roleBadge');
+            badge.innerText = userRole === 'admin' ? '管理者' : userRole === 'dietitian' ? '營養師' : '一般會員';
+            badge.style.color = userRole === 'admin' ? '#d32f2f' : userRole === 'dietitian' ? '#2e7d32' : '#666';
+            
+            document.getElementById('dietitian-course-box').style.display = (userRole === 'dietitian' || userRole === 'admin') ? 'block' : 'none';
+            syncData(document.getElementById('dbColSelect').value);
+        }
+
+        async function login() { await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+        async function logout() { await auth.signOut(); location.reload(); }
+
+        function startAllSyncs() {
+            ['users', 'dietitians', 'products', 'admins', 'courses', 'tests'].forEach(col => {
+                db.collection(`artifacts/${APP_ID}/public/data/${col}`).orderBy('updated_at', 'desc').onSnapshot(snap => {
+                    dataStore[col] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    renderFrontUI(col);
+                    if(document.getElementById('dbColSelect').value === col) renderDbList(col);
+                });
+            });
+        }
+
+        function renderFrontUI(col) {
+            if(col === 'products') {
+                document.getElementById('shop-list').innerHTML = (dataStore.products || []).map(p => `
+                    <div class="item-card">
+                        <img src="${p.imageUrl || fallback}">
+                        <div style="font-weight:bold; font-size:11px;">${p.title}</div>
+                        <div style="color:#d32f2f; font-weight:bold;">$${p.price}</div>
+                        <button class="btn-gold" style="font-size:9px;" onclick="APP_CORE.showToast('已下單並記錄於雲端')">購買</button>
+                    </div>
+                `).join('') || '<p>尚無商品</p>';
+            }
+            if(col === 'courses') {
+                document.getElementById('course-list').innerHTML = (dataStore.courses || []).map(c => `
+                    <div class="item-card">
+                        <img src="${c.coverUrl || fallback}">
+                        <div style="font-weight:bold; font-size:11px;">${c.title}</div>
+                        <div style="font-size:9px; opacity:0.7;">${c.instructor}</div>
+                    </div>
+                `).join('') || '<p>尚無課程</p>';
+            }
+        }
+
+        function renderDbList(col) {
+            const data = dataStore[col] || [];
+            document.getElementById('addBtn').style.display = (userRole === 'admin' || (userRole === 'dietitian' && col === 'courses')) ? 'block' : 'none';
+            document.getElementById('db-list').innerHTML = data.map(item => {
+                const canEdit = (userRole === 'admin') || (userRole === 'dietitian' && col === 'courses');
+                const canDel = (userRole === 'admin');
+                return `
+                    <div class="db-item">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong>${item.name || item.title || 'Untitled'}</strong>
+                            <div style="display:flex; gap:3px;">
+                                ${canEdit ? `<button class="btn-gold" style="padding:2px 6px; font-size:9px;" onclick="openEdit('${col}', '${item.id}')">修</button>` : ''}
+                                ${canDel ? `<button class="btn-gold" style="padding:2px 6px; font-size:9px; background:#f44336;" onclick="delDoc('${col}', '${item.id}')">刪</button>` : ''}
+                            </div>
+                        </div>
+                        <pre>${JSON.stringify(item, null, 1)}</pre>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function runTest() {
+            APP_CORE.toggleSpinner("生物掃描中...");
+            setTimeout(async () => {
+                await db.collection(`artifacts/${APP_ID}/public/data/tests`).add({
+                    user: currentUser.email,
+                    score: Math.floor(Math.random() * 100),
+                    updated_at: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                APP_CORE.toggleSpinner(false);
+                APP_CORE.showToast("檢測結果已存入雲端");
+            }, 1500);
+        }
+
+        function syncData(col) { renderDbList(col); }
+        function openAdd() {
+            activeEditId = '';
+            document.getElementById('modalTitle').innerText = "新增資料";
+            document.getElementById('editArea').value = JSON.stringify({ title: "新項目", price: 0 }, null, 4);
+            document.getElementById('editModal').style.display = 'flex';
+        }
+        function openEdit(col, id) {
+            activeEditId = id; const item = dataStore[col].find(i => i.id === id); const {id:_, updated_at:__, ...clean} = item;
+            document.getElementById('modalTitle').innerText = "編輯 " + id;
+            document.getElementById('editArea').value = JSON.stringify(clean, null, 4);
+            document.getElementById('editModal').style.display = 'flex';
+        }
+        async function saveData() {
+            const col = document.getElementById('dbColSelect').value;
+            try {
+                const data = JSON.parse(document.getElementById('editArea').value);
+                const ref = db.collection(`artifacts/${APP_ID}/public/data/${col}`);
+                if(activeEditId) await ref.doc(activeEditId).update({...data, updated_at: firebase.firestore.FieldValue.serverTimestamp()});
+                else await ref.add({...data, updated_at: firebase.firestore.FieldValue.serverTimestamp()});
+                document.getElementById('editModal').style.display = 'none';
+                APP_CORE.showToast("同步成功");
+            } catch(e) { APP_CORE.showToast("JSON 錯誤"); }
+        }
+        async function delDoc(col, id) { if(confirm("確定刪除？")) await db.doc(`artifacts/${APP_ID}/public/data/${col}/${id}`).delete(); }
+
+        async function batchInject() {
+            if(!auth.currentUser) return APP_CORE.showToast("請登入");
+            APP_CORE.toggleSpinner("部署旗艦數據...");
+            const email = auth.currentUser.email;
+            const sets = {
+                admins: [{ name: "系統總管 (您)", email: email, role: "super" }],
+                dietitians: [{ name: "首席營養師 (您)", email: email, expert: "基因同步", avatarUrl: "https://i.pravatar.cc/150?u=me" }],
+                products: Array.from({length:10}, (_, i) => ({ title: `智控補給 ${i+1}`, price: 1000, imageUrl: `https://picsum.photos/seed/p${i}/300/200` })),
+                courses: Array.from({length:10}, (_, i) => ({ title: `精準課程 ${i+1}`, instructor: "首席導師", coverUrl: `https://picsum.photos/seed/c${i}/300/200` }))
+            };
+            for(let col of ['admins', 'dietitians', 'products', 'courses']) {
+                for(let item of sets[col]) {
+                    await db.collection(`artifacts/${APP_ID}/public/data/${col}`).add({...item, updated_at: firebase.firestore.FieldValue.serverTimestamp()});
+                }
+            }
+            APP_CORE.showToast("注入完成，請重新登入以啟動權限！");
+            APP_CORE.toggleSpinner(false);
+        }
+    </script>
+
+</body>
+</html>
