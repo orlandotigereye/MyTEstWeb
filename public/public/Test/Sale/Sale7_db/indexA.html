@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Shizuku Bio-Sync System V7.0 - 💎 皇家 Open-JSON 版</title>
+    
+    <!-- Firebase SDK (Compat v9) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    
+    <!-- 1. 內嵌 Global CSS -->
+    <style>
+        :root {
+            --primary-color: #2c3e50; --accent-color: #FFD700; --accent-dark: #B8860B;
+            --accent-light: #FFFACD; --bg-gradient: radial-gradient(circle, #fdf5e6 0%, #ffd700 100%);        
+            --card-bg: rgba(255, 255, 255, 0.95); --text-color: #5d4037; --muted-color: #7f8c8d;
+            --success-color: #27ae60; --space-sm: 8px; --space-md: 12px; --radius-md: 12px;
+            --base-font-size: 13px; --main-font: 'Segoe UI', 'Noto Sans TC', sans-serif;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }      
+        body { font-family: var(--main-font); font-size: var(--base-font-size); background: var(--bg-gradient); background-attachment: fixed; color: var(--text-color); margin: 0; line-height: 1.5; }
+        .tabs-container { display: flex; background: var(--accent-dark); position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; color: rgba(255,255,255,0.8); font-size: 11px; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .tab-btn.active { color: #fff; background: rgba(255,255,255,0.15); border-bottom: 3px solid #fff; }
+        .content-section { display: none; padding: 12px; animation: fadeIn 0.4s ease; }
+        .content-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .card { background: var(--card-bg); border: 2px solid var(--accent-dark); border-radius: var(--radius-md); padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(184, 134, 11, 0.2); }
+        .card h2 { margin-top: 0; font-size: 15px; color: var(--accent-dark); border-bottom: 1px solid var(--accent-dark); padding-bottom: 5px; margin-bottom: 12px; }
+        .btn-gold { background: linear-gradient(to bottom, var(--accent-color), var(--accent-dark)); color: #fff; border: 1px solid #8b4513; padding: 8px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-shadow: 1px 1px 1px rgba(0,0,0,0.3); }
+        .btn-gold:active { transform: scale(0.95); }
+        .stat-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
+        .stat-box { text-align: center; padding: 10px; border-radius: 6px; border: 1px solid #eee; background: #fff; }
+        .stat-val { font-size: 18px; font-weight: bold; color: var(--accent-dark); }
+        .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(44, 62, 80, 0.95); color: white; padding: 10px 20px; border-radius: 25px; z-index: 9999; font-size: 12px; display: none; }
+        .spinner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.7); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9000; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid var(--accent-dark); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <!-- 2. 內嵌 Core JS (與 firebaseW.html 同步) -->
+    <script>
+        const APP_CORE = {
+            version: "7.0.0-Sale7",
+            firebaseConfig: {
+                apiKey: "AIzaSyCdtLo2glycCj2SwxlS-PVsYVyBjQ5hJMo",
+                authDomain: "open-json.firebaseapp.com",
+                projectId: "open-json",
+                storageBucket: "open-json.firebasestorage.app",
+                messagingSenderId: "210389093947",
+                appId: "1:210389093947:web:ab91992676db8618e3961e",
+                measurementId: "G-QFQMQ21VYQ"
+            },
+            init() {
+                this.setupTabs();
+                window.dispatchEvent(new CustomEvent('coreReady'));
+            },
+            showToast(msg) {
+                let t = document.getElementById('toast') || Object.assign(document.createElement('div'), {id:'toast', className:'toast'});
+                if(!t.parentElement) document.body.appendChild(t);
+                t.textContent = msg; t.style.display = 'block';
+                setTimeout(() => t.style.display = 'none', 3000);
+            },
+            toggleSpinner(show) {
+                let s = document.getElementById('spinner') || Object.assign(document.createElement('div'), {id:'spinner', className:'spinner-overlay', innerHTML:'<div class="loader"></div><p id="sp-txt" style="margin-top:10px; font-weight:bold; color:var(--accent-dark);">Processing...</p>'});
+                if(!s.parentElement) document.body.appendChild(s);
+                if(typeof show === 'string') document.getElementById('sp-txt').textContent = show;
+                s.style.display = show ? 'flex' : 'none';
+            },
+            setupTabs() {
+                window.switchTab = (id) => {
+                    document.querySelectorAll('.content-section, .tab-btn').forEach(el => el.classList.remove('active'));
+                    document.getElementById(id).classList.add('active');
+                    const btn = document.querySelector(`[onclick*="${id}"]`);
+                    if(btn) btn.classList.add('active');
+                };
+            }
+        };
+        window.APP_CORE = APP_CORE;
+        document.addEventListener('DOMContentLoaded', () => APP_CORE.init());
+    </script>
+
+    <div class="tabs-container">
+        <button class="tab-btn active" onclick="switchTab('mainTab')"><i class="fas fa-home"></i> 首頁</button>
+        <button class="tab-btn" onclick="switchTab('dataTab')"><i class="fas fa-database"></i> 數據</button>
+        <button class="tab-btn" onclick="switchTab('setupTab')"><i class="fas fa-tools"></i> 設定</button>
+    </div>
+
+    <!-- MAIN -->
+    <div id="mainTab" class="content-section active">
+        <div class="card">
+            <h2>🧬 生理同步系統 V7.0 (Open-JSON)</h2>
+            <div id="login-section" style="margin-bottom: 15px; text-align: center;">
+                <button id="loginBtn" class="btn-gold" onclick="login()"><i class="fab fa-google"></i> Google 登入驗證</button>
+                <div id="user-info" style="display: none; align-items: center; gap: 10px; padding: 10px; background: #eee; border-radius: 8px;">
+                    <img id="userImg" src="" style="width: 30px; border-radius: 50%;">
+                    <span id="userName" style="font-weight: bold;"></span>
+                </div>
+            </div>
+            
+            <div class="stat-container">
+                <div class="stat-box"><div class="stat-val" id="count-u">0</div><div style="font-size:10px;">使用者</div></div>
+                <div class="stat-box"><div class="stat-val" id="count-d">0</div><div style="font-size:10px;">營養師</div></div>
+                <div class="stat-box"><div class="stat-val" id="count-p">0</div><div style="font-size:10px;">產品</div></div>
+                <div class="stat-box"><div class="stat-val" id="count-a">0</div><div style="font-size:10px;">管理者</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DATA -->
+    <div id="dataTab" class="content-section">
+        <div class="card">
+            <h2>📊 雲端數據概覽</h2>
+            <div id="data-display" style="font-size: 11px; max-height: 400px; overflow-y: auto;">
+                請先登入以讀取資料...
+            </div>
+        </div>
+    </div>
+
+    <!-- SETUP -->
+    <div id="setupTab" class="content-section">
+        <div class="card">
+            <h2>🛠 系統初始化</h2>
+            <p style="font-size: 11px;">此操作將在 Open-JSON 專案中寫入 40 筆預設資料：</p>
+            <button class="btn-gold" style="width: 100%; background: #4caf50;" onclick="setupProjectData()">
+                <i class="fas fa-cloud-upload-alt"></i> 執行 40 筆資料完整代入
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let db = null, auth = null;
+        const APP_ID = 'Sale7_System_Alpha'; // 使用自定義 AppID
+
+        window.addEventListener('coreReady', () => {
+            const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(APP_CORE.firebaseConfig);
+            db = firebase.firestore(app);
+            auth = firebase.auth(app);
+
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    document.getElementById('loginBtn').style.display = 'none';
+                    document.getElementById('user-info').style.display = 'flex';
+                    document.getElementById('userImg').src = user.photoURL;
+                    document.getElementById('userName').innerText = user.displayName;
+                    refreshStats();
+                } else {
+                    document.getElementById('loginBtn').style.display = 'inline-flex';
+                    document.getElementById('user-info').style.display = 'none';
+                }
+            });
+        });
+
+        async function login() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            try { await auth.signInWithPopup(provider); } catch(e) { APP_CORE.showToast("登入失敗"); }
+        }
+
+        async function refreshStats() {
+            const collections = ['users', 'dietitians', 'products', 'admins'];
+            for(const col of collections) {
+                const snap = await db.collection(`artifacts/${APP_ID}/public/data/${col}`).get();
+                document.getElementById(`count-${col[0]}`).innerText = snap.size;
+            }
+        }
+
+        async function setupProjectData() {
+            if(!auth.currentUser) return APP_CORE.showToast("請先登入");
+            if(!confirm("確定要代入 40 筆測試資料嗎？")) return;
+            
+            APP_CORE.toggleSpinner("正在同步 40 筆數據...");
+            try {
+                const dataSets = {
+                    users: Array.from({length:10}, (_, i) => ({ name: `使用者 ${i+1}`, email: `user${i+1}@example.com`, role: 'user' })),
+                    dietitians: Array.from({length:10}, (_, i) => ({ name: `營養師 ${i+1}`, expert: '減重管理', role: 'expert' })),
+                    products: Array.from({length:10}, (_, i) => ({ name: `健康產品 ${i+1}`, price: 100 * (i+1), category: 'supplements' })),
+                    admins: Array.from({length:10}, (_, i) => ({ name: `管理者 ${i+1}`, level: 'super', role: 'admin' }))
+                };
+
+                for(const [col, items] of Object.entries(dataSets)) {
+                    const colRef = db.collection(`artifacts/${APP_ID}/public/data/${col}`);
+                    for(const item of items) {
+                        await colRef.add({ ...item, updated_at: firebase.firestore.FieldValue.serverTimestamp() });
+                    }
+                }
+                APP_CORE.showToast("資料完整代入成功！");
+                refreshStats();
+            } catch(e) {
+                APP_CORE.showToast("寫入失敗: " + e.message);
+            } finally {
+                APP_CORE.toggleSpinner(false);
+            }
+        }
+    </script>
+
+</body>
+</html>
