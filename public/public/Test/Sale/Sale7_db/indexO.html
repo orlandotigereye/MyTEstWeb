@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Shizuku Bio-Sync V11.0 - 💎 皇家終極完全體 (IndexO)</title>
+    
+    <!-- 外部依賴 (CDN) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    
+    <!-- 1. CSS 層 (內嵌 Global Theme & 組件樣式) -->
+    <style>
+        :root {
+            --primary-color: #2c3e50; --accent-color: #FFD700; --accent-dark: #B8860B;
+            --accent-light: #FFFACD; --bg-gradient: radial-gradient(circle, #fdf5e6 0%, #ffd700 100%);        
+            --card-bg: rgba(255, 255, 255, 0.95); --text-color: #5d4037; --muted-color: #7f8c8d;
+            --success-color: #27ae60; --space-xs: 4px; --space-sm: 8px; --space-md: 12px;
+            --space-lg: 20px; --radius-sm: 6px; --radius-md: 12px; --radius-lg: 20px;
+            --base-font-size: 13px; --main-font: 'Segoe UI', 'Noto Sans TC', system-ui, sans-serif;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }      
+        body { font-family: var(--main-font); font-size: var(--base-font-size); background: var(--bg-gradient); background-attachment: fixed; color: var(--text-color); margin: 0; padding: 0; overflow-x: hidden; line-height: 1.5; }
+        
+        /* App Shell */
+        .tabs-container { display: flex; background: var(--accent-dark); position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.2); overflow-x: auto; }
+        .tab-btn { flex: 1; padding: var(--space-md); border: none; background: transparent; color: rgba(255,255,255,0.8); font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.3s; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 60px; }
+        .tab-btn.active { color: #fff; background: rgba(255,255,255,0.15); border-bottom: 3px solid #fff; }
+        .content-section { display: none; padding: var(--space-md); animation: fadeIn 0.4s ease; }
+        .content-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* UI Cards */
+        .card { background: var(--card-bg); border: 2px solid var(--accent-dark); border-radius: var(--radius-md); padding: var(--space-md); box-shadow: 0 4px 15px rgba(184, 134, 11, 0.2); margin-bottom: var(--space-md); }
+        .card h2 { margin-top: 0; font-size: 15px; color: var(--accent-dark); border-bottom: 1px solid var(--accent-dark); padding-bottom: var(--space-xs); margin-bottom: var(--space-md); display: flex; align-items: center; gap: 8px; }
+
+        .btn-gold { background: linear-gradient(to bottom, var(--accent-color), var(--accent-dark)); color: #fff; border: 1px solid #8b4513; padding: var(--space-sm) var(--space-md); border-radius: var(--radius-sm); font-size: 11px; font-weight: bold; cursor: pointer; text-shadow: 1px 1px 1px rgba(0,0,0,0.3); display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn-gold:active { transform: scale(0.95); opacity: 0.9; }
+
+        textarea, input, select { width: 100%; padding: var(--space-sm); border: 1px solid #ddd; border-radius: var(--radius-sm); font-size: 14px; background: #fffdf0; }
+        
+        /* Zinzino & Analysis Visuals */
+        .gold-panel { background: linear-gradient(135deg, rgba(255, 215, 0, 0.4), rgba(184, 134, 11, 0.2)); border: 1px solid var(--accent-color); box-shadow: 0 2px 10px rgba(218, 165, 32, 0.3); border-radius: var(--radius-md); backdrop-filter: blur(5px); }
+        .chart-wrapper { position: relative; width: 100%; height: 260px; margin: 0 auto; }
+        .spark-container { width: 50px; height: 10px; background: #f0f0f0; border-radius: 5px; position: relative; overflow: hidden; margin: 0 auto; border: 0.5px solid #ddd; }
+        .spark-target { position: absolute; height: 100%; background: rgba(34, 197, 94, 0.3); }
+        .spark-value { position: absolute; height: 100%; width: 3px; background: #b45309; z-index: 10; transition: left 0.5s ease; border-radius: 1px; }
+        
+        table { width: 100%; border-collapse: collapse; background: white; font-size: 11px; margin-bottom: 10px; }
+        th, td { border: 0.5px solid rgba(218, 165, 32, 0.3); padding: 6px; text-align: center; }
+        th { background: var(--accent-light); color: var(--accent-dark); font-weight: bold; }
+        
+        /* Shizuku Grid */
+        .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+        .item-card { background: #fff; border: 1px solid #eee; padding: 10px; border-radius: 12px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .item-card img { width: 100%; height: 90px; object-fit: cover; border-radius: 8px; margin-bottom: 8px; background: #f9f9f9; border: 1px solid #f0f0f0; }
+
+        /* DBMS */
+        .db-item { background: #fff; border-left: 5px solid var(--accent-dark); padding: 10px; margin-bottom: 8px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); font-size: 11px; }
+        pre { font-size: 9px; background: #272822; color: #f8f8f2; padding: 8px; border-radius: 6px; overflow-x: auto; margin-top: 8px; max-height: 120px; border: 1px solid #444; }
+
+        /* Helpers */
+        .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(44, 62, 80, 0.95); color: white; padding: 10px 20px; border-radius: 25px; z-index: 9999; font-size: 12px; display: none; }
+        .spinner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.7); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9000; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid var(--accent-dark); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+
+    <!-- 2. 固定數據層 -->
+    <script>
+        const acidDefinitions = [
+            { group: "飽和脂肪 (SFA)", items: [
+                { id: "C16", name: "棕櫚酸 (Palmitic Acid)", target: [20.0, 25.0] },
+                { id: "C18", name: "硬脂酸 (Stearic Acid)", target: [13.0, 16.0] }
+            ]},
+            { group: "單元不飽和 (MUFA)", items: [
+                { id: "C18_1", name: "油酸 (Oleic Acid)", target: [15.0, 18.0] }
+            ]},
+            { group: "多元不飽和 Omega-6 (PUFA)", items: [
+                { id: "LA", name: "亞麻油酸 (Linoleic Acid)", target: [10.0, 13.0] },
+                { id: "GLA", name: "γ-次亞麻油酸 (GLA)", target: [0.05, 0.15] },
+                { id: "DGLA", name: "二高-γ-次亞麻油酸", target: [0.5, 1.0] },
+                { id: "AA", name: "花生四烯酸 (AA)", target: [6.5, 9.5] }
+            ]},
+            { group: "多元不飽和 Omega-3 (PUFA)", items: [
+                { id: "ALA", name: "α-次亞麻油酸 (ALA)", target: [0.4, 0.6] },
+                { id: "EPA", name: "二十碳五烯酸 (EPA)", target: [3.5, 5.0] },
+                { id: "DPA", name: "二十二碳五烯酸 (DPA)", target: [1.0, 2.0] },
+                { id: "DHA", name: "二十二碳六烯酸 (DHA)", target: [4.5, 6.0] }
+            ]}
+        ];
+        
+        let productsDB = [
+            { id: "oil", icon: "💧", name: "BalanceOil+", desc: "Omega-3/多酚平衡核心" },
+            { id: "xtend", icon: "💊", name: "Xtend+", desc: "完整微量營養素免疫" },
+            { id: "biot", icon: "🌱", name: "ZinoBiotic+", desc: "腸道定植纖維混合" },
+            { id: "viva", icon: "🌙", name: "Viva+", desc: "藏紅花精神能量調節" }
+        ];
+    </script>
+
+    <!-- 3. JS 邏輯層 (內嵌 APP_CORE) -->
+    <script>
+        const APP_CORE = {
+            version: "11.0-Embedded-Final",
+            firebaseConfig: {
+                apiKey: "AIzaSyCdtLo2glycCj2SwxlS-PVsYVyBjQ5hJMo",
+                authDomain: "open-json.firebaseapp.com",
+                projectId: "open-json",
+                storageBucket: "open-json.firebasestorage.app",
+                messagingSenderId: "210389093947",
+                appId: "1:210389093947:web:ab91992676db8618e3961e"
+            },
+            db: null, auth: null, _initialized: false,
+            init() {
+                if (this._initialized) return;
+                const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(this.firebaseConfig);
+                this.db = firebase.firestore(app);
+                this.auth = firebase.auth(app);
+                this.setupTabs();
+                this._initialized = true;
+                window.dispatchEvent(new CustomEvent('coreReady'));
+            },
+            showToast(msg) {
+                let t = document.getElementById('toast') || Object.assign(document.createElement('div'), {id:'toast', className:'toast'});
+                if(!t.parentElement) document.body.appendChild(t);
+                t.textContent = msg; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 3000);
+            },
+            toggleSpinner(show) {
+                let s = document.getElementById('spinner') || Object.assign(document.createElement('div'), {id:'spinner', className:'spinner-overlay', innerHTML:'<div class="loader"></div>'});
+                if(!s.parentElement) document.body.appendChild(s);
+                s.style.display = show ? 'flex' : 'none';
+            },
+            setupTabs() {
+                window.switchTab = (tabId) => {
+                    document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    const targetContent = document.getElementById(tabId);
+                    const targetBtn = document.querySelector(`[onclick*="${tabId}"]`);
+                    if (targetContent) targetContent.classList.add('active');        
+                    if (targetBtn) targetBtn.classList.add('active');
+                    if (tabId === 'analysisTab') setTimeout(() => { if(barChart) barChart.resize(); if(radarChart) radarChart.resize(); }, 100);
+                };
+            },
+            downloadSelf(filename) {
+                const content = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+                const blob = new Blob([content], { type: 'text/html' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = filename || 'indexO.html';
+                a.click();
+            }
+        };
+        window.APP_CORE = APP_CORE;
+        document.addEventListener('DOMContentLoaded', () => APP_CORE.init());
+
+        // --- 應用程式專屬邏輯 ---
+        const APP_ID = 'Sale7_Master_Sync';
+        let dataStore = {}, userRole = 'user', activeEditId = '', barChart, radarChart, currentResult;
+
+        window.addEventListener('coreReady', () => {
+            APP_CORE.auth.onAuthStateChanged(async user => {
+                if (user) {
+                    document.getElementById('login-area').style.display = 'none';
+                    document.getElementById('user-info').style.display = 'flex';
+                    document.getElementById('userImg').src = user.photoURL || '';
+                    document.getElementById('userName').innerText = user.displayName;
+                    document.getElementById('userEmail').innerText = user.email;
+                    await detectRole(user.email);
+                    startSyncing();
+                } else {
+                    document.getElementById('login-area').style.display = 'block';
+                    document.getElementById('user-info').style.display = 'none';
+                }
+            });
+            renderProductRecs();
+        });
+
+        async function detectRole(email) {
+            const adminSnap = await APP_CORE.db.collection(`artifacts/${APP_ID}/public/data/admins`).where('email', '==', email).get();
+            if(!adminSnap.empty) userRole = 'admin'; else {
+                const expertSnap = await APP_CORE.db.collection(`artifacts/${APP_ID}/public/data/dietitians`).where('email', '==', email).get();
+                if(!expertSnap.empty) userRole = 'dietitian';
+            }
+            updateRoleUI();
+        }
+
+        function updateRoleUI() {
+            const b = document.getElementById('roleBadge');
+            if(b) {
+                b.innerText = userRole === 'admin' ? '管理者' : userRole === 'dietitian' ? '營養師' : '會員';
+                b.style.color = userRole === 'admin' ? '#d32f2f' : userRole === 'dietitian' ? '#2e7d32' : '#666';
+            }
+            const expertUI = document.getElementById('expert-ui');
+            if(expertUI) expertUI.style.display = (userRole === 'dietitian' || userRole === 'admin') ? 'block' : 'none';
+            filterDbList();
+        }
+
+        function startSyncing() {
+            ['users', 'products', 'courses', 'admins', 'tests', 'dietitians'].forEach(col => {
+                APP_CORE.db.collection(`artifacts/${APP_ID}/public/data/${col}`).orderBy('updated_at', 'desc').onSnapshot(snap => {
+                    dataStore[col] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    renderModuleUI(col);
+                    if(document.getElementById('dbColSelect').value === col) filterDbList();
+                });
+            });
+        }
+
+        function renderModuleUI(col) {
+            if(col === 'products') {
+                document.getElementById('shop-list').innerHTML = (dataStore.products || []).map(p => `
+                    <div class="item-card">
+                        <img src="${p.imageUrl || 'https://via.placeholder.com/150'}">
+                        <div style="font-weight:bold; font-size:11px;">${p.title}</div>
+                        <div style="color:#d32f2f; font-weight:bold;">$${p.price}</div>
+                        <button class="btn-gold" style="font-size:9px;" onclick="APP_CORE.showToast('已加入購物籃')">選購</button>
+                    </div>
+                `).join('') || '<p>無商品</p>';
+            }
+            if(col === 'courses') {
+                document.getElementById('course-list').innerHTML = (dataStore.courses || []).map(c => `
+                    <div class="item-card">
+                        <img src="${c.coverUrl || 'https://via.placeholder.com/150'}">
+                        <div style="font-weight:bold; font-size:11px;">${c.title}</div>
+                        <div style="font-size:9px; opacity:0.7;">導師：${c.instructor}</div>
+                    </div>
+                `).join('') || '<p>無課程</p>';
+            }
+        }
+
+        async function executeZinzinoFetch() {
+            const id = document.getElementById('id-input').value.trim();
+            if(!id) return APP_CORE.showToast("請輸入檢測 ID");
+            APP_CORE.toggleSpinner("啟動深度同步檢測...");
+            const isBad = id.startsWith("22");
+            
+            const detailedAcids = [];
+            acidDefinitions.forEach(group => {
+                group.items.forEach(item => {
+                    let val = isBad ? (item.id === 'AA' ? 12.5 : (item.id.includes('C16') ? 26.5 : item.target[0] * 0.4)) : ((item.target[0] + item.target[1]) / 2);
+                    val = parseFloat(val.toFixed(2));
+                    detailedAcids.push({ group: group.group, name: item.name, v: val, t: item.target, d: ((val - item.target[0]) / (item.target[1] - item.target[0]) * 100 - 50).toFixed(1) });
+                });
+            });
+
+            currentResult = { id, isBad, topRec: isBad ? "oil" : "xtend", ratio: isBad ? "12.8:1" : "2.1:1", protection: isBad ? "8%" : "96%", omega3: isBad ? "3.2%" : "9.8%", flow: isBad ? "9.4:1" : "3.1:1", acids: detailedAcids };
+            updateZinzinoUI();
+            
+            if(APP_CORE.auth.currentUser) {
+                await APP_CORE.db.collection(`artifacts/${APP_ID}/public/data/tests`).add({ user: APP_CORE.auth.currentUser.email, testId: id, score: isBad?45:95, result: currentResult, updated_at: firebase.firestore.FieldValue.serverTimestamp() });
+            }
+            APP_CORE.toggleSpinner(false); APP_CORE.showToast("同步完成！"); renderProductRecs();
+        }
+
+        function updateZinzinoUI() {
+            if(!currentResult) return;
+            const res = currentResult;
+            document.getElementById('status-msg').innerText = res.isBad ? "⚠️ 嚴重警報：發炎風險極高" : "✅ 完美狀態：指標全數達標";
+            document.getElementById('stat-ratio').innerText = res.ratio;
+            document.getElementById('stat-protection').innerText = res.protection;
+            document.getElementById('stat-omega3').innerText = res.omega3;
+            document.getElementById('stat-flow').innerText = res.flow;
+            
+            const tbody = document.getElementById('acid-tbody'); tbody.innerHTML = "";
+            let lastGroup = "";
+            res.acids.forEach(a => {
+                if(a.group !== lastGroup) { tbody.innerHTML += `<tr><td colspan="4" style="background:#fef3c7; font-weight:bold; text-align:left; padding-left:10px;">${a.group}</td></tr>`; lastGroup = a.group; }
+                const pos = ((a.v - (a.t[0]*0.5)) / (a.t[1]*1.2 - a.t[0]*0.5)) * 100;
+                tbody.innerHTML += `<tr><td style="text-align:left; font-weight:bold;">${a.name}</td><td style="color:#b45309; font-weight:bold;">${a.v}%</td><td style="color:#999;">${a.t[0]}-${a.t[1]}</td><td><div class="spark-container"><div class="spark-target" style="left:25%;width:50%"></div><div class="spark-value" style="left:${Math.max(0,Math.min(pos,95))}"></div></div></td></tr>`;
+            });
+            renderCharts(); renderWeeklyDiet();
+        }
+
+        function renderCharts() {
+            const barCtx = document.getElementById('barChart').getContext('2d');
+            if(barChart) barChart.destroy();
+            barChart = new Chart(barCtx, { type:'bar', data: { labels: currentResult.acids.map(a => a.name.split(' (')[0]), datasets:[{ data: currentResult.acids.map(a => a.d), backgroundColor: currentResult.acids.map(a => a.d < -50 ? '#dc2626' : (a.d > 50 ? '#ea580c' : '#B8860B')) }] }, options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{ticks:{font:{size:7}}},y:{ticks:{font:{size:6}}}} } });
+            
+            const radarCtx = document.getElementById('radarChart').getContext('2d');
+            if(radarChart) radarChart.destroy();
+            radarChart = new Chart(radarCtx, { type:'radar', data: { labels: ['平衡比', '保護力', '流動性', '精神力', '免疫力'], datasets: [{ data: currentResult.isBad ? [15, 8, 20, 40, 30] : [95, 96, 92, 90, 94], backgroundColor: 'rgba(184, 134, 11, 0.2)', borderColor: '#B8860B', borderWidth: 2 }] }, options: { responsive:true, maintainAspectRatio:false, scales:{r:{min:0,max:100,ticks:{display:false}}}, plugins:{legend:{display:false}} } });
+        }
+
+        function renderWeeklyDiet() {
+            const tbody = document.getElementById('diet-tbody'); tbody.innerHTML = "";
+            const days = ["週一", "週二", "週三", "週四", "週五", "週六", "週日"];
+            days.forEach((day, i) => {
+                tbody.innerHTML += `<tr class="${i%2===0?'bg-white':'bg-yellow-50/30'}"><td class="font-bold text-yellow-800">${day}</td><td class="diet-cell"><span class="diet-header">💧 BalanceOil+</span>🍴 核心細胞同步餐</td><td class="diet-cell"><span class="diet-header">🌱 ZinoBiotic+</span>🍴 腸道環境優化餐</td></tr>`;
+            });
+            document.getElementById('dosage-info').innerHTML = `<b>精準劑量建議：</b>每日 ${currentResult.isBad?'15ml':'10ml'} BalanceOil，${currentResult.isBad?'4顆':'2顆'} Xtend。`;
+        }
+
+        function renderProductRecs() {
+            document.getElementById('product-recs').innerHTML = productsDB.map(p => `
+                <div class="product-card p-2 text-center border rounded ${currentResult && p.id === currentResult.topRec ? 'border-red-500 bg-red-50' : 'border-yellow-200 bg-white'} relative">
+                    ${currentResult && p.id === currentResult.topRec ? '<span class="absolute top-0 right-0 bg-red-500 text-white text-[8px] px-1 rounded-bl">TOP</span>' : ''}
+                    <div class="text-xl">${p.icon}</div>
+                    <div class="font-bold text-[9px] leading-none mt-1">${p.name}</div>
+                </div>
+            `).join('');
+        }
+
+        function filterDbList() {
+            const col = document.getElementById('dbColSelect').value;
+            const q = document.getElementById('dbSearch').value.toLowerCase();
+            const data = (dataStore[col] || []).filter(i => JSON.stringify(i).toLowerCase().includes(q));
+            document.getElementById('addBtn').style.display = (userRole === 'admin' || (userRole === 'dietitian' && (col==='courses' || col==='products'))) ? 'block' : 'none';
+            document.getElementById('db-list').innerHTML = data.map(item => `
+                <div class="db-item">
+                    <div class="flex justify-between items-start">
+                        <div class="flex items-center">
+                            ${(item.imageUrl || item.coverUrl) ? `<img class="thumb-preview" style="width:30px;height:30px;border-radius:50%;margin-right:10px;" src="${item.imageUrl || item.coverUrl}">` : ''}
+                            <div><strong>${item.name || item.title || 'Untitled'}</strong> <span style="font-size:8px; opacity:0.5;">${item.id.slice(0,6)}</span></div>
+                        </div>
+                        <div class="flex gap-1">
+                            ${(userRole === 'admin' || (userRole === 'dietitian' && (col==='courses' || col==='products'))) ? `<button class="btn-gold" style="padding:2px 6px; font-size:9px;" onclick="openEdit('${col}', '${item.id}')">修</button>` : ''}
+                            ${userRole === 'admin' ? `<button class="btn-gold" style="padding:2px 6px; font-size:9px; background:#f44336;" onclick="delDoc('${col}', '${item.id}')">刪</button>` : ''}
+                        </div>
+                    </div>
+                    <pre>${JSON.stringify(item, null, 1)}</pre>
+                </div>
+            `).join('');
+        }
+
+        function openAdd(tc) { activeEditId = ''; const col = tc || document.getElementById('dbColSelect').value; document.getElementById('modalTitle').innerText = "新增至 " + col; document.getElementById('editArea').value = JSON.stringify({ title: "新數據項目", imageUrl: "", updated_at: "" }, null, 4); document.getElementById('editModal').style.display = 'flex'; }
+        function openEdit(col, id) { activeEditId = id; const item = dataStore[col].find(i => i.id === id); const {id:_, updated_at:__, ...clean} = item; document.getElementById('modalTitle').innerText = "修改 " + id; document.getElementById('editArea').value = JSON.stringify(clean, null, 4); document.getElementById('editModal').style.display = 'flex'; }
+        async function saveData() {
+            const col = document.getElementById('dbColSelect').value;
+            try {
+                const data = JSON.parse(document.getElementById('editArea').value);
+                const ref = APP_CORE.db.collection(`artifacts/${APP_ID}/public/data/${col}`);
+                if(activeEditId) await ref.doc(activeEditId).update({...data, updated_at: firebase.firestore.FieldValue.serverTimestamp()});
+                else await ref.add({...data, updated_at: firebase.firestore.FieldValue.serverTimestamp()});
+                document.getElementById('editModal').style.display = 'none'; APP_CORE.showToast("資料已存檔");
+            } catch(e) { APP_CORE.showToast("JSON 語法錯誤"); }
+        }
+        async function delDoc(col, id) { if(confirm("確定刪除？")) await APP_CORE.db.doc(`artifacts/${APP_ID}/public/data/${col}/${id}`).delete(); }
+
+        async function batchInject() {
+            if(!APP_CORE.auth.currentUser) return APP_CORE.showToast("請登入");
+            APP_CORE.toggleSpinner("部署數據中...");
+            const email = APP_CORE.auth.currentUser.email;
+            const sets = {
+                admins: [{ name: "最高指揮官", email, role: "super" }],
+                dietitians: [{ name: "大師導師", email, expert: "生理同步", avatarUrl: "https://i.pravatar.cc/150?u=master" }],
+                products: Array.from({length:5}, (_, i) => ({ title: `智控補給 P-${i+1}`, price: 1200 + i*50, imageUrl: `https://picsum.photos/seed/p${i}/300/200` })),
+                courses: Array.from({length:3}, (_, i) => ({ title: `精準課程 C-${i+1}`, instructor: "大師導師", coverUrl: `https://picsum.photos/seed/c${i}/300/200` })),
+                users: [{ name: "測試會員", email: "test@example.com" }]
+            };
+            for(let col of Object.keys(sets)) {
+                for(let item of sets[col]) await APP_CORE.db.collection(`artifacts/${APP_ID}/public/data/${col}`).add({...item, updated_at: firebase.firestore.FieldValue.serverTimestamp()});
+            }
+            APP_CORE.showToast("部署成功！"); APP_CORE.toggleSpinner(false);
+        }
+
+        async function login() { await APP_CORE.auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+        async function logout() { await APP_CORE.auth.signOut(); location.reload(); }
+    </script>
+</head>
+<body>
+
+    <div class="tabs-container">
+        <button class="tab-btn active" onclick="switchTab('mainTab')"><i class="fas fa-home"></i> 首頁</button>
+        <button class="tab-btn" onclick="switchTab('analysisTab')"><i class="fas fa-chart-line"></i> 分析看板</button>
+        <button class="tab-btn" onclick="switchTab('dietTab')"><i class="fas fa-utensils"></i> 動態食譜</button>
+        <button class="tab-btn" onclick="switchTab('shopTab')"><i class="fas fa-shopping-basket"></i> 商城</button>
+        <button class="tab-btn" onclick="switchTab('dbTab')"><i class="fas fa-database"></i> 數據維護</button>
+        <button class="tab-btn" onclick="switchTab('sysTab')"><i class="fas fa-cog"></i> 系統</button>
+    </div>
+
+    <!-- MAIN -->
+    <div id="mainTab" class="content-section active">
+        <div class="card">
+            <h2><i class="fas fa-star"></i> 產品快速導覽</h2>
+            <div id="product-recs" class="grid grid-cols-4 gap-2 mb-4"></div>
+            
+            <div id="login-area" class="text-center p-6">
+                <button class="btn-gold" style="padding:15px 30px; font-size:14px;" onclick="login()"><i class="fab fa-google"></i> Google 雲端帳戶登入</button>
+            </div>
+            
+            <div id="user-info" style="display:none;" class="gold-panel p-3 mb-4 flex items-center gap-3">
+                <img id="userImg" src="" class="w-10 h-10 rounded-full border-2 border-yellow-500 shadow-md">
+                <div class="flex-1">
+                    <div id="userName" class="font-bold text-sm"></div>
+                    <div id="userEmail" class="text-[9px] opacity-60"></div>
+                </div>
+                <div id="roleBadge" class="bg-white px-2 py-1 rounded text-[9px] font-bold border border-yellow-200">會員</div>
+                <button class="text-red-600 text-[10px] font-bold" onclick="logout()">登出</button>
+            </div>
+
+            <div class="gold-panel p-4 text-center">
+                <h3 class="font-bold mb-3 text-sm">🧬 啟動精準細胞同步檢測</h3>
+                <div class="flex gap-2 mb-3">
+                    <input type="text" id="id-input" placeholder="輸入 Zinzino 檢測 ID (例: 22GF...)" value="22GF83743634BT">
+                    <button class="btn-gold whitespace-nowrap" onclick="executeZinzinoFetch()"><i class="fas fa-sync-alt"></i> 執行同步</button>
+                </div>
+                <p class="text-[9px] opacity-50">支援 ID: 22GF83743634BT (失衡), 92FK85327356BT (達標)</p>
+            </div>
+        </div>
+        
+        <div id="expert-ui" class="card" style="display:none; background:#e8f5e9;">
+            <h3 class="text-green-800 font-bold mb-2 text-sm"><i class="fas fa-user-md"></i> 專業營養師管理介面</h3>
+            <div class="flex gap-2">
+                <button class="btn-gold flex-1" style="background:#2e7d32;" onclick="switchTab('dbTab')">維護客戶數據</button>
+                <button class="btn-gold flex-1" style="background:#2e7d32;" onclick="openAdd('courses')">建立新課程</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ANALYSIS -->
+    <div id="analysisTab" class="content-section">
+        <div class="card">
+            <h2>📊 生理數據視覺化分析</h2>
+            <div id="status-msg" class="p-3 bg-blue-50 text-blue-800 rounded mb-4 font-bold text-center border border-blue-100">請在首頁輸入 ID 並執行同步檢測</div>
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div class="p-3 border border-yellow-200 bg-white rounded text-center shadow-sm">
+                    <div class="text-gray-400 text-[10px] mb-1">Omega-6:3 平衡</div><div id="stat-ratio" class="font-bold text-lg text-yellow-900">-</div>
+                </div>
+                <div class="p-3 border border-yellow-200 bg-white rounded text-center shadow-sm">
+                    <div class="text-gray-400 text-[10px] mb-1">細胞膜保護價值</div><div id="stat-protection" class="font-bold text-lg text-yellow-900">-</div>
+                </div>
+                <div class="p-3 border border-yellow-200 bg-white rounded text-center shadow-sm">
+                    <div class="text-gray-400 text-[10px] mb-1">Omega-3 指數</div><div id="stat-omega3" class="font-bold text-lg text-yellow-900">-</div>
+                </div>
+                <div class="p-3 border border-yellow-200 bg-white rounded text-center shadow-sm">
+                    <div class="text-gray-400 text-[10px] mb-1">細胞膜流動性</div><div id="stat-flow" class="font-bold text-lg text-yellow-900">-</div>
+                </div>
+            </div>
+
+            <div class="chart-wrapper mb-8"><canvas id="barChart"></canvas></div>
+            <div class="chart-wrapper mb-8"><canvas id="radarChart"></canvas></div>
+            
+            <h2>📋 完整 11 項脂肪酸詳細報告</h2>
+            <div class="overflow-x-auto shadow-sm rounded-lg"><table id="acid-table"><thead><tr><th>指標</th><th>測量值</th><th>目標區間</th><th>達成狀態</th></tr></thead><tbody id="acid-tbody"></tbody></table></div>
+        </div>
+    </div>
+
+    <!-- DIET -->
+    <div id="dietTab" class="content-section">
+        <div class="card">
+            <h2>🍴 全球同步精準食譜建議</h2>
+            <div class="overflow-x-auto"><table><thead><tr><th>日期</th><th>午餐與補給建議</th><th>晚餐與補給建議</th></tr></thead><tbody id="diet-tbody"></tbody></table></div>
+            <div id="dosage-info" class="mt-4 p-3 bg-yellow-50 rounded border border-yellow-200 text-sm font-medium"></div>
+        </div>
+    </div>
+
+    <!-- SHOP -->
+    <div id="shopTab" class="content-section">
+        <div class="card"><h2>🛒 細胞同步精準商城</h2><div id="shop-list" class="item-grid">正在載入精品物資...</div></div>
+        <div class="card"><h2>🎓 皇家同步培訓課程</h2><div id="course-list" class="item-grid">正在讀取課程資源...</div></div>
+    </div>
+
+    <!-- DBMS -->
+    <div id="dbTab" class="content-section">
+        <div class="card">
+            <h2><i class="fas fa-database"></i> 雲端數據維護中心</h2>
+            <div class="flex gap-2 mb-3">
+                <input id="dbSearch" placeholder="搜尋 ID、名稱或內容..." oninput="filterDbList()" class="flex-1">
+                <select id="dbColSelect" onchange="filterDbList()" class="w-32">
+                    <option value="users">學員清單</option><option value="products">產品庫存</option><option value="courses">課程資源</option><option value="tests">檢測報告</option><option value="admins">系統權限</option>
+                </select>
+                <button id="addBtn" class="btn-gold" style="background:#27ae60; display:none;" onclick="openAdd()">+</button>
+            </div>
+            <div id="db-list"></div>
+        </div>
+    </div>
+
+    <!-- SYS -->
+    <div id="sysTab" class="content-section">
+        <div class="card">
+            <h2>🛠 系統管理與部署</h2>
+            <button class="btn-gold w-full mb-3" style="padding:15px; background:#4caf50;" onclick="batchInject()"><i class="fas fa-magic"></i> 一鍵部署 60 筆旗艦數據</button>
+            <button class="btn-gold w-full mb-3" onclick="APP_CORE.downloadSelf('Sale11_Master_V110.html')"><i class="fas fa-download"></i> 備份本頁完整原始碼</button>
+            <button class="btn-gold w-full" style="background:#666;" onclick="location.reload()"><i class="fas fa-redo"></i> 重新載入系統</button>
+        </div>
+    </div>
+
+    <!-- MODAL -->
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 id="modalTitle">數據維護編輯器</h2>
+            <textarea id="editArea" style="height: 350px; font-family: monospace;"></textarea>
+            <div class="grid grid-cols-2 gap-3 mt-4">
+                <button class="btn-gold" onclick="saveData()">確認存檔</button>
+                <button class="btn-gold" style="background:#666;" onclick="document.getElementById('editModal').style.display='none'">取消返回</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast & Spinner -->
+    <div id="toast" class="toast"></div>
+    <div id="spinner" class="spinner-overlay"><div class="loader"></div></div>
+
+</body>
+</html>
