@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>S23 INDUSTRIAL 2D SCANNER v4</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<style>
+body{margin:0;background:#000;color:#FFD700;font-family:sans-serif;text-align:center}
+#reader{width:100vw;height:100vw;max-height:80vh;margin:auto}
+#box{
+position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+width:60vw;height:60vw;border:3px solid #FFD700;border-radius:12px;
+box-shadow:0 0 0 1000px rgba(0,0,0,.6)
+}
+.ctrl{display:flex;gap:6px;padding:8px}
+button{flex:1;padding:10px;font-size:14px;background:#FFD700;border:none;border-radius:6px}
+input{width:100%}
+#log{font-size:12px;height:80px;overflow:auto;background:#111;padding:6px}
+</style>
+</head>
+
+<body>
+<div id="reader"></div>
+<div id="box"></div>
+
+<div class="ctrl">
+<button onclick="torch()">Torch</button>
+<button onclick="boost()">Boost</button>
+</div>
+
+<div class="ctrl">
+Zoom<input type="range" id="z" min="1" max="8" step="0.1" value="1" oninput="setZoom(this.value)">
+</div>
+
+<div class="ctrl">
+Exposure<input type="range" id="e" min="-2" max="2" step="0.5" value="0" oninput="setExp(this.value)">
+</div>
+
+<div id="log"></div>
+
+<script>
+let qr, track, last="", lock=false, boostOn=false
+
+function log(t){logBox.innerHTML="<div>"+t+"</div>"+logBox.innerHTML}
+const logBox=document.getElementById("log")
+
+function beep(){
+const c=new AudioContext()
+const o=c.createOscillator()
+o.connect(c.destination);o.start();setTimeout(()=>o.stop(),80)
+}
+
+async function copy(t){
+try{await navigator.clipboard.writeText(t);log("📋 Copied")}
+catch{}
+}
+
+async function init(){
+qr=new Html5Qrcode("reader")
+
+const config={
+fps:30,
+qrbox:(w,h)=>({width:w*0.65,height:h*0.65}), // ROI 中央區域
+formatsToSupport:[
+Html5QrcodeSupportedFormats.QR_CODE,
+Html5QrcodeSupportedFormats.DATA_MATRIX,
+Html5QrcodeSupportedFormats.AZTEC
+],
+experimentalFeatures:{useBarCodeDetectorIfSupported:true},
+videoConstraints:{
+facingMode:{exact:"environment"}, // 強制後鏡頭
+width:{ideal:1920},
+height:{ideal:1080},
+focusMode:"continuous"
+}
+}
+
+await qr.start({facingMode:"environment"},config,onScan)
+
+setTimeout(()=>{
+const v=document.querySelector("video")
+track=v.srcObject.getVideoTracks()[0]
+log("ENGINE READY")
+},1500)
+}
+
+function onScan(txt){
+if(lock) return
+if(txt===last) return
+
+last=txt
+lock=true
+
+beep()
+navigator.vibrate?.(120)
+copy(txt)
+log("LOCKED: "+txt.substring(0,30))
+
+setTimeout(()=>lock=false,300) // 0.3秒防重複
+}
+
+async function torch(){
+if(!track) return
+const caps=track.getCapabilities()
+if(!caps.torch) return
+const s=!track.getSettings().torch
+await track.applyConstraints({advanced:[{torch:s}]})
+log("Torch "+(s?"ON":"OFF"))
+}
+
+function boost(){
+boostOn=!boostOn
+document.querySelector("video").style.filter=boostOn?"contrast(1.6)brightness(1.2)grayscale(1)":""
+log("Boost "+(boostOn?"ON":"OFF"))
+}
+
+async function setZoom(v){
+if(track) await track.applyConstraints({advanced:[{zoom:parseFloat(v)}]})
+}
+
+async function setExp(v){
+if(track) await track.applyConstraints({advanced:[{exposureCompensation:parseFloat(v)}]})
+}
+
+init()
+</script>
+</body>
+</html>
